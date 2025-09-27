@@ -57,11 +57,11 @@ build_images() {
     
     # 构建前端镜像（在项目根目录构建）
     log_info "构建前端镜像..."
-    docker build -t ${IMAGE_PREFIX:-annual-leave}-frontend:${FRONTEND_TAG:-latest} -f docker/frontend/Dockerfile ..
+    docker build -t ${IMAGE_PREFIX:-annual-leave}-frontend:${FRONTEND_TAG:-latest} -f docker/frontend/Dockerfile .
     
     # 构建后端镜像（在项目根目录构建）
     log_info "构建后端镜像..."
-    docker build -t ${IMAGE_PREFIX:-annual-leave}-backend:${BACKEND_TAG:-latest} -f docker/backend/Dockerfile ..
+    docker build -t ${IMAGE_PREFIX:-annual-leave}-backend:${BACKEND_TAG:-latest} -f docker/backend/Dockerfile .
     
     log_success "镜像构建完成"
 }
