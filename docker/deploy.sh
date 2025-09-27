@@ -27,6 +27,18 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# 获取Docker Compose命令
+get_docker_compose_cmd() {
+    if command -v docker-compose &> /dev/null; then
+        echo "docker-compose"
+    elif docker compose version &> /dev/null; then
+        echo "docker compose"
+    else
+        log_error "Docker Compose未安装，请先安装Docker Compose"
+        exit 1
+    fi
+}
+
 # 检查依赖
 check_dependencies() {
     if ! command -v docker &> /dev/null; then
@@ -34,10 +46,8 @@ check_dependencies() {
         exit 1
     fi
     
-    if ! command -v docker-compose &> /dev/null; then
-        log_error "Docker Compose未安装，请先安装Docker Compose"
-        exit 1
-    fi
+    # 检查Docker Compose
+    get_docker_compose_cmd > /dev/null
 }
 
 # 检查环境文件
@@ -51,13 +61,15 @@ check_env() {
 # 停止现有服务
 stop_services() {
     log_info "停止现有服务..."
-    docker-compose down --remove-orphans || true
+    local compose_cmd=$(get_docker_compose_cmd)
+    $compose_cmd down --remove-orphans || true
 }
 
 # 启动服务
 start_services() {
     log_info "启动服务..."
-    docker-compose up -d
+    local compose_cmd=$(get_docker_compose_cmd)
+    $compose_cmd up -d
     
     # 等待服务启动
     log_info "等待服务启动..."
@@ -91,10 +103,11 @@ check_services_health() {
 # 显示服务状态
 show_services_status() {
     log_info "服务状态:"
-    docker-compose ps
+    local compose_cmd=$(get_docker_compose_cmd)
+    $compose_cmd ps
     
     log_info "容器日志:"
-    docker-compose logs --tail=10
+    $compose_cmd logs --tail=10
 }
 
 # 备份数据
