@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# 年假计算系统 - Docker镜像构建脚本
+set -e
+
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# 日志函数
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# 检查Docker是否安装
+check_docker() {
+    if ! command -v docker &> /dev/null; then
+        log_error "Docker未安装，请先安装Docker"
+        exit 1
+    fi
+    
+    # 检查Docker Compose（支持新老版本）
+    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+        log_error "Docker Compose未安装，请先安装Docker Compose"
+        exit 1
+    fi
+}
+
+# 加载环境变量
+load_env() {
+    if [ -f .env ]; then
+        log_info "加载环境变量..."
+        source .env
+    else
+        log_warning "未找到.env文件，使用默认配置"
+    fi
+}
+
+# 构建镜像
+build_images() {
+    log_info "开始构建Docker镜像..."
+    
+    # 构建前端镜像（在项目根目录构建）
+    log_info "构建前端镜像..."
+    docker build -t ${IMAGE_PREFIX:-annual-leave}-frontend:${FRONTEND_TAG:-latest} -f docker/frontend/Dockerfile ..
+    
+    # 构建后端镜像（在项目根目录构建）
+    log_info "构建后端镜像..."
+    docker build -t ${IMAGE_PREFIX:-annual-leave}-backend:${BACKEND_TAG:-latest} -f docker/backend/Dockerfile ..
+    
+    log_success "镜像构建完成"
+}
+
+# 显示镜像信息
+show_images() {
+    log_info "当前镜像列表:"
+    docker images | grep ${IMAGE_PREFIX:-annual-leave} || log_warning "未找到相关镜像"
+}
+
+# 清理构建缓存
+clean_cache() {
+    log_info "清理Docker构建缓存..."
+    docker system prune -f
+}
+
+# 主函数
+main() {
+    log_info "=== 年假计算系统 Docker镜像构建 ==="
+    
+    # 检查依赖
+    check_docker
+    
+    # 加载配置
+    load_env
+    
+    # 构建镜像
+    build_images
+    
+    # 显示镜像信息
+    show_images
+    
+    # 可选清理
+    if [ "$1" = "--clean" ]; then
+        clean_cache
+    fi
+    
+    log_success "构建流程完成"
+}
+
+# 执行主函数
+main "$@"

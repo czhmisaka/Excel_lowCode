@@ -1,0 +1,24 @@
+{
+    "export": {
+        "timestamp": "2025-09-28T03:18:02+08:00",
+        "version": "20250928-031750-ff9c834",
+        "system": "年假计算系统"
+    },
+    "images": {
+        "frontend": {
+            "file": "annual-leave-frontend:latest-20250928-031750-ff9c834.tar.gz",
+            "size": "",
+            "checksum": ""
+        },
+        "backend": {
+            "file": "annual-leave-backend:latest-20250928-031750-ff9c834.tar.gz",
+            "size": "",
+            "checksum": ""
+        }
+    },
+    "environment": {
+        "node_version": "v22.18.0",
+        "npm_version": "10.9.3",
+        "docker_version": "28.0.1"
+    }
+}
