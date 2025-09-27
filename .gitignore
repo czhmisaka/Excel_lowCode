@@ -1,0 +1,120 @@
+# 操作系统生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# 依赖目录
+node_modules/
+*/node_modules/
+
+# 构建输出
+dist/
+dist-ssr/
+build/
+*/dist/
+*/dist-ssr/
+*/build/
+
+# 缓存文件
+.cache/
+.parcel-cache/
+.vite/
+*.tsbuildinfo
+.nuxt/
+.nitro/
+.cache/
+
+# 日志文件
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+logs/
+*.log.*
+
+# 环境变量文件
+.env
+.env.*
+!.env.example
+
+# 后端特定文件
+uploads/
+temp/
+*.sqlite
+*.db
+
+# 测试相关
+coverage/
+.nyc_output/
+*.lcov
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.sw?
+*.sublime-*
+*.code-workspace
+
+# 包管理器锁文件（根据团队规范选择是否忽略）
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# 前端特定
+.astro/
+.svelte-kit/
+
+# 后端特定
+dump.rdb
+*.pid
+
+# 项目特定忽略项
+# 上传的 Excel 文件（根据实际需求调整）
+# *.xlsx
+# *.xls
+
+# 临时文件
+*.tmp
+*.temp
+
+# 文档生成
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# 其他
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# 压缩文件
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# 备份文件
+*.bak
+*.backup
+*.old
+
+# 系统文件
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -1,0 +1,61 @@
+@import "./base.css";
+
+/* 重置基础样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial,
+    sans-serif;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+}
+
+/* PC端管理界面布局优化 */
+@media (min-width: 1024px) {
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #f0f2f5;
+  }
+
+  #app {
+    display: block;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* 超大屏幕优化（1440p及以上） */
+@media (min-width: 1440px) {
+  #app {
+    max-width: 100%;
+    margin: 0 auto;
+  }
+}
+
+/* 链接样式 */
+a,
+.green {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
+}

@@ -1,0 +1,113 @@
+openapi: 3.0.0
+info:
+  title: Excel数据管理服务器API
+  description: 基于Node.js的Excel文件上传、解析、数据存储和查询服务
+  version: 1.0.0
+  contact:
+    name: CZH
+    email: czh@example.com
+
+servers:
+  - url: http://localhost:3000
+    description: 开发服务器
+  - url: https://api.example.com
+    description: 生产服务器
+
+tags:
+  - name: 文件上传
+    description: Excel文件上传相关接口
+  - name: 映射关系
+    description: 表映射关系查询接口
+  - name: 数据操作
+    description: 数据查询、新增、更新、删除接口
+
+paths:
+  /health:
+    get:
+      summary: 健康检查
+      description: 检查服务器和数据库连接状态
+      tags:
+        - 系统状态
+      responses:
+        "200":
+          description: 服务器运行正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  database:
+                    type: string
+                    example: "connected"
+                  environment:
+                    type: string
+                    example: "development"
+
+components:
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+        error:
+          type: string
+
+    UploadResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiResponse"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                hash:
+                  type: string
+                tableName:
+                  type: string
+                recordCount:
+                  type: integer
+                createdAt:
+                  type: string
+                  format: date-time
+
+    MappingItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        tableName:
+          type: string
+        hashValue:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+security:
+  - bearerAuth: []
