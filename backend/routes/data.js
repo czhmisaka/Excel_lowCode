@@ -75,69 +75,7 @@ const editController = require('../controllers/editController');
  *       500:
  *         description: 服务器内部错误
  */
-router.get('/:hash', async (req, res) => {
-    try {
-        const { hash } = req.params;
-        const { page = 1, limit = 10, search } = req.query;
-
-        // 验证映射关系是否存在
-        const mapping = await TableMapping.findOne({ where: { hashValue: hash } });
-        if (!mapping) {
-            return res.status(404).json({
-                success: false,
-                message: '表不存在'
-            });
-        }
-
-        // 创建动态模型
-        const DynamicModel = await getDynamicModel(hash, mapping.columnDefinitions);
-
-        // 构建查询条件
-        let whereCondition = {};
-        if (search) {
-            try {
-                const searchObj = JSON.parse(search);
-                whereCondition = searchObj;
-            } catch (error) {
-                return res.status(400).json({
-                    success: false,
-                    message: '搜索条件格式错误'
-                });
-            }
-        }
-
-        // 计算分页
-        const offset = (parseInt(page) - 1) * parseInt(limit);
-
-        // 查询数据
-        const { count, rows } = await DynamicModel.findAndCountAll({
-            where: whereCondition,
-            limit: parseInt(limit),
-            offset: offset,
-            order: [['id', 'ASC']]
-        });
-
-        const totalPages = Math.ceil(count / parseInt(limit));
-
-        res.json({
-            success: true,
-            data: rows,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: count,
-                pages: totalPages
-            }
-        });
-    } catch (error) {
-        console.error('查询数据失败:', error);
-        res.status(500).json({
-            success: false,
-            message: '查询数据失败',
-            error: error.message
-        });
-    }
-});
+router.get('/:hash', queryController.queryData);
 
 /**
  * @swagger
