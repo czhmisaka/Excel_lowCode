@@ -141,8 +141,8 @@
                         </el-table-column>
                         <el-table-column label="操作" width="150" fixed="right">
                             <template #default="scope">
-                                <el-button type="primary" link @click="startEdit(scope.$index)"
-                                    :disabled="hasIdColumn && scope.row.id">
+                                <el-button type="primary" link @click="showEditDialog(scope.row)"
+                                    :disabled="!scope.row.id">
                                     编辑
                                 </el-button>
                                 <el-button type="danger" link @click="deleteSingleRow(scope.row, scope.$index)">
@@ -174,6 +174,23 @@
                     <el-button @click="handleAddDialogClose">取消</el-button>
                     <el-button type="primary" @click="confirmAddRecord" :loading="addLoading">
                         确认新增
+                    </el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 编辑记录弹窗 -->
+        <el-dialog v-model="editDialogVisible" title="编辑记录" width="600px" :before-close="handleEditDialogClose">
+            <el-form :model="editRecordForm" label-width="100px" ref="editFormRef">
+                <el-form-item v-for="column in filteredTableColumns" :key="column" :label="column" :prop="column">
+                    <el-input v-model="editRecordForm[column]" :placeholder="`请输入${column}`" />
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="handleEditDialogClose">取消</el-button>
+                    <el-button type="primary" @click="confirmEditRecord" :loading="editLoading">
+                        确认编辑
                     </el-button>
                 </span>
             </template>
@@ -288,6 +305,13 @@ const addDialogVisible = ref(false)
 const addLoading = ref(false)
 const newRecordForm = ref<any>({})
 const addFormRef = ref()
+
+// 编辑记录弹窗相关状态
+const editDialogVisible = ref(false)
+const editLoading = ref(false)
+const editRecordForm = ref<any>({})
+const editFormRef = ref()
+const editingRecordId = ref<number | null>(null)
 
 // Excel导入相关状态
 const importDialogVisible = ref(false)
@@ -482,6 +506,52 @@ const confirmAddRecord = async () => {
         ElMessage.error(error.message || '新增记录失败')
     } finally {
         addLoading.value = false
+    }
+}
+
+// 显示编辑记录弹窗
+const showEditDialog = (row: any) => {
+    // 保存当前编辑的记录ID
+    editingRecordId.value = row.id
+
+    // 初始化表单数据，排除id字段
+    editRecordForm.value = {}
+    tableColumns.value.forEach(col => {
+        if (col.toLowerCase() !== 'id') {
+            editRecordForm.value[col] = row[col] || ''
+        }
+    })
+    editDialogVisible.value = true
+}
+
+// 处理编辑弹窗关闭
+const handleEditDialogClose = () => {
+    editDialogVisible.value = false
+    editRecordForm.value = {}
+    editingRecordId.value = null
+}
+
+// 确认编辑记录
+const confirmEditRecord = async () => {
+    if (!editingRecordId.value) {
+        ElMessage.error('未找到要编辑的记录')
+        return
+    }
+
+    editLoading.value = true
+    try {
+        // 构建更新条件
+        const conditions = { id: editingRecordId.value }
+        const updates = { ...editRecordForm.value }
+
+        await dataStore.updateData(conditions, updates)
+        ElMessage.success('记录编辑成功')
+        handleEditDialogClose()
+        await loadData() // 重新加载数据以显示更新后的记录
+    } catch (error: any) {
+        ElMessage.error(error.message || '记录编辑失败')
+    } finally {
+        editLoading.value = false
     }
 }
 
