@@ -166,8 +166,8 @@ stop_services() {
 build_frontend() {
     log_info "构建前端镜像..."
     
-    # 前端在浏览器中运行，应该使用localhost访问后端API
-    local api_base_url="http://localhost:3000"
+    # 使用配置的API_BASE_URL，如果没有配置则使用localhost
+    local api_base_url="${API_BASE_URL:-http://localhost:3000}"
     
     log_info "使用API地址构建前端: $api_base_url"
     
@@ -321,9 +321,9 @@ main() {
     esac
     
     log_success "部署流程完成"
-    log_info "前端访问地址: http://localhost:${FRONTEND_PORT}"
-    log_info "后端API地址: http://localhost:3000"
-    log_info "API文档地址: http://localhost:3000/api-docs"
+    log_info "前端访问地址: http://${API_BASE_URL#*://}:${FRONTEND_PORT}"
+    log_info "后端API地址: ${API_BASE_URL}"
+    log_info "API文档地址: ${API_BASE_URL}/api-docs"
 }
 
 # 执行主函数

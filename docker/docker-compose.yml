@@ -25,6 +25,11 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    build:
+      context: ..
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        - VITE_API_BASE_URL=/backend
 
   # 后端服务
   backend:

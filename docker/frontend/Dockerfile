@@ -13,8 +13,11 @@ RUN npm ci
 # 复制源代码
 COPY fe/ ./
 
+# 复制生产环境配置文件
+COPY fe/.env.production ./
+
 # 设置构建时的环境变量（后端API地址）
-ARG VITE_API_BASE_URL
+ARG VITE_API_BASE_URL=/backend
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 # 构建应用
