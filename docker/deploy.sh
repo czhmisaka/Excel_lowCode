@@ -50,11 +50,108 @@ check_dependencies() {
     get_docker_compose_cmd > /dev/null
 }
 
+# 从环境变量获取服务器IP地址
+get_server_ip() {
+    # 优先使用环境变量中的API_BASE_URL
+    if [ -n "$API_BASE_URL" ]; then
+        # 从API_BASE_URL中提取IP地址
+        local ip=$(echo "$API_BASE_URL" | sed -E 's|^https?://([^:/]+).*|\1|')
+        
+        # 如果是localhost或127.0.0.1，则尝试获取真实IP
+        if [ "$ip" = "localhost" ] || [ "$ip" = "127.0.0.1" ]; then
+            # 尝试获取真实IP地址
+            local real_ip=""
+            
+            # 方法1: 使用hostname命令
+            if command -v hostname &> /dev/null; then
+                real_ip=$(hostname -I 2>/dev/null | awk '{print $1}' || hostname -i 2>/dev/null | awk '{print $1}')
+            fi
+            
+            # 方法2: 使用ifconfig
+            if [ -z "$real_ip" ] && command -v ifconfig &> /dev/null; then
+                real_ip=$(ifconfig | grep "inet " | grep -v 127.0.0.1 | head -1 | awk '{print $2}')
+            fi
+            
+            # 方法3: 使用ip命令
+            if [ -z "$real_ip" ] && command -v ip &> /dev/null; then
+                real_ip=$(ip addr show | grep "inet " | grep -v 127.0.0.1 | head -1 | awk '{print $2}' | cut -d/ -f1)
+            fi
+            
+            if [ -n "$real_ip" ]; then
+                ip="$real_ip"
+                log_info "检测到服务器IP地址: $ip"
+            else
+                log_warning "无法获取服务器IP地址，使用默认值: $ip"
+            fi
+        else
+            log_info "使用配置的服务器地址: $ip"
+        fi
+        
+        echo "$ip"
+        return 0
+    fi
+    
+    # 如果没有配置API_BASE_URL，则尝试获取IP地址
+    log_warning "未配置API_BASE_URL，尝试自动获取服务器IP地址"
+    
+    local ip=""
+    
+    # 方法1: 使用hostname命令
+    if command -v hostname &> /dev/null; then
+        ip=$(hostname -I 2>/dev/null | awk '{print $1}' || hostname -i 2>/dev/null | awk '{print $1}')
+    fi
+    
+    # 方法2: 使用ifconfig
+    if [ -z "$ip" ] && command -v ifconfig &> /dev/null; then
+        ip=$(ifconfig | grep "inet " | grep -v 127.0.0.1 | head -1 | awk '{print $2}')
+    fi
+    
+    # 方法3: 使用ip命令
+    if [ -z "$ip" ] && command -v ip &> /dev/null; then
+        ip=$(ip addr show | grep "inet " | grep -v 127.0.0.1 | head -1 | awk '{print $2}' | cut -d/ -f1)
+    fi
+    
+    # 如果还是获取不到，使用默认值
+    if [ -z "$ip" ]; then
+        ip="localhost"
+        log_warning "无法获取服务器IP地址，使用默认值: $ip"
+    else
+        log_info "检测到服务器IP地址: $ip"
+    fi
+    
+    echo "$ip"
+}
+
 # 检查环境文件
 check_env() {
-    if [ ! -f .env ]; then
-        log_error "未找到.env文件，请先复制.env.template为.env并配置环境变量"
+    # 检查 .env 和 ./docker/.env 文件是否存在
+    if [  -f .env  ]; then
+        # 加载环境变量
+        set -a
+        source .env
+        set +a
+    fi
+    
+    if [  -f ./docker/.env  ]; then
+        # 加载环境变量
+        set -a
+        source ./docker/.env
+        set +a
+    fi
+
+    # 不存在报错
+    if [ -z "$FRONTEND_PORT" ]; then
+        log_error "环境变量 FRONTEND_PORT 未设置，请检查 .env "
         exit 1
+    fi
+   
+    # 设置API基础URL（如果未配置）
+    if [ -z "$API_BASE_URL" ]; then
+        local server_ip=$(get_server_ip)
+        API_BASE_URL="http://${server_ip}:3000"
+        log_info "设置API基础URL: $API_BASE_URL"
+    else
+        log_info "使用配置的API基础URL: $API_BASE_URL"
     fi
 }
 
@@ -62,14 +159,29 @@ check_env() {
 stop_services() {
     log_info "停止现有服务..."
     local compose_cmd=$(get_docker_compose_cmd)
-    $compose_cmd down --remove-orphans || true
+    (cd docker && $compose_cmd down --remove-orphans || true)
+}
+
+# 构建前端镜像
+build_frontend() {
+    log_info "构建前端镜像..."
+    
+    # 前端在浏览器中运行，应该使用localhost访问后端API
+    local api_base_url="http://localhost:3000"
+    
+    log_info "使用API地址构建前端: $api_base_url"
+    
+    # 构建前端镜像，传递API地址参数
+    docker build -t annual-leave-frontend:latest \
+        --build-arg VITE_API_BASE_URL="$api_base_url" \
+        -f docker/frontend/Dockerfile .
 }
 
 # 启动服务
 start_services() {
     log_info "启动服务..."
     local compose_cmd=$(get_docker_compose_cmd)
-    $compose_cmd up -d
+    (cd docker && $compose_cmd up -d)
     
     # 等待服务启动
     log_info "等待服务启动..."
@@ -84,7 +196,7 @@ check_services_health() {
     log_info "检查服务健康状态..."
     
     # 检查前端服务
-    if curl -f http://localhost:80/health > /dev/null 2>&1; then
+    if curl -f http://localhost:${FRONTEND_PORT}/health > /dev/null 2>&1; then
         log_success "前端服务运行正常"
     else
         log_error "前端服务健康检查失败"
@@ -104,18 +216,18 @@ check_services_health() {
 show_services_status() {
     log_info "服务状态:"
     local compose_cmd=$(get_docker_compose_cmd)
-    $compose_cmd ps
+    (cd docker && $compose_cmd ps)
     
     log_info "容器日志:"
-    $compose_cmd logs --tail=10
+    (cd docker && $compose_cmd logs --tail=10)
 }
 
 # 备份数据
 backup_data() {
     if [ "$1" = "--backup" ]; then
         log_info "备份上传文件..."
-        if [ -d "uploads" ]; then
-            tar -czf "backup-uploads-$(date +%Y%m%d-%H%M%S).tar.gz" uploads/
+        if [ -d "docker/uploads" ]; then
+            tar -czf "backup-uploads-$(date +%Y%m%d-%H%M%S).tar.gz" docker/uploads/
             log_success "上传文件备份完成"
         fi
     fi
@@ -202,13 +314,14 @@ main() {
             ;;
         "full")
             stop_services
+            build_frontend
             start_services
             show_services_status
             ;;
     esac
     
     log_success "部署流程完成"
-    log_info "前端访问地址: http://localhost:80"
+    log_info "前端访问地址: http://localhost:${FRONTEND_PORT}"
     log_info "后端API地址: http://localhost:3000"
     log_info "API文档地址: http://localhost:3000/api-docs"
 }

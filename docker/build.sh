@@ -43,9 +43,9 @@ check_docker() {
 
 # 加载环境变量
 load_env() {
-    if [ -f .env ]; then
+    if [ -f docker/.env ]; then
         log_info "加载环境变量..."
-        source .env
+        source docker/.env
     else
         log_warning "未找到.env文件，使用默认配置"
     fi
@@ -57,7 +57,11 @@ build_images() {
     
     # 构建前端镜像（在项目根目录构建）
     log_info "构建前端镜像..."
-    docker build -t ${IMAGE_PREFIX:-annual-leave}-frontend:${FRONTEND_TAG:-latest} -f docker/frontend/Dockerfile .
+    docker build \
+        -t ${IMAGE_PREFIX:-annual-leave}-frontend:${FRONTEND_TAG:-latest} \
+        -f docker/frontend/Dockerfile \
+        --build-arg VITE_API_BASE_URL=${API_BASE_URL:-http://localhost:3000} \
+        .
     
     # 构建后端镜像（在项目根目录构建）
     log_info "构建后端镜像..."
