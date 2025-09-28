@@ -26,24 +26,103 @@
 
                 <div v-else>
                     <div class="editor-toolbar">
-                        <el-button type="primary" @click="showAddDialog">
-                            <el-icon>
-                                <Plus />
-                            </el-icon>
-                            新增记录
-                        </el-button>
-                        <el-button type="success" @click="handleImportExcel">
-                            <el-icon>
-                                <Upload />
-                            </el-icon>
-                            导入Excel
-                        </el-button>
-                        <el-button type="danger" @click="deleteSelectedRows" :disabled="selectedRows.length === 0">
-                            <el-icon>
-                                <Delete />
-                            </el-icon>
-                            删除选中
-                        </el-button>
+                        <!-- 搜索区域 -->
+                        <div class="search-section">
+                            <el-select v-model="searchColumn" placeholder="选择列"
+                                style="width: 150px; margin-right: 10px;">
+                                <el-option label="全部列" value="all" />
+                                <el-option v-for="column in tableColumns" :key="column" :label="column"
+                                    :value="column" />
+                            </el-select>
+                            <el-input v-model="searchKeyword" placeholder="输入搜索关键词"
+                                style="width: 200px; margin-right: 10px;" @keyup.enter="handleSearch" clearable
+                                @clear="clearSearch">
+                                <template #append>
+                                    <el-button @click="handleSearch">
+                                        <el-icon>
+                                            <Search />
+                                        </el-icon>
+                                    </el-button>
+                                </template>
+                            </el-input>
+                            <el-button @click="clearSearch" :disabled="!hasSearchCondition">
+                                <el-icon>
+                                    <Close />
+                                </el-icon>
+                                清除
+                            </el-button>
+                            <el-button type="primary" @click="showAdvancedSearch = !showAdvancedSearch">
+                                <el-icon>
+                                    <Setting />
+                                </el-icon>
+                                高级搜索
+                            </el-button>
+                        </div>
+
+                        <!-- 高级搜索面板 -->
+                        <div v-if="showAdvancedSearch" class="advanced-search-panel">
+                            <div class="advanced-search-form">
+                                <div v-for="(condition, index) in advancedConditions" :key="index"
+                                    class="condition-row">
+                                    <el-select v-model="condition.column" placeholder="选择列"
+                                        style="width: 150px; margin-right: 10px;">
+                                        <el-option v-for="column in tableColumns" :key="column" :label="column"
+                                            :value="column" />
+                                    </el-select>
+                                    <el-select v-model="condition.operator" placeholder="操作符"
+                                        style="width: 120px; margin-right: 10px;">
+                                        <el-option label="包含" value="like" />
+                                        <el-option label="等于" value="eq" />
+                                        <el-option label="不等于" value="ne" />
+                                        <el-option label="大于" value="gt" />
+                                        <el-option label="小于" value="lt" />
+                                    </el-select>
+                                    <el-input v-model="condition.value" placeholder="输入值"
+                                        style="width: 200px; margin-right: 10px;" />
+                                    <el-button @click="removeCondition(index)" type="danger" link>
+                                        <el-icon>
+                                            <Remove />
+                                        </el-icon>
+                                    </el-button>
+                                </div>
+                                <div class="condition-actions">
+                                    <el-button @click="addCondition" type="primary" link>
+                                        <el-icon>
+                                            <Plus />
+                                        </el-icon>
+                                        添加条件
+                                    </el-button>
+                                    <el-button @click="applyAdvancedSearch" type="primary">
+                                        应用搜索
+                                    </el-button>
+                                    <el-button @click="clearAdvancedSearch">
+                                        清除
+                                    </el-button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 操作按钮区域 -->
+                        <div class="action-buttons">
+                            <el-button type="primary" @click="showAddDialog">
+                                <el-icon>
+                                    <Plus />
+                                </el-icon>
+                                新增记录
+                            </el-button>
+                            <el-button type="success" @click="handleImportExcel">
+                                <el-icon>
+                                    <Upload />
+                                </el-icon>
+                                导入Excel
+                            </el-button>
+                            <el-button type="danger" @click="deleteSelectedRows" :disabled="selectedRows.length === 0">
+                                <el-icon>
+                                    <Delete />
+                                </el-icon>
+                                删除选中
+                            </el-button>
+                        </div>
                     </div>
 
                     <el-table :data="tableData" v-loading="loading" border style="width: 100%"
@@ -187,7 +266,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useFilesStore } from '@/stores/files'
 import { useDataStore } from '@/stores/data'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Plus, Delete, Upload, Document, SuccessFilled, WarningFilled } from '@element-plus/icons-vue'
+import { Refresh, Plus, Delete, Upload, Document, SuccessFilled, WarningFilled, Search, Close, Setting, Remove } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 
 const route = useRoute()
@@ -217,6 +296,14 @@ const importFile = ref<File | null>(null)
 const importPreviewData = ref<any[]>([])
 const importProgress = ref(0)
 
+// 搜索相关状态
+const searchColumn = ref('all')
+const searchKeyword = ref('')
+const showAdvancedSearch = ref(false)
+const advancedConditions = ref<any[]>([
+    { column: '', operator: 'like', value: '' }
+])
+
 // 计算属性
 const tableData = computed(() => dataStore.currentData)
 const tableColumns = computed(() => {
@@ -230,6 +317,14 @@ const hasIdColumn = computed(() => {
     return tableColumns.value.some(col => col.toLowerCase() === 'id')
 })
 const totalRecords = computed(() => dataStore.pagination.total)
+
+// 搜索相关计算属性
+const hasSearchCondition = computed(() => {
+    return searchKeyword.value.trim() !== '' ||
+        advancedConditions.value.some(condition =>
+            condition.column && condition.value.trim() !== ''
+        )
+})
 
 // 初始化数据
 const initData = async () => {
@@ -288,22 +383,6 @@ watch(() => route.query.hash, async (newHash) => {
     }
 })
 
-// 加载数据
-const loadData = async () => {
-    if (!selectedHash.value) return
-
-    loading.value = true
-    try {
-        await dataStore.fetchData(selectedHash.value, {
-            page: currentPage.value,
-            limit: pageSize.value
-        })
-    } catch (error) {
-        console.error('加载数据失败:', error)
-    } finally {
-        loading.value = false
-    }
-}
 
 // 分页处理
 const handleSizeChange = (size: number) => {
@@ -653,6 +732,187 @@ const confirmImport = async () => {
     }
 }
 
+// 搜索相关方法
+
+// 处理搜索
+const handleSearch = async () => {
+    if (!searchKeyword.value.trim()) {
+        ElMessage.warning('请输入搜索关键词')
+        return
+    }
+
+    currentPage.value = 1
+    await loadDataWithSearch()
+}
+
+// 清除搜索
+const clearSearch = () => {
+    searchColumn.value = 'all'
+    searchKeyword.value = ''
+    advancedConditions.value = [{ column: '', operator: 'like', value: '' }]
+    currentPage.value = 1
+    loadData()
+}
+
+// 添加搜索条件
+const addCondition = () => {
+    advancedConditions.value.push({ column: '', operator: 'like', value: '' })
+}
+
+// 移除搜索条件
+const removeCondition = (index: number) => {
+    if (advancedConditions.value.length > 1) {
+        advancedConditions.value.splice(index, 1)
+    } else {
+        // 如果只剩一个条件，清空它而不是删除
+        advancedConditions.value[0] = { column: '', operator: 'like', value: '' }
+    }
+}
+
+// 应用高级搜索
+const applyAdvancedSearch = async () => {
+    const validConditions = advancedConditions.value.filter(condition =>
+        condition.column && condition.value.trim() !== ''
+    )
+
+    if (validConditions.length === 0) {
+        ElMessage.warning('请至少填写一个有效的搜索条件')
+        return
+    }
+
+    currentPage.value = 1
+    await loadDataWithSearch()
+}
+
+// 清除高级搜索
+const clearAdvancedSearch = () => {
+    advancedConditions.value = [{ column: '', operator: 'like', value: '' }]
+}
+
+// 带搜索条件的数据加载
+const loadDataWithSearch = async () => {
+    if (!selectedHash.value) return
+
+    loading.value = true
+    try {
+        let searchConditions: any = {}
+
+        // 处理简单搜索
+        if (searchKeyword.value.trim()) {
+            if (searchColumn.value === 'all') {
+                // 在所有列中搜索
+                searchConditions = {
+                    $or: tableColumns.value.map(col => ({
+                        [col]: { $like: `%${searchKeyword.value}%` }
+                    }))
+                }
+            } else {
+                // 在指定列中搜索
+                searchConditions[searchColumn.value] = { $like: `%${searchKeyword.value}%` }
+            }
+        }
+
+        // 处理高级搜索条件
+        const validAdvancedConditions = advancedConditions.value.filter(condition =>
+            condition.column && condition.value.trim() !== ''
+        )
+
+        if (validAdvancedConditions.length > 0) {
+            validAdvancedConditions.forEach(condition => {
+                const operator = getOperatorSymbol(condition.operator)
+                searchConditions[condition.column] = { [operator]: condition.value }
+            })
+        }
+
+        await dataStore.fetchData(selectedHash.value, {
+            page: currentPage.value,
+            limit: pageSize.value,
+            search: Object.keys(searchConditions).length > 0 ? searchConditions : undefined
+        })
+
+        ElMessage.success('搜索完成')
+    } catch (error) {
+        console.error('搜索数据失败:', error)
+        ElMessage.error('搜索失败，请检查搜索条件')
+    } finally {
+        loading.value = false
+    }
+}
+
+// 获取操作符符号
+const getOperatorSymbol = (operator: string): string => {
+    const operatorMap: { [key: string]: string } = {
+        'like': '$like',
+        'eq': '$eq',
+        'ne': '$ne',
+        'gt': '$gt',
+        'lt': '$lt'
+    }
+    return operatorMap[operator] || '$like'
+}
+
+// 修改原有的loadData方法，支持搜索参数
+const originalLoadData = async () => {
+    if (!selectedHash.value) return
+
+    loading.value = true
+    try {
+        await dataStore.fetchData(selectedHash.value, {
+            page: currentPage.value,
+            limit: pageSize.value
+        })
+    } catch (error) {
+        console.error('加载数据失败:', error)
+    } finally {
+        loading.value = false
+    }
+}
+
+// 重写loadData方法，支持搜索参数
+const loadData = async () => {
+    if (!selectedHash.value) return
+
+    loading.value = true
+    try {
+        let searchConditions: any = {}
+
+        // 处理简单搜索
+        if (searchKeyword.value.trim()) {
+            if (searchColumn.value === 'all') {
+                searchConditions = {
+                    $or: tableColumns.value.map(col => ({
+                        [col]: { $like: `%${searchKeyword.value}%` }
+                    }))
+                }
+            } else {
+                searchConditions[searchColumn.value] = { $like: `%${searchKeyword.value}%` }
+            }
+        }
+
+        // 处理高级搜索条件
+        const validAdvancedConditions = advancedConditions.value.filter(condition =>
+            condition.column && condition.value.trim() !== ''
+        )
+
+        if (validAdvancedConditions.length > 0) {
+            validAdvancedConditions.forEach(condition => {
+                const operator = getOperatorSymbol(condition.operator)
+                searchConditions[condition.column] = { [operator]: condition.value }
+            })
+        }
+
+        await dataStore.fetchData(selectedHash.value, {
+            page: currentPage.value,
+            limit: pageSize.value,
+            search: Object.keys(searchConditions).length > 0 ? searchConditions : undefined
+        })
+    } catch (error) {
+        console.error('加载数据失败:', error)
+    } finally {
+        loading.value = false
+    }
+}
+
 onMounted(() => {
     initData()
 })
@@ -768,5 +1028,84 @@ onMounted(() => {
     margin: 15px 0 10px 0;
     color: #303133;
     font-weight: 600;
+}
+
+/* 搜索区域样式 */
+.search-section {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.advanced-search-panel {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.advanced-search-form {
+    margin-bottom: 15px;
+}
+
+.condition-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: white;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.condition-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .search-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-section>* {
+        margin-bottom: 10px;
+        margin-right: 0 !important;
+    }
+
+    .condition-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .condition-row>* {
+        margin-bottom: 10px;
+        margin-right: 0 !important;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .action-buttons>* {
+        margin-bottom: 10px;
+    }
 }
 </style>

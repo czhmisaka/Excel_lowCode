@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-09-28 01:00:38
  * @LastEditors: CZH
- * @LastEditTime: 2025-09-28 01:01:47
- * @FilePath: /fe/vite.config.ts
+ * @LastEditTime: 2025-09-28 14:43:27
+ * @FilePath: /综合部-年假计算/fe/vite.config.ts
  */
 import { fileURLToPath, URL } from 'node:url'
 
@@ -25,10 +25,10 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: {
-      '/api': {
+      '/backend/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        rewrite: (path) => path.replace(/^\/api/, '/api').replace(/^\/backend/, '')
       }
     }
   }
