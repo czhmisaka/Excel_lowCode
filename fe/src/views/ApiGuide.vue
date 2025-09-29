@@ -300,6 +300,7 @@
                                         <el-radio label="add">新增数据</el-radio>
                                         <el-radio label="update">更新数据</el-radio>
                                         <el-radio label="delete">删除数据</el-radio>
+                                        <el-radio label="columns">获取列信息</el-radio>
                                     </el-radio-group>
                                 </el-form-item>
                             </el-form>
@@ -591,6 +592,10 @@ const generatedCurlCommand = computed(() => {
         case 'delete':
             curlCommand = `curl -X DELETE "${baseUrl}/api/data/${requestData.hash}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({ conditions: requestData.conditions })}'`
             break
+
+        case 'columns':
+            curlCommand = `curl -X GET "${baseUrl}/api/mappings/${requestData.hash}/columns"`
+            break
     }
 
     return curlCommand
@@ -678,6 +683,13 @@ const executeTest = async () => {
                     conditions: { ...deleteConditions }
                 }
                 response = await apiService.deleteData(testConfig.hash, deleteConditions)
+                break
+
+            case 'columns':
+                requestData = {
+                    hash: testConfig.hash
+                }
+                response = await apiService.getTableColumns(testConfig.hash)
                 break
         }
 
