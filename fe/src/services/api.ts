@@ -175,6 +175,12 @@ class ApiService {
         return response.data
     }
 
+    // 获取表的列信息
+    async getTableColumns(hash: string): Promise<ColumnDefinition[]> {
+        const response = await apiClient.get(`/api/mappings/${hash}/columns`)
+        return response.data.data || []
+    }
+
     // 系统健康检查
     async healthCheck(): Promise<any> {
         const response = await apiClient.get('/health')

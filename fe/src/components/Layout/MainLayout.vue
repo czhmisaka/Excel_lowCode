@@ -37,6 +37,12 @@
                     </el-icon>
                     <span>映射关系</span>
                 </el-menu-item>
+                <el-menu-item index="/api-guide">
+                    <el-icon>
+                        <Document />
+                    </el-icon>
+                    <span>数据表 CRUD API 指南</span>
+                </el-menu-item>
             </el-menu>
         </el-aside>
 
@@ -76,7 +82,8 @@ import {
     DataBoard,
     Edit,
     Connection,
-    Sunny
+    Sunny,
+    Document
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -91,7 +98,8 @@ const currentRouteName = computed(() => {
         '/files': '文件管理',
         '/data': '数据浏览',
         '/editor': '数据编辑',
-        '/mappings': '映射关系'
+        '/mappings': '映射关系',
+        '/api-guide': '数据表 CRUD API 指南'
     }
     return routeMap[route.path] || '未知页面'
 })

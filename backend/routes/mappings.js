@@ -226,6 +226,102 @@ router.put('/:hash', updateTableName);
 
 /**
  * @swagger
+ * /api/mappings/{hash}/columns:
+ *   get:
+ *     summary: 根据哈希值获取表的列信息
+ *     description: 根据哈希值查询特定表的列定义信息，用于前端表单配置
+ *     tags:
+ *       - 映射关系
+ *     parameters:
+ *       - in: path
+ *         name: hash
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 表的哈希值
+ *     responses:
+ *       200:
+ *         description: 成功获取列信息
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name:
+ *                         type: string
+ *                         example: "name"
+ *                         description: "列名"
+ *                       type:
+ *                         type: string
+ *                         example: "string"
+ *                         description: "数据类型"
+ *                       nullable:
+ *                         type: boolean
+ *                         example: true
+ *                         description: "是否可为空"
+ *                       defaultValue:
+ *                         type: any
+ *                         example: null
+ *                         description: "默认值"
+ *       404:
+ *         description: 映射关系不存在
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.get('/:hash/columns', async (req, res) => {
+    try {
+        const { hash } = req.params;
+        const mapping = await TableMapping.findOne({
+            where: { hashValue: hash },
+            attributes: ['id', 'tableName', 'hashValue', 'columnDefinitions']
+        });
+
+        if (!mapping) {
+            return res.status(404).json({
+                success: false,
+                message: '映射关系不存在'
+            });
+        }
+
+        // 解析columnDefinitions
+        let columnDefinitions = [];
+        if (mapping.columnDefinitions) {
+            if (typeof mapping.columnDefinitions === 'string') {
+                try {
+                    columnDefinitions = JSON.parse(mapping.columnDefinitions);
+                } catch (error) {
+                    console.error('解析columnDefinitions失败:', error);
+                    columnDefinitions = [];
+                }
+            } else {
+                columnDefinitions = mapping.columnDefinitions;
+            }
+        }
+
+        res.json({
+            success: true,
+            data: columnDefinitions
+        });
+    } catch (error) {
+        console.error('获取列信息失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取列信息失败',
+            error: error.message
+        });
+    }
+});
+
+/**
+ * @swagger
  * /api/mappings/{hash}:
  *   delete:
  *     summary: 删除表映射关系

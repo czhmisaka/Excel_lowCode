@@ -16,11 +16,19 @@
             <div class="mapping-list">
                 <el-table :data="mappingList" v-loading="loading">
                     <el-table-column prop="tableName" label="表名" width="200" />
-                    <el-table-column prop="hashValue" label="文件哈希" width="280">
+                    <el-table-column prop="hashValue" label="文件哈希" width="320">
                         <template #default="scope">
-                            <el-tooltip :content="scope.row.hashValue" placement="top">
-                                <span class="hash-value">{{ formatHash(scope.row.hashValue) }}</span>
-                            </el-tooltip>
+                            <div class="hash-cell">
+                                <el-tooltip :content="scope.row.hashValue" placement="top">
+                                    <span class="hash-value">{{ formatHash(scope.row.hashValue) }}</span>
+                                </el-tooltip>
+                                <el-button type="text" size="small" @click="copyHash(scope.row.hashValue)"
+                                    class="copy-btn">
+                                    <el-icon>
+                                        <CopyDocument />
+                                    </el-icon>
+                                </el-button>
+                            </div>
                         </template>
                     </el-table-column>
                     <el-table-column prop="originalFileName" label="原始文件名" min-width="200" />
@@ -94,7 +102,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { useFilesStore } from '@/stores/files'
 import { apiService } from '@/services/api'
-import { Refresh, Edit } from '@element-plus/icons-vue'
+import { Refresh, Edit, CopyDocument } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const filesStore = useFilesStore()
@@ -194,6 +202,27 @@ const openEditTableNameDialog = (mapping: any) => {
     })
 }
 
+// 复制哈希值
+const copyHash = async (hash: string) => {
+    try {
+        await navigator.clipboard.writeText(hash)
+        ElMessage.success('哈希值已复制到剪贴板')
+    } catch (error) {
+        // 如果clipboard API不可用，使用备用方法
+        const textArea = document.createElement('textarea')
+        textArea.value = hash
+        document.body.appendChild(textArea)
+        textArea.select()
+        try {
+            document.execCommand('copy')
+            ElMessage.success('哈希值已复制到剪贴板')
+        } catch (err) {
+            ElMessage.error('复制失败，请手动复制')
+        }
+        document.body.removeChild(textArea)
+    }
+}
+
 // 保存表名（对话框版本）
 const saveTableName = async () => {
     if (!editTableNameFormRef.value) return
@@ -248,11 +277,27 @@ onMounted(() => {
     align-items: center;
 }
 
+.hash-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .hash-value {
     font-family: 'Courier New', monospace;
     font-size: 12px;
     color: #666;
     cursor: pointer;
+    flex: 1;
+}
+
+.copy-btn {
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.copy-btn:hover {
+    opacity: 1;
 }
 
 .table-info {
