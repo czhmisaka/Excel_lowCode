@@ -181,6 +181,46 @@ class ApiService {
         return response.data.data || []
     }
 
+    // 获取表结构信息（包含搜索能力）
+    async getTableStructure(hash: string): Promise<{
+        columns: ColumnDefinition[],
+        searchCapabilities: { [key: string]: string[] } // 字段名 -> 可用的操作符列表
+    }> {
+        const response = await apiClient.get(`/api/mappings/${hash}/columns`)
+        const columns = response.data.data || []
+
+        // 根据字段类型生成搜索能力
+        const searchCapabilities: { [key: string]: string[] } = {}
+
+        columns.forEach((column: ColumnDefinition) => {
+            const capabilities = this.getSearchOperatorsForType(column.type)
+            searchCapabilities[column.name] = capabilities
+        })
+
+        return {
+            columns,
+            searchCapabilities
+        }
+    }
+
+    // 根据字段类型获取可用的搜索操作符
+    private getSearchOperatorsForType(type: string): string[] {
+        const baseOperators = ['eq', 'ne']
+
+        switch (type) {
+            case 'string':
+                return [...baseOperators, 'like']
+            case 'number':
+                return [...baseOperators, 'gt', 'lt', 'gte', 'lte']
+            case 'date':
+                return [...baseOperators, 'gt', 'lt', 'gte', 'lte']
+            case 'boolean':
+                return ['eq']
+            default:
+                return [...baseOperators, 'like']
+        }
+    }
+
     // 系统健康检查
     async healthCheck(): Promise<any> {
         const response = await apiClient.get('/health')

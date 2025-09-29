@@ -31,7 +31,7 @@
                             <el-select v-model="searchColumn" placeholder="选择列"
                                 style="width: 150px; margin-right: 10px;">
                                 <el-option label="全部列" value="all" />
-                                <el-option v-for="column in tableColumns" :key="column" :label="column"
+                                <el-option v-for="column in availableSearchColumns" :key="column" :label="column"
                                     :value="column" />
                             </el-select>
                             <el-input v-model="searchKeyword" placeholder="输入搜索关键词"
@@ -66,16 +66,13 @@
                                     class="condition-row">
                                     <el-select v-model="condition.column" placeholder="选择列"
                                         style="width: 150px; margin-right: 10px;">
-                                        <el-option v-for="column in tableColumns" :key="column" :label="column"
-                                            :value="column" />
+                                        <el-option v-for="column in availableSearchColumns" :key="column"
+                                            :label="column" :value="column" />
                                     </el-select>
                                     <el-select v-model="condition.operator" placeholder="操作符"
                                         style="width: 120px; margin-right: 10px;">
-                                        <el-option label="包含" value="like" />
-                                        <el-option label="等于" value="eq" />
-                                        <el-option label="不等于" value="ne" />
-                                        <el-option label="大于" value="gt" />
-                                        <el-option label="小于" value="lt" />
+                                        <el-option v-for="option in getOperatorOptions(condition.column)"
+                                            :key="option.value" :label="option.label" :value="option.value" />
                                     </el-select>
                                     <el-input v-model="condition.value" placeholder="输入值"
                                         style="width: 200px; margin-right: 10px;" />
@@ -282,6 +279,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFilesStore } from '@/stores/files'
 import { useDataStore } from '@/stores/data'
+import { apiService } from '@/services/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Plus, Delete, Upload, Document, SuccessFilled, WarningFilled, Search, Close, Setting, Remove } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
@@ -320,6 +318,15 @@ const importFile = ref<File | null>(null)
 const importPreviewData = ref<any[]>([])
 const importProgress = ref(0)
 
+// 表结构信息
+const tableStructure = ref<{
+    columns: any[],
+    searchCapabilities: { [key: string]: string[] }
+}>({
+    columns: [],
+    searchCapabilities: {}
+})
+
 // 搜索相关状态
 const searchColumn = ref('all')
 const searchKeyword = ref('')
@@ -349,6 +356,32 @@ const hasSearchCondition = computed(() => {
             condition.column && condition.value.trim() !== ''
         )
 })
+
+// 可用的搜索列（从表结构中获取）
+const availableSearchColumns = computed(() => {
+    if (tableStructure.value.columns.length === 0) {
+        return tableColumns.value
+    }
+    return tableStructure.value.columns.map(col => col.name)
+})
+
+// 获取字段的操作符选项
+const getOperatorOptions = (columnName: string) => {
+    const capabilities = tableStructure.value.searchCapabilities[columnName] || ['like', 'eq', 'ne']
+    const operatorLabels: { [key: string]: string } = {
+        'like': '包含',
+        'eq': '等于',
+        'ne': '不等于',
+        'gt': '大于',
+        'lt': '小于',
+        'gte': '大于等于',
+        'lte': '小于等于'
+    }
+    return capabilities.map(op => ({
+        label: operatorLabels[op] || op,
+        value: op
+    }))
+}
 
 // 初始化数据
 const initData = async () => {
@@ -938,12 +971,28 @@ const originalLoadData = async () => {
     }
 }
 
+// 获取表结构信息
+const fetchTableStructure = async () => {
+    if (!selectedHash.value) return
+
+    try {
+        const structure = await apiService.getTableStructure(selectedHash.value)
+        tableStructure.value = structure
+    } catch (error) {
+        console.error('获取表结构信息失败:', error)
+        ElMessage.error('获取表结构信息失败')
+    }
+}
+
 // 重写loadData方法，支持搜索参数
 const loadData = async () => {
     if (!selectedHash.value) return
 
     loading.value = true
     try {
+        // 先获取表结构信息
+        await fetchTableStructure()
+
         let searchConditions: any = {}
 
         // 处理简单搜索
