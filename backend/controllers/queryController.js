@@ -1,6 +1,7 @@
 const { TableMapping, getDynamicModel } = require('../models');
 const { validateHash } = require('../utils/hashGenerator');
 const { Op } = require('sequelize');
+const { sequelize } = require('../config/database');
 
 /**
  * 获取所有映射关系
@@ -74,12 +75,15 @@ const queryData = async (req, res) => {
 
         // 构建查询条件
         const whereClause = {};
+        let hasNumberLikeCondition = false;
+        let numberLikeCondition = '';
+
         if (search) {
             try {
                 const searchConditions = JSON.parse(search);
 
                 // 递归转换查询条件
-                const convertConditions = (conditions) => {
+                const convertConditions = (conditions, columnDefs = columnDefinitions) => {
                     const converted = {};
 
                     for (const [field, condition] of Object.entries(conditions)) {
@@ -88,7 +92,7 @@ const queryData = async (req, res) => {
                             if (Array.isArray(condition)) {
                                 // 递归处理嵌套条件，使用 Sequelize Op.or
                                 converted[Op.or] = condition.map(nestedCondition =>
-                                    convertConditions(nestedCondition)
+                                    convertConditions(nestedCondition, columnDefs)
                                 );
                             } else {
                                 throw new Error('$or 操作符的值必须是数组');
@@ -97,7 +101,7 @@ const queryData = async (req, res) => {
                             if (Array.isArray(condition)) {
                                 // 递归处理嵌套条件，使用 Sequelize Op.and
                                 converted[Op.and] = condition.map(nestedCondition =>
-                                    convertConditions(nestedCondition)
+                                    convertConditions(nestedCondition, columnDefs)
                                 );
                             } else {
                                 throw new Error('$and 操作符的值必须是数组');
@@ -105,37 +109,54 @@ const queryData = async (req, res) => {
                         } else if (condition && typeof condition === 'object' && !Array.isArray(condition)) {
                             // 处理普通字段条件
                             const fieldCondition = {};
+
+                            // 获取字段类型
+                            let fieldType = 'string'; // 默认字符串类型
+                            if (columnDefs && Array.isArray(columnDefs)) {
+                                const columnDef = columnDefs.find(col => col.name === field);
+                                if (columnDef && columnDef.type) {
+                                    fieldType = columnDef.type;
+                                }
+                            }
+
                             for (const [operator, value] of Object.entries(condition)) {
-                                switch (operator) {
-                                    case '$eq':
-                                        fieldCondition[Op.eq] = value;
-                                        break;
-                                    case '$ne':
-                                        fieldCondition[Op.ne] = value;
-                                        break;
-                                    case '$like':
-                                        fieldCondition[Op.like] = value;
-                                        break;
-                                    case '$gt':
-                                        fieldCondition[Op.gt] = value;
-                                        break;
-                                    case '$lt':
-                                        fieldCondition[Op.lt] = value;
-                                        break;
-                                    case '$gte':
-                                        fieldCondition[Op.gte] = value;
-                                        break;
-                                    case '$lte':
-                                        fieldCondition[Op.lte] = value;
-                                        break;
-                                    case '$in':
-                                        fieldCondition[Op.in] = value;
-                                        break;
-                                    case '$notIn':
-                                        fieldCondition[Op.notIn] = value;
-                                        break;
-                                    default:
-                                        throw new Error(`不支持的操作符: ${operator}`);
+                                // 特殊处理数字字段的 $like 操作符
+                                if (operator === '$like' && fieldType === 'number') {
+                                    // 对于数字字段的模糊查询，使用 CAST 转换为字符串
+                                    hasNumberLikeCondition = true;
+                                    numberLikeCondition = `CAST(\`${field}\` AS CHAR) LIKE '${value}'`;
+                                } else {
+                                    switch (operator) {
+                                        case '$eq':
+                                            fieldCondition[Op.eq] = value;
+                                            break;
+                                        case '$ne':
+                                            fieldCondition[Op.ne] = value;
+                                            break;
+                                        case '$like':
+                                            fieldCondition[Op.like] = value;
+                                            break;
+                                        case '$gt':
+                                            fieldCondition[Op.gt] = value;
+                                            break;
+                                        case '$lt':
+                                            fieldCondition[Op.lt] = value;
+                                            break;
+                                        case '$gte':
+                                            fieldCondition[Op.gte] = value;
+                                            break;
+                                        case '$lte':
+                                            fieldCondition[Op.lte] = value;
+                                            break;
+                                        case '$in':
+                                            fieldCondition[Op.in] = value;
+                                            break;
+                                        case '$notIn':
+                                            fieldCondition[Op.notIn] = value;
+                                            break;
+                                        default:
+                                            throw new Error(`不支持的操作符: ${operator}`);
+                                    }
                                 }
                             }
                             converted[field] = fieldCondition;
@@ -163,14 +184,65 @@ const queryData = async (req, res) => {
         // 查询数据
         console.log('执行查询，条件:', JSON.stringify(whereClause, null, 2));
         console.log('查询条件类型检查:', typeof whereClause, Array.isArray(whereClause));
+        console.log('是否有数字字段的like条件:', hasNumberLikeCondition);
+        console.log('数字字段like条件:', numberLikeCondition);
 
         try {
-            const { count, rows } = await DynamicModel.findAndCountAll({
-                where: whereClause,
-                limit: parseInt(limit),
-                offset: offset,
-                order: [['id', 'ASC']]
-            });
+            let count, rows;
+
+            if (hasNumberLikeCondition) {
+                // 对于数字字段的模糊查询，使用原始SQL查询
+                const tableName = `data_${hash}`;
+                let whereSQL = '';
+                const whereParams = [];
+
+                // 构建WHERE子句
+                if (Object.keys(whereClause).length > 0) {
+                    // 这里简化处理，实际应该递归构建复杂的WHERE条件
+                    const conditions = [];
+                    for (const [field, condition] of Object.entries(whereClause)) {
+                        if (condition && typeof condition === 'object') {
+                            for (const [op, value] of Object.entries(condition)) {
+                                if (op === Op.eq) {
+                                    conditions.push(`\`${field}\` = ?`);
+                                    whereParams.push(value);
+                                }
+                                // 可以添加更多操作符支持
+                            }
+                        }
+                    }
+                    if (conditions.length > 0) {
+                        whereSQL = `WHERE ${conditions.join(' AND ')} AND ${numberLikeCondition}`;
+                    } else {
+                        whereSQL = `WHERE ${numberLikeCondition}`;
+                    }
+                } else {
+                    whereSQL = `WHERE ${numberLikeCondition}`;
+                }
+
+                // 执行原始查询
+                const countQuery = `SELECT COUNT(*) as total FROM \`${tableName}\` ${whereSQL}`;
+                const dataQuery = `SELECT * FROM \`${tableName}\` ${whereSQL} ORDER BY id ASC LIMIT ${offset}, ${limit}`;
+
+                console.log('执行原始查询 - count:', countQuery);
+                console.log('执行原始查询 - data:', dataQuery);
+
+                const [countResult] = await sequelize.query(countQuery, { replacements: whereParams });
+                const [dataResult] = await sequelize.query(dataQuery, { replacements: whereParams });
+
+                count = countResult[0].total;
+                rows = dataResult;
+            } else {
+                // 正常查询
+                const result = await DynamicModel.findAndCountAll({
+                    where: whereClause,
+                    limit: parseInt(limit),
+                    offset: offset,
+                    order: [['id', 'ASC']]
+                });
+                count = result.count;
+                rows = result.rows;
+            }
 
             // 获取表结构信息
             const tableInfo = {
