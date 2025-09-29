@@ -12,6 +12,151 @@
                 <div class="api-docs">
                     <h3>API接口文档</h3>
 
+                    <!-- 获取所有表映射关系 -->
+                    <el-card class="api-card">
+                        <template #header>
+                            <div class="api-header">
+                                <el-tag type="success">GET</el-tag>
+                                <span>/api/mappings</span>
+                            </div>
+                        </template>
+                        <div class="api-detail">
+                            <p><strong>描述：</strong>获取所有Excel文件与动态表的映射关系</p>
+                            <p><strong>参数：</strong>无</p>
+                            <p><strong>响应：</strong></p>
+                            <pre><code>{
+                        "success": true,
+                        "data": [
+                        {
+                        "id": 1,
+                        "tableName": "员工信息表",
+                        "hashValue": "abc123def456...",
+                        "createdAt": "2025-09-27T23:11:16.000Z",
+                        "updatedAt": "2025-09-27T23:11:16.000Z"
+                        }
+                        ],
+                        "total": 1
+                        }</code></pre>
+                        </div>
+                    </el-card>
+
+                    <!-- 获取表映射关系详情 -->
+                    <el-card class="api-card">
+                        <template #header>
+                            <div class="api-header">
+                                <el-tag type="success">GET</el-tag>
+                                <span>/api/mappings/{hash}</span>
+                            </div>
+                        </template>
+                        <div class="api-detail">
+                            <p><strong>描述：</strong>根据哈希值获取特定的表映射关系详情</p>
+                            <p><strong>参数：</strong></p>
+                            <ul>
+                                <li><code>hash</code> (路径参数) - 表的哈希值</li>
+                            </ul>
+                            <p><strong>响应：</strong></p>
+                            <pre><code>{
+                        "success": true,
+                        "data": {
+                        "id": 1,
+                        "tableName": "员工信息表",
+                        "hashValue": "abc123def456...",
+                        "createdAt": "2025-09-27T23:11:16.000Z",
+                        "updatedAt": "2025-09-27T23:11:16.000Z"
+                        }
+                        }</code></pre>
+                        </div>
+                    </el-card>
+
+                    <!-- 获取表列信息 -->
+                    <el-card class="api-card">
+                        <template #header>
+                            <div class="api-header">
+                                <el-tag type="success">GET</el-tag>
+                                <span>/api/mappings/{hash}/columns</span>
+                            </div>
+                        </template>
+                        <div class="api-detail">
+                            <p><strong>描述：</strong>根据哈希值获取表的列定义信息，用于前端表单配置</p>
+                            <p><strong>参数：</strong></p>
+                            <ul>
+                                <li><code>hash</code> (路径参数) - 表的哈希值</li>
+                            </ul>
+                            <p><strong>响应：</strong></p>
+                            <pre><code>{
+                        "success": true,
+                        "data": [
+                        {
+                        "name": "name",
+                        "type": "string",
+                        "nullable": true,
+                        "defaultValue": null
+                        }
+                        ]
+                        }</code></pre>
+                        </div>
+                    </el-card>
+
+                    <!-- 更新表名 -->
+                    <el-card class="api-card">
+                        <template #header>
+                            <div class="api-header">
+                                <el-tag type="warning">PUT</el-tag>
+                                <span>/api/mappings/{hash}</span>
+                            </div>
+                        </template>
+                        <div class="api-detail">
+                            <p><strong>描述：</strong>根据哈希值更新表映射关系的表名</p>
+                            <p><strong>参数：</strong></p>
+                            <ul>
+                                <li><code>hash</code> (路径参数) - 表的哈希值</li>
+                                <li><code>tableName</code> (请求体) - 新的表名</li>
+                            </ul>
+                            <p><strong>响应：</strong></p>
+                            <pre><code>{
+                        "success": true,
+                        "message": "表名更新成功",
+                        "data": {
+                        "id": 1,
+                        "tableName": "新的表名",
+                        "hashValue": "abc123def456...",
+                        "createdAt": "2025-09-27T23:11:16.000Z",
+                        "updatedAt": "2025-09-28T16:42:00.000Z"
+                        }
+                        }</code></pre>
+                        </div>
+                    </el-card>
+
+                    <!-- 删除表映射关系 -->
+                    <el-card class="api-card">
+                        <template #header>
+                            <div class="api-header">
+                                <el-tag type="danger">DELETE</el-tag>
+                                <span>/api/mappings/{hash}</span>
+                            </div>
+                        </template>
+                        <div class="api-detail">
+                            <p><strong>描述：</strong>根据哈希值删除表映射关系，并同步删除对应的数据表</p>
+                            <p><strong>参数：</strong></p>
+                            <ul>
+                                <li><code>hash</code> (路径参数) - 表的哈希值</li>
+                            </ul>
+                            <p><strong>响应：</strong></p>
+                            <pre><code>{
+                        "success": true,
+                        "message": "映射关系删除成功",
+                        "data": {
+                        "id": 1,
+                        "tableName": "员工信息表",
+                        "hashValue": "abc123def456...",
+                        "originalFileName": "员工信息表.xlsx",
+                        "tableDropped": true,
+                        "deletedAt": "2025-09-28T02:30:00.000Z"
+                        }
+                        }</code></pre>
+                        </div>
+                    </el-card>
+
                     <!-- 查询接口 -->
                     <el-card class="api-card">
                         <template #header>
@@ -128,8 +273,26 @@
                         </template>
                         <div class="config-section">
                             <el-form :model="testConfig" label-width="100px">
+                                <el-form-item label="选择表">
+                                    <div class="table-selector">
+                                        <el-select v-model="testConfig.selectedTable" placeholder="请选择表"
+                                            style="width: 300px; margin-right: 10px;" @change="handleTableChange"
+                                            filterable>
+                                            <el-option v-for="table in availableTables" :key="table.hashValue"
+                                                :label="table.tableName" :value="table" />
+                                        </el-select>
+                                        <el-button v-if="testConfig.hash" @click="copyHash" type="primary" link
+                                            :disabled="!testConfig.hash">
+                                            <el-icon>
+                                                <DocumentCopy />
+                                            </el-icon>
+                                            复制Hash
+                                        </el-button>
+                                    </div>
+                                </el-form-item>
                                 <el-form-item label="Hash值">
-                                    <el-input v-model="testConfig.hash" placeholder="请输入表的哈希值" style="width: 300px;" />
+                                    <el-input v-model="testConfig.hash" placeholder="或手动输入哈希值" style="width: 300px;"
+                                        @input="handleManualHashInput" />
                                 </el-form-item>
                                 <el-form-item label="选择接口">
                                     <el-radio-group v-model="selectedApi">
@@ -267,18 +430,33 @@
 
                     <!-- 测试按钮和结果 -->
                     <div class="test-actions">
-                        <el-button type="primary" @click="executeTest" :loading="testing" :disabled="!testConfig.hash">
-                            <el-icon>
-                                <VideoPlay />
-                            </el-icon>
-                            执行测试
-                        </el-button>
-                        <el-button @click="resetTest">
-                            <el-icon>
-                                <Refresh />
-                            </el-icon>
-                            重置
-                        </el-button>
+                        <div class="curl-command">
+                            <h4>cURL 调用指令</h4>
+                            <div class="curl-actions">
+                                <el-button @click="copyCurlCommand" type="primary" link>
+                                    <el-icon>
+                                        <DocumentCopy />
+                                    </el-icon>
+                                    复制cURL指令
+                                </el-button>
+                            </div>
+                            <pre class="json-preview">{{ generatedCurlCommand }}</pre>
+                        </div>
+                        <div class="test-buttons">
+                            <el-button type="primary" @click="executeTest" :loading="testing"
+                                :disabled="!testConfig.hash">
+                                <el-icon>
+                                    <VideoPlay />
+                                </el-icon>
+                                执行测试
+                            </el-button>
+                            <el-button @click="resetTest">
+                                <el-icon>
+                                    <Refresh />
+                                </el-icon>
+                                重置
+                            </el-button>
+                        </div>
                     </div>
 
                     <!-- 测试结果 -->
@@ -295,6 +473,7 @@
                                 <h4>响应信息</h4>
                                 <pre class="json-preview">{{ testResult.response }}</pre>
                             </div>
+
                         </div>
                     </el-card>
                 </div>
@@ -304,15 +483,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, watch } from 'vue'
+import { ref, computed, reactive, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Remove, VideoPlay, Refresh } from '@element-plus/icons-vue'
+import { Plus, Remove, VideoPlay, Refresh, DocumentCopy } from '@element-plus/icons-vue'
 import { apiService } from '@/services/api'
 
 // 测试配置
 const testConfig = reactive({
-    hash: ''
+    hash: '',
+    selectedTable: null as any
 })
+
+// 可用表列表
+const availableTables = ref<any[]>([])
+const loadingTables = ref(false)
 
 // 选择的API
 const selectedApi = ref('query')
@@ -372,6 +556,44 @@ const generatedSearchCondition = computed(() => {
     })
 
     return JSON.stringify(conditions, null, 2)
+})
+
+// 生成cURL命令
+const generatedCurlCommand = computed(() => {
+    if (!testResult.value) return ''
+
+    const requestData = JSON.parse(testResult.value.request)
+    const baseUrl = 'http://localhost:3000' // 后端服务地址
+
+    let curlCommand = ''
+
+    switch (selectedApi.value) {
+        case 'query':
+            const queryParams = new URLSearchParams()
+            if (requestData.params.page) queryParams.append('page', requestData.params.page.toString())
+            if (requestData.params.limit) queryParams.append('limit', requestData.params.limit.toString())
+            if (requestData.params.search) queryParams.append('search', requestData.params.search)
+
+            const queryString = queryParams.toString()
+            const url = `${baseUrl}/api/data/${requestData.hash}${queryString ? `?${queryString}` : ''}`
+
+            curlCommand = `curl -X GET "${url}"`
+            break
+
+        case 'add':
+            curlCommand = `curl -X POST "${baseUrl}/api/data/${requestData.hash}/add" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(requestData.data)}'`
+            break
+
+        case 'update':
+            curlCommand = `curl -X PUT "${baseUrl}/api/data/${requestData.hash}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({ conditions: requestData.conditions, updates: requestData.updates })}'`
+            break
+
+        case 'delete':
+            curlCommand = `curl -X DELETE "${baseUrl}/api/data/${requestData.hash}" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify({ conditions: requestData.conditions })}'`
+            break
+    }
+
+    return curlCommand
 })
 
 // 方法
@@ -534,6 +756,95 @@ watch(() => testConfig.hash, (newHash) => {
         resetFormData()
     }
 })
+
+// 获取可用表列表
+const fetchAvailableTables = async () => {
+    loadingTables.value = true
+    try {
+        const mappings = await apiService.getMappings()
+        availableTables.value = mappings
+    } catch (error: any) {
+        console.error('获取表列表失败:', error)
+        ElMessage.error(`获取表列表失败: ${error.message}`)
+        availableTables.value = []
+    } finally {
+        loadingTables.value = false
+    }
+}
+
+// 处理表选择变化
+const handleTableChange = (selectedTable: any) => {
+    if (selectedTable) {
+        testConfig.hash = selectedTable.hashValue
+    } else {
+        testConfig.hash = ''
+    }
+}
+
+// 处理手动输入哈希值
+const handleManualHashInput = () => {
+    // 当手动输入哈希值时，清空选择的表
+    testConfig.selectedTable = null
+}
+
+// 复制哈希值到剪贴板
+const copyHash = async () => {
+    if (!testConfig.hash) {
+        ElMessage.warning('没有可复制的哈希值')
+        return
+    }
+
+    try {
+        await navigator.clipboard.writeText(testConfig.hash)
+        ElMessage.success('哈希值已复制到剪贴板')
+    } catch (error) {
+        console.error('复制失败:', error)
+        // 降级方案：使用 document.execCommand
+        const textArea = document.createElement('textarea')
+        textArea.value = testConfig.hash
+        document.body.appendChild(textArea)
+        textArea.select()
+        try {
+            document.execCommand('copy')
+            ElMessage.success('哈希值已复制到剪贴板')
+        } catch (err) {
+            ElMessage.error('复制失败，请手动复制')
+        }
+        document.body.removeChild(textArea)
+    }
+}
+
+// 复制cURL命令到剪贴板
+const copyCurlCommand = async () => {
+    if (!generatedCurlCommand.value) {
+        ElMessage.warning('没有可复制的cURL指令')
+        return
+    }
+
+    try {
+        await navigator.clipboard.writeText(generatedCurlCommand.value)
+        ElMessage.success('cURL指令已复制到剪贴板')
+    } catch (error) {
+        console.error('复制cURL指令失败:', error)
+        // 降级方案：使用 document.execCommand
+        const textArea = document.createElement('textarea')
+        textArea.value = generatedCurlCommand.value
+        document.body.appendChild(textArea)
+        textArea.select()
+        try {
+            document.execCommand('copy')
+            ElMessage.success('cURL指令已复制到剪贴板')
+        } catch (err) {
+            ElMessage.error('复制失败，请手动复制')
+        }
+        document.body.removeChild(textArea)
+    }
+}
+
+// 组件挂载时获取表列表
+onMounted(() => {
+    fetchAvailableTables()
+})
 </script>
 
 <style scoped>
@@ -551,6 +862,11 @@ watch(() => testConfig.hash, (newHash) => {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+}
+
+.api-test {
+    min-width: 600px;
+    max-width: 1200px;
 }
 
 .api-docs h3,
@@ -605,6 +921,12 @@ watch(() => testConfig.hash, (newHash) => {
     padding: 15px 0;
 }
 
+.table-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .query-builder {
     padding: 15px 0;
 }
@@ -653,6 +975,9 @@ watch(() => testConfig.hash, (newHash) => {
     font-size: 14px;
     line-height: 1.4;
     margin: 0;
+    word-wrap: break-word;
+    word-break: break-all;
+    white-space: pre-wrap;
 }
 
 .data-input,
@@ -672,7 +997,14 @@ watch(() => testConfig.hash, (newHash) => {
 .test-actions {
     margin: 20px 0;
     display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.test-buttons {
+    display: flex;
     gap: 10px;
+    align-items: center;
 }
 
 .result-card {
@@ -692,6 +1024,22 @@ watch(() => testConfig.hash, (newHash) => {
 .response-info h4 {
     margin-bottom: 10px;
     color: #303133;
+}
+
+.curl-command {
+    margin-bottom: 20px;
+}
+
+.curl-command h4 {
+    margin-bottom: 10px;
+    color: #303133;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.curl-actions {
+    margin-bottom: 10px;
 }
 
 /* 响应式设计 */
@@ -714,6 +1062,63 @@ watch(() => testConfig.hash, (newHash) => {
 
     .test-actions {
         flex-direction: column;
+    }
+
+    .test-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .test-buttons .el-button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .table-selector {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .table-selector .el-select {
+        width: 100% !important;
+        margin-right: 0 !important;
+        margin-bottom: 10px;
+    }
+
+    .curl-command h4 {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .json-preview {
+        font-size: 12px;
+        padding: 10px;
+    }
+
+    .api-test {
+        min-width: unset;
+        max-width: unset;
+    }
+}
+
+@media (max-width: 480px) {
+    .api-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .config-section .el-form-item {
+        margin-bottom: 15px;
+    }
+
+    .config-section .el-form-item__label {
+        width: 80px !important;
+    }
+
+    .config-section .el-input,
+    .config-section .el-select {
+        width: 100% !important;
     }
 }
 </style>
