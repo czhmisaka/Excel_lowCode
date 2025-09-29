@@ -28,10 +28,13 @@
                     <el-table-column prop="columnCount" label="列数" width="80" />
                     <el-table-column prop="createdAt" label="创建时间" width="180" />
                     <el-table-column prop="updatedAt" label="更新时间" width="180" />
-                    <el-table-column label="操作" width="120">
+                    <el-table-column label="操作" width="180">
                         <template #default="scope">
                             <el-button type="primary" link @click="viewColumnDefinitions(scope.row)">
                                 查看结构
+                            </el-button>
+                            <el-button type="primary" link @click="openEditTableNameDialog(scope.row)">
+                                编辑表名
                             </el-button>
                         </template>
                     </el-table-column>
@@ -66,13 +69,33 @@
                 <el-button @click="showColumnDialog = false">关闭</el-button>
             </template>
         </el-dialog>
+
+        <!-- 编辑表名对话框 -->
+        <el-dialog v-model="showEditTableNameDialog" title="编辑表名" width="500px">
+            <div class="edit-table-name-form" v-if="editingMapping">
+                <el-form :model="editTableNameForm" :rules="editTableNameRules" ref="editTableNameFormRef"
+                    label-width="80px">
+                    <el-form-item label="表名" prop="tableName">
+                        <el-input v-model="editTableNameForm.tableName" placeholder="请输入表名" maxlength="255"
+                            show-word-limit />
+                    </el-form-item>
+                </el-form>
+            </div>
+
+            <template #footer>
+                <el-button @click="showEditTableNameDialog = false">取消</el-button>
+                <el-button type="primary" @click="saveTableName" :loading="savingTableName">保存</el-button>
+            </template>
+        </el-dialog>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useFilesStore } from '@/stores/files'
-import { Refresh } from '@element-plus/icons-vue'
+import { apiService } from '@/services/api'
+import { Refresh, Edit } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const filesStore = useFilesStore()
 
@@ -81,6 +104,23 @@ const loading = ref(false)
 const mappingList = ref<any[]>([])
 const showColumnDialog = ref(false)
 const selectedMapping = ref<any>(null)
+
+// 编辑表名相关状态
+const showEditTableNameDialog = ref(false)
+const editingMapping = ref<any>(null)
+const savingTableName = ref(false)
+const editTableNameFormRef = ref()
+const editTableNameForm = ref({
+    tableName: ''
+})
+
+// 表名验证规则
+const editTableNameRules = {
+    tableName: [
+        { required: true, message: '请输入表名', trigger: 'blur' },
+        { min: 1, max: 255, message: '表名长度在 1 到 255 个字符', trigger: 'blur' }
+    ]
+}
 
 // 初始化数据
 const initData = async () => {
@@ -140,6 +180,58 @@ const viewColumnDefinitions = (mapping: any) => {
     showColumnDialog.value = true
 }
 
+// 显示编辑表名对话框
+const openEditTableNameDialog = (mapping: any) => {
+    editingMapping.value = mapping
+    editTableNameForm.value.tableName = mapping.tableName
+    showEditTableNameDialog.value = true
+
+    // 重置表单验证
+    nextTick(() => {
+        if (editTableNameFormRef.value) {
+            editTableNameFormRef.value.clearValidate()
+        }
+    })
+}
+
+// 保存表名（对话框版本）
+const saveTableName = async () => {
+    if (!editTableNameFormRef.value) return
+
+    // 验证表单
+    const valid = await editTableNameFormRef.value.validate()
+    if (!valid) return
+
+    const newTableName = editTableNameForm.value.tableName.trim()
+
+    // 如果表名没有变化，直接关闭对话框
+    if (newTableName === editingMapping.value.tableName) {
+        showEditTableNameDialog.value = false
+        return
+    }
+
+    savingTableName.value = true
+    try {
+        // 调用API更新表名
+        const response = await apiService.updateMapping(editingMapping.value.hashValue, newTableName)
+
+        if (response.success) {
+            ElMessage.success('表名更新成功')
+            // 更新列表中的表名
+            editingMapping.value.tableName = newTableName
+            showEditTableNameDialog.value = false
+        } else {
+            ElMessage.error(response.message || '更新表名失败')
+        }
+    } catch (error: any) {
+        console.error('更新表名失败:', error)
+        ElMessage.error(error.response?.data?.message || '更新表名失败')
+    } finally {
+        savingTableName.value = false
+    }
+}
+
+
 onMounted(() => {
     initData()
 })
@@ -178,5 +270,28 @@ onMounted(() => {
 .table-info p {
     margin: 5px 0;
     color: #606266;
+}
+
+.table-name-cell {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 4px 0;
+    min-height: 32px;
+}
+
+.table-name-text {
+    flex: 1;
+}
+
+.edit-icon {
+    margin-left: 8px;
+    color: #c0c4cc;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.table-name-cell:hover .edit-icon {
+    opacity: 1;
 }
 </style>

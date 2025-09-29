@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { TableMapping } = require('../models');
 const { deleteMapping } = require('../controllers/deleteController');
+const { updateTableName } = require('../controllers/updateMappingController');
 
 /**
  * @swagger
@@ -151,6 +152,77 @@ router.get('/:hash', async (req, res) => {
         });
     }
 });
+
+/**
+ * @swagger
+ * /api/mappings/{hash}:
+ *   put:
+ *     summary: 更新表名
+ *     description: 根据哈希值更新表映射关系的表名
+ *     tags:
+ *       - 映射关系
+ *     parameters:
+ *       - in: path
+ *         name: hash
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 表的哈希值
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tableName
+ *             properties:
+ *               tableName:
+ *                 type: string
+ *                 example: "新的表名"
+ *                 description: "新的表名"
+ *     responses:
+ *       200:
+ *         description: 成功更新表名
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "表名更新成功"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     tableName:
+ *                       type: string
+ *                       example: "新的表名"
+ *                     hashValue:
+ *                       type: string
+ *                       example: "abc123def456..."
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-09-27T23:11:16.000Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-09-28T16:42:00.000Z"
+ *       400:
+ *         description: 无效的请求参数
+ *       404:
+ *         description: 映射关系不存在
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.put('/:hash', updateTableName);
 
 /**
  * @swagger

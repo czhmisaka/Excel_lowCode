@@ -167,6 +167,14 @@ class ApiService {
         return response.data
     }
 
+    // 更新映射关系表名
+    async updateMapping(hash: string, tableName: string): Promise<any> {
+        const response = await apiClient.put(`/api/mappings/${hash}`, {
+            tableName
+        })
+        return response.data
+    }
+
     // 系统健康检查
     async healthCheck(): Promise<any> {
         const response = await apiClient.get('/health')
