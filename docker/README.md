@@ -11,10 +11,14 @@ docker/
 │   └── nginx.conf        # Nginx配置
 ├── backend/              # 后端相关配置
 │   └── Dockerfile        # 后端Dockerfile
-├── docker-compose.yml    # Docker Compose配置
+├── docker-compose.yml    # Docker Compose配置（生产环境）
+├── docker-compose.local.yml # Docker Compose配置（本地开发环境）
 ├── .env.template         # 环境变量模板
+├── .env.local            # 本地开发环境配置
+├── init-database.sql     # 数据库初始化脚本
 ├── build.sh             # 镜像构建脚本
-├── deploy.sh            # 部署脚本
+├── deploy.sh            # 部署脚本（生产环境）
+├── localRun.sh          # 本地开发环境部署脚本
 ├── export-images.sh     # 镜像导出脚本
 ├── import-images.sh     # 镜像导入脚本
 └── README.md           # 本文档
@@ -69,6 +73,8 @@ BACKEND_TAG=latest
 
 ### 3. 部署应用
 
+#### 生产环境部署（使用外部数据库）
+
 ```bash
 # 完整部署（停止旧服务 -> 启动新服务）
 ./deploy.sh
@@ -84,6 +90,25 @@ BACKEND_TAG=latest
 
 # 部署后恢复数据
 ./deploy.sh --restore backup-file.tar.gz
+```
+
+#### 本地开发环境部署（包含MySQL数据库）
+
+```bash
+# 完整本地部署（包含MySQL数据库）
+./localRun.sh
+
+# 仅停止本地服务
+./localRun.sh --stop-only
+
+# 仅启动本地服务
+./localRun.sh --start-only
+
+# 查看本地服务状态
+./localRun.sh --status
+
+# 查看容器日志
+./localRun.sh --logs
 ```
 
 ### 4. 验证部署
@@ -166,6 +191,47 @@ docker save -o backend.tar annual-leave-backend:latest
 docker load -i frontend.tar
 docker load -i backend.tar
 ```
+
+## 本地开发环境 (localRun)
+
+本地开发环境使用 `localRun.sh` 脚本，提供完整的本地Docker环境，包含MySQL数据库服务。
+
+### 本地环境特点
+
+1. **独立数据库**: 包含MySQL 8.0数据库容器
+2. **自动初始化**: 自动创建数据库和示例数据
+3. **数据持久化**: 数据库数据保存在Docker卷中
+4. **健康检查**: 完整的服务健康检查机制
+5. **开发友好**: 适合本地开发和测试
+
+### 本地服务配置
+
+#### MySQL数据库服务
+- **容器名**: annual-leave-mysql
+- **端口映射**: 3306:3306
+- **数据库名**: annual_leave
+- **用户名**: annual_user
+- **密码**: annual_password
+- **根密码**: root
+- **数据卷**: mysql-data (持久化存储)
+
+#### 前端服务
+- **容器名**: annual-leave-frontend
+- **端口映射**: 8080:80
+- **健康检查**: http://localhost:8080/health
+- **静态文件**: 使用Nginx服务
+
+#### 后端服务
+- **容器名**: annual-leave-backend
+- **端口映射**: 3000:3000
+- **健康检查**: http://localhost:3000/health
+- **数据卷**: uploads目录持久化存储
+- **数据库连接**: 自动连接到本地MySQL容器
+
+### 网络配置
+- 使用自定义桥接网络 `app-network`
+- 前端可通过 `backend` 主机名访问后端服务
+- 后端可通过 `mysql` 主机名访问数据库服务
 
 ## 服务配置说明
 

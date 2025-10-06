@@ -1,0 +1,101 @@
+services:
+  # MySQL数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: annual-leave-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=annual_leave
+      - MYSQL_USER=annual_user
+      - MYSQL_PASSWORD=annual_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init-database.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test:
+        ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # 前端服务
+  frontend:
+    image: annual-leave-frontend:latest
+    container_name: annual-leave-frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:80/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 后端服务
+  backend:
+    image: annual-leave-backend:latest
+    container_name: annual-leave-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=annual_leave
+      - DB_USER=annual_user
+      - DB_PASSWORD=annual_password
+      - LOCAL_RUN=true
+    volumes:
+      - backend-uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# 网络配置
+networks:
+  app-network:
+    driver: bridge
+
+# 卷配置
+volumes:
+  mysql-data:
+    driver: local
+  backend-uploads:
+    driver: local
