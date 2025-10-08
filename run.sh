@@ -30,18 +30,18 @@ log_error() {
 
 # 检查当前目录
 check_current_directory() {
-    local expected_dir="综合部-年假计算"
+    local expected_dir="-"
     local current_dir=$(basename "$(pwd)")
     
     if [ "$current_dir" != "$expected_dir" ]; then
         log_warning "当前目录: $current_dir"
         log_warning "建议在项目根目录 ($expected_dir) 执行此脚本"
-        read -p "是否继续在当前目录执行? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "请切换到项目根目录后重新执行"
-            exit 1
-        fi
+        # read -p "是否继续在当前目录执行? (y/N): " -n 1 -r
+        # echo
+        # if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        #     log_info "请切换到项目根目录后重新执行"
+        #     exit 1
+        # fi
     fi
 }
 
@@ -203,7 +203,8 @@ parse_arguments() {
         log_info "前端端口: $frontend_port"
     fi
     
-    echo "${deploy_args[@]}"
+    # 返回部署参数数组（使用全局变量）
+    DEPLOY_ARGS=("${deploy_args[@]}")
 }
 
 # 主函数
@@ -223,8 +224,7 @@ main() {
     check_script_files
     
     # 解析参数并设置环境变量
-    local deploy_args
-    deploy_args=$(parse_arguments "$@")
+    parse_arguments "$@"
     
     # 执行构建阶段
     if ! run_build "$@"; then
@@ -236,8 +236,11 @@ main() {
     log_info "构建完成，准备开始部署..."
     echo
     
-    # 执行部署阶段
-    if ! run_deploy $deploy_args; then
+    # 执行部署阶段（传递环境变量）
+    export RUN_MODE="$RUN_MODE"
+    export BACKEND_PORT="$BACKEND_PORT"
+    export FRONTEND_PORT="$FRONTEND_PORT"
+    if ! run_deploy "${DEPLOY_ARGS[@]}"; then
         log_error "部署失败"
         exit 1
     fi

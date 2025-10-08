@@ -125,9 +125,9 @@ get_server_ip() {
 # 检查环境文件
 check_env() {
     # 根据运行模式选择环境文件
-    local env_file="./docker/.env"
+    local env_file="docker/.env"
     if [ "$RUN_MODE" = "sqlite" ]; then
-        env_file="./docker/.env.sqlite"
+        env_file="docker/.env.sqlite"
         log_info "使用SQLite环境配置: $env_file"
     else
         log_info "使用MySQL环境配置: $env_file"
@@ -178,10 +178,18 @@ check_env() {
 stop_services() {
     log_info "停止现有服务..."
     local compose_cmd=$(get_docker_compose_cmd)
-    local compose_file=$(select_compose_file)
+    local compose_file="./docker/$(select_compose_file)"
     
+    log_info "当前执行路径 : $(pwd)"
     log_info "使用Docker Compose文件: $compose_file"
-    (cd docker && $compose_cmd -f "$compose_file" down --remove-orphans || true)
+    
+    # 检查Docker Compose文件是否存在
+    # if [ ! -f "$compose_file" ]; then
+    #     log_error "Docker Compose文件不存在: $compose_file"
+    #     exit 1
+    # fi
+    
+    ($compose_cmd -f "$compose_file" down --remove-orphans || true)
 }
 
 # 构建前端镜像
@@ -196,17 +204,15 @@ build_frontend() {
     # 构建前端镜像，传递API地址参数
     docker build -t annual-leave-frontend:latest \
         --build-arg VITE_API_BASE_URL="$api_base_url" \
-        -f docker/frontend/Dockerfile .
+        -f ./docker/frontend/Dockerfile .
 }
 
 # 选择Docker Compose文件
 select_compose_file() {
     if [ "$RUN_MODE" = "sqlite" ]; then
         echo "docker-compose.sqlite.yml"
-        log_info "使用SQLite模式: docker-compose.sqlite.yml"
     else
         echo "docker-compose.yml"
-        log_info "使用MySQL模式: docker-compose.yml"
     fi
 }
 
@@ -214,10 +220,17 @@ select_compose_file() {
 start_services() {
     log_info "启动服务..."
     local compose_cmd=$(get_docker_compose_cmd)
-    local compose_file=$(select_compose_file)
+    local compose_file="./docker/$(select_compose_file)"
     
     log_info "使用Docker Compose文件: $compose_file"
-    (cd docker && $compose_cmd -f "$compose_file" up -d)
+    
+    # 检查Docker Compose文件是否存在
+    # if [ ! -f "$compose_file" ]; then
+    #     log_error "Docker Compose文件不存在: $compose_file"
+    #     exit 1
+    # fi
+    
+    ($compose_cmd -f "$compose_file" up -d)
     
     # 等待服务启动
     log_info "等待服务启动..."
@@ -252,21 +265,28 @@ check_services_health() {
 show_services_status() {
     log_info "服务状态:"
     local compose_cmd=$(get_docker_compose_cmd)
-    local compose_file=$(select_compose_file)
+    local compose_file="docker/$(select_compose_file)"
     
     log_info "使用Docker Compose文件: $compose_file"
-    (cd docker && $compose_cmd -f "$compose_file" ps)
+    
+    # 检查Docker Compose文件是否存在
+    if [ ! -f "$compose_file" ]; then
+        log_error "Docker Compose文件不存在: $compose_file"
+        exit 1
+    fi
+    
+    (cd docker && $compose_cmd -f "$(basename "$compose_file")" ps)
     
     log_info "容器日志:"
-    (cd docker && $compose_cmd -f "$compose_file" logs --tail=10)
+    (cd docker && $compose_cmd -f "$(basename "$compose_file")" logs --tail=10)
 }
 
 # 备份数据
 backup_data() {
     if [ "$1" = "--backup" ]; then
         log_info "备份上传文件..."
-        if [ -d "docker/uploads" ]; then
-            tar -czf "backup-uploads-$(date +%Y%m%d-%H%M%S).tar.gz" docker/uploads/
+        if [ -d "./uploads" ]; then
+            tar -czf "backup-uploads-$(date +%Y%m%d-%H%M%S).tar.gz" ./uploads/
             log_success "上传文件备份完成"
         fi
     fi
@@ -323,6 +343,18 @@ main() {
                 action="start"
                 shift
                 ;;
+            --run-local)
+                # SQLite 模式参数，由环境变量处理
+                shift
+                ;;
+            --backend-port)
+                # 后端端口参数，由环境变量处理
+                shift 2
+                ;;
+            --frontend-port)
+                # 前端端口参数，由环境变量处理
+                shift 2
+                ;;
             --help)
                 show_usage
                 exit 0
@@ -360,7 +392,7 @@ main() {
     esac
     
     log_success "部署流程完成"
-    log_info "前端访问地址: http://${API_BASE_URL#*://}:${FRONTEND_PORT}"
+    log_info "前端访问地址: http://localhost:${FRONTEND_PORT}"
     log_info "后端API地址: ${API_BASE_URL}"
     log_info "API文档地址: ${API_BASE_URL}/api-docs"
 }
