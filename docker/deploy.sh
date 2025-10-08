@@ -124,31 +124,50 @@ get_server_ip() {
 
 # 检查环境文件
 check_env() {
-    # 检查 .env 和 ./docker/.env 文件是否存在
-    if [  -f .env  ]; then
+    # 根据运行模式选择环境文件
+    local env_file="./docker/.env"
+    if [ "$RUN_MODE" = "sqlite" ]; then
+        env_file="./docker/.env.sqlite"
+        log_info "使用SQLite环境配置: $env_file"
+    else
+        log_info "使用MySQL环境配置: $env_file"
+    fi
+    
+    # 检查环境文件是否存在
+    if [ -f "$env_file" ]; then
+        # 加载环境变量
+        set -a
+        source "$env_file"
+        set +a
+        log_success "加载环境变量文件: $env_file"
+    else
+        log_warning "环境变量文件不存在: $env_file"
+    fi
+    
+    # 检查 .env 文件是否存在（项目根目录）
+    if [ -f .env ]; then
         # 加载环境变量
         set -a
         source .env
         set +a
-    fi
-    
-    if [  -f ./docker/.env  ]; then
-        # 加载环境变量
-        set -a
-        source ./docker/.env
-        set +a
+        log_info "加载项目根目录环境变量文件: .env"
     fi
 
-    # 不存在报错
+    # 设置默认端口（如果未设置）
     if [ -z "$FRONTEND_PORT" ]; then
-        log_error "环境变量 FRONTEND_PORT 未设置，请检查 .env "
-        exit 1
+        FRONTEND_PORT="8080"
+        log_info "使用默认前端端口: $FRONTEND_PORT"
+    fi
+    
+    if [ -z "$BACKEND_PORT" ]; then
+        BACKEND_PORT="3000"
+        log_info "使用默认后端端口: $BACKEND_PORT"
     fi
    
     # 设置API基础URL（如果未配置）
     if [ -z "$API_BASE_URL" ]; then
         local server_ip=$(get_server_ip)
-        API_BASE_URL="http://${server_ip}:3000"
+        API_BASE_URL="http://${server_ip}:${BACKEND_PORT}"
         log_info "设置API基础URL: $API_BASE_URL"
     else
         log_info "使用配置的API基础URL: $API_BASE_URL"
@@ -159,7 +178,10 @@ check_env() {
 stop_services() {
     log_info "停止现有服务..."
     local compose_cmd=$(get_docker_compose_cmd)
-    (cd docker && $compose_cmd down --remove-orphans || true)
+    local compose_file=$(select_compose_file)
+    
+    log_info "使用Docker Compose文件: $compose_file"
+    (cd docker && $compose_cmd -f "$compose_file" down --remove-orphans || true)
 }
 
 # 构建前端镜像
@@ -177,11 +199,25 @@ build_frontend() {
         -f docker/frontend/Dockerfile .
 }
 
+# 选择Docker Compose文件
+select_compose_file() {
+    if [ "$RUN_MODE" = "sqlite" ]; then
+        echo "docker-compose.sqlite.yml"
+        log_info "使用SQLite模式: docker-compose.sqlite.yml"
+    else
+        echo "docker-compose.yml"
+        log_info "使用MySQL模式: docker-compose.yml"
+    fi
+}
+
 # 启动服务
 start_services() {
     log_info "启动服务..."
     local compose_cmd=$(get_docker_compose_cmd)
-    (cd docker && $compose_cmd up -d)
+    local compose_file=$(select_compose_file)
+    
+    log_info "使用Docker Compose文件: $compose_file"
+    (cd docker && $compose_cmd -f "$compose_file" up -d)
     
     # 等待服务启动
     log_info "等待服务启动..."
@@ -204,7 +240,7 @@ check_services_health() {
     fi
     
     # 检查后端服务
-    if curl -f http://localhost:3000/health > /dev/null 2>&1; then
+    if curl -f http://localhost:${BACKEND_PORT}/health > /dev/null 2>&1; then
         log_success "后端服务运行正常"
     else
         log_error "后端服务健康检查失败"
@@ -216,10 +252,13 @@ check_services_health() {
 show_services_status() {
     log_info "服务状态:"
     local compose_cmd=$(get_docker_compose_cmd)
-    (cd docker && $compose_cmd ps)
+    local compose_file=$(select_compose_file)
+    
+    log_info "使用Docker Compose文件: $compose_file"
+    (cd docker && $compose_cmd -f "$compose_file" ps)
     
     log_info "容器日志:"
-    (cd docker && $compose_cmd logs --tail=10)
+    (cd docker && $compose_cmd -f "$compose_file" logs --tail=10)
 }
 
 # 备份数据

@@ -7,14 +7,14 @@ WORKDIR /app
 # 复制package.json和package-lock.json
 COPY ../backend/package*.json ./
 
-# 安装依赖
+# 安装依赖（包括SQLite支持）
 RUN npm ci --only=production
 
 # 复制源代码
 COPY ../backend/ ./
 
-# 创建上传目录
-RUN mkdir -p uploads
+# 创建上传目录和数据目录（用于SQLite）
+RUN mkdir -p uploads && mkdir -p data
 
 # 设置环境变量
 ENV NODE_ENV=production

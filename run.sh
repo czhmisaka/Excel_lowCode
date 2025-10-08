@@ -118,6 +118,13 @@ show_usage() {
     echo ""
     echo "描述: 按顺序执行构建和部署流程"
     echo ""
+    echo "运行模式选项:"
+    echo "  --run-local        使用本地SQLite数据库模式"
+    echo ""
+    echo "端口配置选项:"
+    echo "  --backend-port PORT  设置后端服务端口（默认: 3000）"
+    echo "  --frontend-port PORT 设置前端服务端口（默认: 8080）"
+    echo ""
     echo "构建选项 (传递给 build.sh):"
     echo "  --clean            构建完成后清理Docker缓存"
     echo ""
@@ -133,8 +140,70 @@ show_usage() {
     echo "  $0 --clean            # 构建后清理缓存并部署"
     echo "  $0 --backup           # 备份后构建和部署"
     echo "  $0 --stop-only        # 仅构建和停止服务"
+    echo "  $0 --run-local        # 使用SQLite数据库本地运行"
+    echo "  $0 --run-local --backend-port 4000 --frontend-port 9000  # 自定义端口运行"
     echo ""
     echo "注意: 此脚本会按顺序调用 docker/build.sh 和 docker/deploy.sh"
+}
+
+# 解析命令行参数
+parse_arguments() {
+    local run_local=false
+    local backend_port=""
+    local frontend_port=""
+    local deploy_args=()
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --run-local)
+                run_local=true
+                deploy_args+=("$1")
+                shift
+                ;;
+            --backend-port)
+                if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
+                    backend_port="$2"
+                    deploy_args+=("$1" "$2")
+                    shift 2
+                else
+                    log_error "--backend-port 需要有效的端口号"
+                    exit 1
+                fi
+                ;;
+            --frontend-port)
+                if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
+                    frontend_port="$2"
+                    deploy_args+=("$1" "$2")
+                    shift 2
+                else
+                    log_error "--frontend-port 需要有效的端口号"
+                    exit 1
+                fi
+                ;;
+            *)
+                deploy_args+=("$1")
+                shift
+                ;;
+        esac
+    done
+    
+    # 设置环境变量
+    if [ "$run_local" = true ]; then
+        export RUN_MODE="sqlite"
+        log_info "运行模式: SQLite 本地数据库"
+    fi
+    
+    if [ -n "$backend_port" ]; then
+        export BACKEND_PORT="$backend_port"
+        log_info "后端端口: $backend_port"
+    fi
+    
+    if [ -n "$frontend_port" ]; then
+        export FRONTEND_PORT="$frontend_port"
+        log_info "前端端口: $frontend_port"
+    fi
+    
+    echo "${deploy_args[@]}"
 }
 
 # 主函数
@@ -153,6 +222,10 @@ main() {
     check_current_directory
     check_script_files
     
+    # 解析参数并设置环境变量
+    local deploy_args
+    deploy_args=$(parse_arguments "$@")
+    
     # 执行构建阶段
     if ! run_build "$@"; then
         log_error "构建失败，停止部署流程"
@@ -164,7 +237,7 @@ main() {
     echo
     
     # 执行部署阶段
-    if ! run_deploy "$@"; then
+    if ! run_deploy $deploy_args; then
         log_error "部署失败"
         exit 1
     fi
