@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 年假计算系统 - Docker镜像导入脚本
+# Excel_lowCode - Docker镜像导入脚本
 set -e
 
 # 颜色定义
@@ -172,7 +172,7 @@ main() {
         metadata_file="$1"
     fi
     
-    log_info "=== 年假计算系统 Docker镜像导入 ==="
+    log_info "=== Excel_lowCode Docker镜像导入 ==="
     
     # 检查依赖
     check_docker

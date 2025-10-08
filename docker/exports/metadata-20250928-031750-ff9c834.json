@@ -2,7 +2,7 @@
     "export": {
         "timestamp": "2025-09-28T03:18:02+08:00",
         "version": "20250928-031750-ff9c834",
-        "system": "年假计算系统"
+        "system": "Excel_lowCode"
     },
     "images": {
         "frontend": {

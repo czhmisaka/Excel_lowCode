@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 年假计算系统 - 完整运行脚本（构建 + 部署）
+# Excel_lowCode - 完整运行脚本（构建 + 部署）
 # 按顺序调用 build.sh 和 deploy.sh
 set -e
 
@@ -217,7 +217,7 @@ main() {
         fi
     done
     
-    log_info "=== 年假计算系统 - 完整运行流程 ==="
+    log_info "=== Excel_lowCode - 完整运行流程 ==="
     
     # 环境检查
     check_current_directory

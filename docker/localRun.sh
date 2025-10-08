@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 年假计算系统 - 本地开发环境部署脚本
+# Excel_lowCode - 本地开发环境部署脚本
 # 此脚本用于在本地Docker环境中启动包含MySQL数据库的完整系统
 set -e
 
@@ -252,7 +252,7 @@ main() {
         esac
     done
     
-    log_info "=== 年假计算系统 本地开发环境部署 ==="
+    log_info "=== Excel_lowCode 本地开发环境部署 ==="
     
     # 检查依赖
     check_dependencies

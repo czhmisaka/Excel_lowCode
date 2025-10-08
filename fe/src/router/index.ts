@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-08-28 07:54:03
  * @LastEditors: CZH
- * @LastEditTime: 2025-09-29 10:09:26
- * @FilePath: /综合部-年假计算/fe/src/router/index.ts
+ * @LastEditTime: 2025-10-09 01:47:14
+ * @FilePath: /lowCode_excel/fe/src/router/index.ts
  */
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/components/Layout/MainLayout.vue'

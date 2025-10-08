@@ -1,10 +1,10 @@
-# 综合部-年假计算系统
+# Excel_lowCode
 
-一个完整的年假计算管理系统，提供Excel数据上传、解析、存储和可视化管理的全流程解决方案。
+一个完整的低代码Excel数据处理系统，提供Excel数据上传、解析、存储和可视化管理的全流程解决方案。
 
 ## 🚀 项目简介
 
-本项目是一个专为综合部设计的年假计算管理系统，支持Excel文件上传、数据解析、关系映射和数据管理等功能。系统采用前后端分离架构，支持Docker容器化部署。
+本项目是一个通用的低代码Excel数据处理系统，支持Excel文件上传、数据解析、关系映射和数据管理等功能。系统采用前后端分离架构，支持Docker容器化部署。
 
 ### 主要特性
 
@@ -44,7 +44,7 @@
 ## 📁 项目结构
 
 ```
-综合部-年假计算/
+Excel_lowCode/
 ├── backend/                    # 后端服务
 │   ├── config/               # 配置文件
 │   │   └── database.js       # 数据库配置
@@ -123,7 +123,7 @@
 #### 1. 克隆项目
 ```bash
 git clone <项目地址>
-cd 综合部-年假计算
+cd Excel_lowCode
 ```
 
 #### 2. 后端服务配置
@@ -156,7 +156,7 @@ npm run dev
 确保MySQL服务运行，并执行数据库初始化脚本：
 ```sql
 -- 创建数据库
-CREATE DATABASE annual_leave;
+CREATE DATABASE excel_lowcode;
 
 -- 导入初始化脚本
 source docker/init-database.sql
@@ -273,19 +273,19 @@ CREATE TABLE table_mappings (
 ### 服务配置
 
 #### 前端服务
-- **容器名**: annual-leave-frontend
+- **容器名**: excel-lowcode-frontend
 - **端口**: 80 (生产) / 8080 (开发)
 - **健康检查**: http://localhost:80/health
 
 #### 后端服务
-- **容器名**: annual-leave-backend
+- **容器名**: excel-lowcode-backend
 - **端口**: 3000
 - **健康检查**: http://localhost:3000/health
 
 #### MySQL数据库 (开发环境)
-- **容器名**: annual-leave-mysql
+- **容器名**: excel-lowcode-mysql
 - **端口**: 3306
-- **数据库**: annual_leave
+- **数据库**: excel_lowcode
 
 ### 网络配置
 - 使用自定义桥接网络 `app-network`

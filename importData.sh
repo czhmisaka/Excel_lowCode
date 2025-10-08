@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 年假计算系统 - 完整数据导入脚本
+# Excel_lowCode - 完整数据导入脚本
 # 导入数据库数据、文件数据、配置数据和Docker镜像
 set -e
 
@@ -519,7 +519,7 @@ main() {
         esac
     done
     
-    log_info "=== 年假计算系统 - 完整数据导入 ==="
+    log_info "=== Excel_lowCode - 完整数据导入 ==="
     
     # 检查依赖
     check_dependencies

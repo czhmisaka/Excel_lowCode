@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 年假计算系统 - Docker镜像导出脚本
+# Excel_lowCode - Docker镜像导出脚本
 set -e
 
 # 颜色定义
@@ -109,7 +109,7 @@ generate_metadata() {
     "export": {
         "timestamp": "$(date -Iseconds)",
         "version": "${version_tag}",
-        "system": "年假计算系统"
+        "system": "Excel_lowCode"
     },
     "images": {
         "frontend": {
@@ -182,7 +182,7 @@ main() {
         esac
     done
     
-    log_info "=== 年假计算系统 Docker镜像导出 ==="
+    log_info "=== Excel_lowCode Docker镜像导出 ==="
     
     # 检查依赖
     check_docker

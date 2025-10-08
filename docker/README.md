@@ -1,6 +1,6 @@
-# 年假计算系统 - Docker部署指南
+# Excel_lowCode - Docker部署指南
 
-本文档介绍如何使用Docker部署年假计算系统的前后端应用。
+本文档介绍如何使用Docker部署Excel_lowCode系统的前后端应用。
 
 ## 项目结构
 

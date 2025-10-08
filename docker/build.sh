@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 年假计算系统 - Docker镜像构建脚本
+# Excel_lowCode - Docker镜像构建脚本
 set -e
 
 # 颜色定义
@@ -84,7 +84,7 @@ clean_cache() {
 
 # 主函数
 main() {
-    log_info "=== 年假计算系统 Docker镜像构建 ==="
+    log_info "=== Excel_lowCode Docker镜像构建 ==="
     
     # 检查依赖
     check_docker

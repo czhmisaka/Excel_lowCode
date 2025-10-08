@@ -2,14 +2,14 @@
 ###
  # @Date: 2025-10-08 23:46:20
  # @LastEditors: CZH
- # @LastEditTime: 2025-10-08 23:46:53
- # @FilePath: /综合部-年假计算/final_verification.sh
+ # @LastEditTime: 2025-10-09 01:43:06
+ # @FilePath: /lowCode_excel/final_verification.sh
 ### 
 
 # 最终验证脚本 - 确认所有新功能正常工作
 set -e
 
-echo "=== 年假计算系统新功能最终验证 ==="
+echo "=== Excel_lowCode新功能最终验证 ==="
 echo
 
 echo "1. 验证参数解析功能"

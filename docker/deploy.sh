@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 年假计算系统 - Docker部署脚本
+# Excel_lowCode - Docker部署脚本
 set -e
 
 # 颜色定义
@@ -367,7 +367,7 @@ main() {
         esac
     done
     
-    log_info "=== 年假计算系统 Docker部署 ==="
+    log_info "=== Excel_lowCode Docker部署 ==="
     
     # 检查依赖
     check_dependencies

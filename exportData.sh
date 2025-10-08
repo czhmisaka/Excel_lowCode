@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 年假计算系统 - 完整数据导出脚本
+# Excel_lowCode - 完整数据导出脚本
 # 导出数据库数据、文件数据、配置数据和Docker镜像
 set -e
 
@@ -258,7 +258,7 @@ generate_metadata() {
     "export": {
         "timestamp": "$(date -Iseconds)",
         "version": "$(basename "$export_path")",
-        "system": "年假计算系统",
+        "system": "Excel_lowCode",
         "description": "完整系统数据备份"
     },
     "database": {
@@ -393,7 +393,7 @@ main() {
         esac
     done
     
-    log_info "=== 年假计算系统 - 完整数据导出 ==="
+    log_info "=== Excel_lowCode - 完整数据导出 ==="
     
     # 检查依赖
     check_dependencies

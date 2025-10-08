@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-09-28 01:00:38
  * @LastEditors: CZH
- * @LastEditTime: 2025-09-28 14:43:27
- * @FilePath: /综合部-年假计算/fe/vite.config.ts
+ * @LastEditTime: 2025-10-09 01:46:59
+ * @FilePath: /lowCode_excel/fe/vite.config.ts
  */
 import { fileURLToPath, URL } from 'node:url'
 

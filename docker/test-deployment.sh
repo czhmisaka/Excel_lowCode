@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 年假计算系统 - 部署测试脚本
+# Excel_lowCode - 部署测试脚本
 set -e
 
 # 颜色定义
@@ -155,7 +155,7 @@ show_test_results() {
 
 # 主函数
 main() {
-    log_info "=== 年假计算系统 Docker部署测试 ==="
+    log_info "=== Excel_lowCode Docker部署测试 ==="
     
     # 检查依赖
     if ! check_dependencies; then

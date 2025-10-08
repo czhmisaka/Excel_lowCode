@@ -2,14 +2,14 @@
 ###
  # @Date: 2025-10-08 23:37:32
  # @LastEditors: CZH
- # @LastEditTime: 2025-10-08 23:37:54
- # @FilePath: /综合部-年假计算/test_new_features.sh
+ # @LastEditTime: 2025-10-09 01:43:18
+ # @FilePath: /lowCode_excel/test_new_features.sh
 ### 
 
 # 测试新功能的脚本
 set -e
 
-echo "=== 测试年假计算系统新功能 ==="
+echo "=== 测试Excel_lowCode新功能 ==="
 echo
 
 # 测试1: 显示帮助信息
