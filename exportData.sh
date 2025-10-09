@@ -30,6 +30,7 @@ log_error() {
 
 # 检查依赖
 check_dependencies() {
+    local export_type=$1
     local missing_deps=()
     
     # 检查Docker
@@ -37,14 +38,24 @@ check_dependencies() {
         missing_deps+=("docker")
     fi
     
-    # 检查MySQL客户端
-    if ! command -v mysql &> /dev/null; then
-        missing_deps+=("mysql-client")
-    fi
-    
-    # 检查mysqldump
-    if ! command -v mysqldump &> /dev/null; then
-        missing_deps+=("mysqldump")
+    # 仅在需要数据库操作时检查数据库依赖
+    if [ "$export_type" = "all" ] || [ "$export_type" = "database" ]; then
+        # 根据数据库类型检查依赖
+        if [ "$DB_TYPE" = "sqlite" ]; then
+            log_info "使用 SQLite 数据库，跳过 MySQL 客户端检查"
+        else
+            # 检查MySQL客户端
+            if ! command -v mysql &> /dev/null; then
+                missing_deps+=("mysql-client")
+            fi
+            
+            # 检查mysqldump
+            if ! command -v mysqldump &> /dev/null; then
+                missing_deps+=("mysqldump")
+            fi
+        fi
+    else
+        log_info "导出类型: ${export_type}，跳过数据库依赖检查"
     fi
     
     if [ ${#missing_deps[@]} -ne 0 ]; then
@@ -98,6 +109,20 @@ export_database() {
     local db_dir="${export_path}/database"
     mkdir -p "$db_dir"
     
+    # 根据数据库类型选择导出方法
+    if [ "$DB_TYPE" = "sqlite" ]; then
+        export_sqlite_database "$db_dir"
+    else
+        export_mysql_database "$db_dir"
+    fi
+}
+
+# 导出 MySQL 数据库
+export_mysql_database() {
+    local db_dir=$1
+    
+    log_info "使用 MySQL 数据库导出..."
+    
     # 导出数据库结构
     log_info "导出数据库结构..."
     mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" \
@@ -118,10 +143,62 @@ export_database() {
     
     # 验证导出文件
     if [ -s "${db_dir}/database-structure.sql" ] && [ -s "${db_dir}/data.sql" ]; then
-        log_success "数据库导出完成"
+        log_success "MySQL 数据库导出完成"
         return 0
     else
-        log_error "数据库导出失败"
+        log_error "MySQL 数据库导出失败"
+        return 1
+    fi
+}
+
+# 导出 SQLite 数据库
+export_sqlite_database() {
+    local db_dir=$1
+    
+    log_info "使用 SQLite 数据库导出..."
+    
+    # 获取 SQLite 数据库文件路径
+    local sqlite_db_path=${SQLITE_DB_PATH:-/app/data/annual_leave.db}
+    
+    # 检查 SQLite 数据库文件是否存在
+    if [ ! -f "$sqlite_db_path" ]; then
+        log_error "SQLite 数据库文件不存在: ${sqlite_db_path}"
+        return 1
+    fi
+    
+    # 复制 SQLite 数据库文件
+    log_info "复制 SQLite 数据库文件..."
+    cp "$sqlite_db_path" "${db_dir}/database.db"
+    
+    # 导出数据库结构（使用 sqlite3 命令）
+    log_info "导出数据库结构..."
+    if command -v sqlite3 &> /dev/null; then
+        sqlite3 "$sqlite_db_path" ".schema" > "${db_dir}/database-structure.sql" 2>/dev/null
+    else
+        log_warning "sqlite3 命令不可用，跳过数据库结构导出"
+        touch "${db_dir}/database-structure.sql"
+    fi
+    
+    # 创建数据导出文件（使用 sqlite3 命令）
+    log_info "导出数据..."
+    if command -v sqlite3 &> /dev/null; then
+        # 导出所有表的数据
+        sqlite3 "$sqlite_db_path" ".dump" > "${db_dir}/data.sql" 2>/dev/null
+    else
+        log_warning "sqlite3 命令不可用，跳过数据导出"
+        touch "${db_dir}/data.sql"
+    fi
+    
+    # 创建表映射数据文件（空文件，SQLite 不需要单独的表映射导出）
+    log_info "导出表映射数据..."
+    touch "${db_dir}/table-mappings.sql"
+    
+    # 验证导出文件
+    if [ -f "${db_dir}/database.db" ]; then
+        log_success "SQLite 数据库导出完成"
+        return 0
+    else
+        log_error "SQLite 数据库导出失败"
         return 1
     fi
 }
@@ -230,18 +307,38 @@ export_images() {
     fi
     
     # 直接导出镜像（备用方法）
-    local images=("annual-leave-frontend:latest" "annual-leave-backend:latest")
+    # 检测所有可能的镜像名称
+    local images=("annual-leave-frontend:latest" "annual-leave-backend:latest" "annual-leave-unified:latest")
+    local found_images=()
     
+    # 检查哪些镜像存在
     for image in "${images[@]}"; do
         if docker image inspect "$image" > /dev/null 2>&1; then
-            log_info "导出镜像: $image"
-            docker save -o "${images_dir}/${image//:/_}.tar" "$image"
-        else
-            log_warning "镜像不存在: $image"
+            found_images+=("$image")
+            log_info "找到镜像: $image"
         fi
     done
     
-    log_success "Docker镜像导出完成"
+    # 导出找到的镜像
+    if [ ${#found_images[@]} -eq 0 ]; then
+        log_warning "未找到任何镜像，跳过镜像导出"
+        return 0
+    fi
+    
+    for image in "${found_images[@]}"; do
+        log_info "导出镜像: $image"
+        local image_file="${images_dir}/${image//:/_}.tar"
+        docker save -o "$image_file" "$image"
+        
+        if [ $? -eq 0 ] && [ -f "$image_file" ]; then
+            local file_size=$(du -h "$image_file" | cut -f1)
+            log_success "镜像导出成功: $(basename "$image_file") (${file_size})"
+        else
+            log_error "镜像导出失败: $image"
+        fi
+    done
+    
+    log_success "Docker镜像导出完成，共导出 ${#found_images[@]} 个镜像"
     return 0
 }
 
@@ -253,29 +350,56 @@ generate_metadata() {
     
     local metadata_file="${export_path}/metadata.json"
     
+    # 根据数据库类型设置数据库信息
+    local db_info=""
+    if [ "$DB_TYPE" = "sqlite" ]; then
+        local sqlite_db_path=${SQLITE_DB_PATH:-/app/data/annual_leave.db}
+        db_info=$(cat << EOF
+        "type": "sqlite",
+        "path": "${sqlite_db_path}",
+        "tables": ["employee_info", "annual_leave_records", "leave_records", "table_mappings"]
+EOF
+)
+    else
+        db_info=$(cat << EOF
+        "type": "mysql",
+        "host": "${DB_HOST}",
+        "port": "${DB_PORT}",
+        "name": "${DB_NAME}",
+        "user": "${DB_USER}",
+        "tables": ["employee_info", "annual_leave_records", "leave_records", "table_mappings"]
+EOF
+)
+    fi
+    
+    # 获取数据库版本信息
+    local db_version="N/A"
+    if [ "$DB_TYPE" = "sqlite" ] && command -v sqlite3 &> /dev/null; then
+        db_version=$(sqlite3 --version 2>/dev/null | head -1 || echo "N/A")
+    elif command -v mysql &> /dev/null; then
+        db_version=$(mysql --version 2>/dev/null | head -1 || echo "N/A")
+    fi
+    
     cat > "$metadata_file" << EOF
 {
     "export": {
         "timestamp": "$(date -Iseconds)",
         "version": "$(basename "$export_path")",
         "system": "Excel_lowCode",
-        "description": "完整系统数据备份"
+        "description": "完整系统数据备份",
+        "database_type": "${DB_TYPE:-mysql}"
     },
     "database": {
-        "host": "${DB_HOST}",
-        "port": "${DB_PORT}",
-        "name": "${DB_NAME}",
-        "user": "${DB_USER}",
-        "tables": ["employee_info", "annual_leave_records", "leave_records", "table_mappings"]
+        ${db_info}
     },
     "components": {
-        "database": "$(find "${export_path}/database" -name "*.sql" 2>/dev/null | wc -l || echo 0) 个文件",
+        "database": "$(find "${export_path}/database" -type f 2>/dev/null | wc -l || echo 0) 个文件",
         "files": "$(find "${export_path}/files" -name "*.tar.gz" 2>/dev/null | wc -l || echo 0) 个文件",
         "configs": "$(find "${export_path}/configs" -type f 2>/dev/null | wc -l || echo 0) 个文件",
         "images": "$(find "${export_path}/images" -name "*.tar" 2>/dev/null | wc -l || echo 0) 个镜像"
     },
     "environment": {
-        "mysql_version": "$(mysql --version 2>/dev/null | head -1 || echo "N/A")",
+        "database_version": "${db_version}",
         "docker_version": "$(docker --version | cut -d' ' -f3 | sed 's/,//' 2>/dev/null || echo "N/A")",
         "system": "$(uname -s) $(uname -r)"
     }
@@ -396,7 +520,7 @@ main() {
     log_info "=== Excel_lowCode - 完整数据导出 ==="
     
     # 检查依赖
-    check_dependencies
+    check_dependencies "$export_type"
     
     # 加载环境变量
     load_env

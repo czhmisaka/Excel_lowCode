@@ -37,9 +37,11 @@ check_dependencies() {
         missing_deps+=("docker")
     fi
     
-    # 检查MySQL客户端
-    if ! command -v mysql &> /dev/null; then
-        missing_deps+=("mysql-client")
+    # 检查MySQL客户端（仅在需要时检查）
+    if [ "$NEED_MYSQL" = "true" ]; then
+        if ! command -v mysql &> /dev/null; then
+            missing_deps+=("mysql-client")
+        fi
     fi
     
     if [ ${#missing_deps[@]} -ne 0 ]; then
@@ -130,21 +132,41 @@ verify_import_package() {
         fi
     done
     
-    # 检查数据库文件
-    local db_files=("database-structure.sql" "data.sql")
-    for file in "${db_files[@]}"; do
-        if [ ! -f "${import_dir}/database/${file}" ]; then
-            log_error "数据库文件缺失: ${file}"
+    # 检查数据库类型并验证相应的文件
+    local db_dir="${import_dir}/database"
+    
+    # 检查是否有 SQLite 数据库文件
+    if [ -f "${db_dir}/database.db" ]; then
+        log_info "检测到 SQLite 数据库备份"
+        NEED_MYSQL="false"
+        
+        # 验证 SQLite 数据库文件
+        if [ ! -s "${db_dir}/database.db" ]; then
+            log_error "SQLite 数据库文件为空或损坏"
             return 1
         fi
-    done
+    else
+        log_info "检测到 MySQL 数据库备份"
+        NEED_MYSQL="true"
+        
+        # 检查 MySQL 数据库文件
+        local db_files=("database-structure.sql" "data.sql")
+        for file in "${db_files[@]}"; do
+            if [ ! -f "${db_dir}/${file}" ]; then
+                log_error "数据库文件缺失: ${file}"
+                return 1
+            fi
+        done
+    fi
     
     # 检查元数据文件
     if [ -f "${import_dir}/metadata.json" ]; then
         log_info "找到元数据文件"
         if command -v jq &> /dev/null; then
             local system_name=$(jq -r '.export.system' "${import_dir}/metadata.json")
+            local db_type=$(jq -r '.export.database_type // "mysql"' "${import_dir}/metadata.json")
             log_info "导入系统: ${system_name}"
+            log_info "数据库类型: ${db_type}"
         fi
     fi
     
@@ -180,6 +202,20 @@ import_database() {
     
     local db_dir="${import_dir}/database"
     
+    # 根据数据库类型选择导入方法
+    if [ "$NEED_MYSQL" = "true" ]; then
+        import_mysql_database "$db_dir"
+    else
+        import_sqlite_database "$db_dir"
+    fi
+}
+
+# 导入 MySQL 数据库
+import_mysql_database() {
+    local db_dir=$1
+    
+    log_info "使用 MySQL 数据库导入..."
+    
     # 检查数据库连接
     log_info "测试数据库连接..."
     if ! mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" -e "SELECT 1;" > /dev/null 2>&1; then
@@ -214,10 +250,45 @@ import_database() {
     local table_count=$(mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -N -e "SHOW TABLES;" | wc -l)
     
     if [ "$table_count" -ge 3 ]; then
-        log_success "数据库导入完成，共 ${table_count} 个表"
+        log_success "MySQL 数据库导入完成，共 ${table_count} 个表"
         return 0
     else
-        log_error "数据库导入验证失败，表数量不足"
+        log_error "MySQL 数据库导入验证失败，表数量不足"
+        return 1
+    fi
+}
+
+# 导入 SQLite 数据库
+import_sqlite_database() {
+    local db_dir=$1
+    
+    log_info "使用 SQLite 数据库导入..."
+    
+    # 获取 SQLite 数据库文件路径
+    local sqlite_db_path=${SQLITE_DB_PATH:-/app/data/annual_leave.db}
+    
+    # 确保目标目录存在
+    local target_dir=$(dirname "$sqlite_db_path")
+    mkdir -p "$target_dir"
+    
+    # 复制 SQLite 数据库文件
+    log_info "恢复 SQLite 数据库文件..."
+    if [ -f "${db_dir}/database.db" ]; then
+        cp "${db_dir}/database.db" "$sqlite_db_path"
+        
+        # 设置适当的权限
+        chmod 644 "$sqlite_db_path"
+        
+        # 验证数据库文件
+        if [ -f "$sqlite_db_path" ] && [ -s "$sqlite_db_path" ]; then
+            log_success "SQLite 数据库导入完成"
+            return 0
+        else
+            log_error "SQLite 数据库导入失败"
+            return 1
+        fi
+    else
+        log_error "SQLite 数据库文件不存在: ${db_dir}/database.db"
         return 1
     fi
 }
@@ -406,8 +477,12 @@ show_import_info() {
     
     # 数据库信息
     if [ -d "${import_dir}/database" ]; then
-        local db_files=$(find "${import_dir}/database" -name "*.sql" | wc -l)
-        echo "  - 数据库: ${db_files} 个文件"
+        if [ -f "${import_dir}/database/database.db" ]; then
+            echo "  - 数据库: SQLite 数据库文件"
+        else
+            local db_files=$(find "${import_dir}/database" -name "*.sql" | wc -l)
+            echo "  - 数据库: ${db_files} 个 SQL 文件"
+        fi
     fi
     
     # 文件信息
