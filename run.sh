@@ -120,6 +120,7 @@ show_usage() {
     echo ""
     echo "运行模式选项:"
     echo "  --run-local        使用本地SQLite数据库模式"
+    echo "  --unified          使用单容器模式部署（推荐）"
     echo ""
     echo "端口配置选项:"
     echo "  --backend-port PORT  设置后端服务端口（默认: 3000）"
@@ -141,7 +142,9 @@ show_usage() {
     echo "  $0 --backup           # 备份后构建和部署"
     echo "  $0 --stop-only        # 仅构建和停止服务"
     echo "  $0 --run-local        # 使用SQLite数据库本地运行"
+    echo "  $0 --unified          # 使用单容器模式部署"
     echo "  $0 --run-local --backend-port 4000 --frontend-port 9000  # 自定义端口运行"
+    echo "  $0 --unified --backend-port 4000 --frontend-port 9000    # 单容器自定义端口"
     echo ""
     echo "注意: 此脚本会按顺序调用 docker/build.sh 和 docker/deploy.sh"
 }
@@ -151,6 +154,7 @@ parse_arguments() {
     local run_local=false
     local backend_port=""
     local frontend_port=""
+    local unified_mode=false
     local deploy_args=()
     
     while [[ $# -gt 0 ]]; do
@@ -180,6 +184,11 @@ parse_arguments() {
                     exit 1
                 fi
                 ;;
+            --unified)
+                unified_mode=true
+                deploy_args+=("$1")
+                shift
+                ;;
             *)
                 deploy_args+=("$1")
                 shift
@@ -191,6 +200,11 @@ parse_arguments() {
     if [ "$run_local" = true ]; then
         export RUN_MODE="sqlite"
         log_info "运行模式: SQLite 本地数据库"
+    fi
+    
+    if [ "$unified_mode" = true ]; then
+        export DEPLOY_MODE="unified"
+        log_info "部署模式: 单容器模式"
     fi
     
     if [ -n "$backend_port" ]; then

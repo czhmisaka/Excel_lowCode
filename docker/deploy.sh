@@ -193,7 +193,7 @@ check_env() {
 stop_services() {
     log_info "停止现有服务..."
     local compose_cmd=$(get_docker_compose_cmd)
-    local compose_file="./docker/$(select_compose_file)"
+    local compose_file="./docker/$(select_compose_file "$@")"
     
     log_info "当前执行路径 : $(pwd)"
     log_info "使用Docker Compose文件: $compose_file"
@@ -224,7 +224,10 @@ build_frontend() {
 
 # 选择Docker Compose文件
 select_compose_file() {
-    if [ "$RUN_MODE" = "sqlite" ]; then
+    # 检查是否使用单容器模式
+    if [ "$1" = "--unified" ]; then
+        echo "docker-compose.unified.yml"
+    elif [ "$RUN_MODE" = "sqlite" ]; then
         echo "docker-compose.sqlite.yml"
     else
         echo "docker-compose.yml"
@@ -235,7 +238,7 @@ select_compose_file() {
 start_services() {
     log_info "启动服务..."
     local compose_cmd=$(get_docker_compose_cmd)
-    local compose_file="./docker/$(select_compose_file)"
+    local compose_file="./docker/$(select_compose_file "$@")"
     
     log_info "使用Docker Compose文件: $compose_file"
     
@@ -326,18 +329,21 @@ show_usage() {
     echo "  --restore FILE    部署后恢复指定备份文件"
     echo "  --stop-only       仅停止服务，不启动"
     echo "  --start-only      仅启动服务，不停止"
+    echo "  --unified         使用单容器模式部署"
     echo "  --help            显示此帮助信息"
     echo ""
     echo "示例:"
     echo "  $0                    # 完整部署流程"
     echo "  $0 --backup           # 备份后部署"
     echo "  $0 --restore backup.tar.gz  # 恢复备份后部署"
+    echo "  $0 --unified          # 使用单容器模式部署"
 }
 
 # 主函数
 main() {
     local action="full"
     local backup_file=""
+    local unified_mode=false
     
     # 解析参数
     while [[ $# -gt 0 ]]; do
@@ -370,6 +376,10 @@ main() {
                 # 前端端口参数，由环境变量处理
                 shift 2
                 ;;
+            --unified)
+                unified_mode=true
+                shift
+                ;;
             --help)
                 show_usage
                 exit 0
@@ -390,21 +400,41 @@ main() {
     # 检查环境配置
     check_env
     
-    case $action in
-        "stop")
-            stop_services
-            ;;
-        "start")
-            start_services
-            show_services_status
-            ;;
-        "full")
-            stop_services
-            build_frontend
-            start_services
-            show_services_status
-            ;;
-    esac
+    # 根据模式选择执行逻辑
+    if [ "$unified_mode" = true ]; then
+        log_info "使用单容器模式部署"
+        case $action in
+            "stop")
+                stop_services --unified
+                ;;
+            "start")
+                start_services --unified
+                show_services_status
+                ;;
+            "full")
+                stop_services --unified
+                start_services --unified
+                show_services_status
+                ;;
+        esac
+    else
+        log_info "使用多容器模式部署"
+        case $action in
+            "stop")
+                stop_services
+                ;;
+            "start")
+                start_services
+                show_services_status
+                ;;
+            "full")
+                stop_services
+                build_frontend
+                start_services
+                show_services_status
+                ;;
+        esac
+    fi
     
     log_success "部署流程完成"
     local server_ip=$(get_server_ip)

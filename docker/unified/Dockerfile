@@ -1,0 +1,89 @@
+# 统一Dockerfile - 单容器解决方案
+# 多阶段构建，包含前端构建、后端依赖安装和运行时环境
+
+# 第一阶段：前端构建
+FROM node:20-alpine AS frontend-builder
+
+# 设置工作目录
+WORKDIR /app/frontend
+
+# 复制前端package.json
+COPY fe/package*.json ./
+
+# 安装前端依赖（包含开发依赖，用于构建）
+RUN npm ci
+
+# 复制前端源代码
+COPY fe/ ./
+
+# 复制生产环境配置文件
+COPY ./fe/.env.production ./
+
+# 设置构建时的环境变量（后端API地址）
+ARG VITE_API_BASE_URL=/backend
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
+# 构建前端应用
+RUN npm run build
+
+# 第二阶段：后端构建
+FROM node:16-alpine AS backend-builder
+
+# 安装构建工具和Python（用于编译SQLite）
+RUN apk add --no-cache python3 make g++
+
+# 设置工作目录
+WORKDIR /app/backend
+
+# 复制后端package.json
+COPY backend/package*.json ./
+
+# 安装后端依赖（包括dev依赖用于编译）
+RUN npm ci
+
+# 复制后端源代码
+COPY backend/ ./
+
+# 创建上传目录和数据目录（用于SQLite）
+RUN mkdir -p uploads && mkdir -p data
+
+# 强制重新构建原生模块（确保在当前架构上编译）
+RUN npm rebuild sqlite3 --build-from-source
+
+# 第三阶段：运行时环境
+FROM node:16-alpine
+
+# 安装运行时依赖
+RUN apk add --no-cache nginx supervisor sqlite-libs
+
+# 创建工作目录
+WORKDIR /app
+
+# 从前端构建阶段复制构建好的静态文件
+COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
+
+# 从后端构建阶段复制后端代码和依赖
+COPY --from=backend-builder /app/backend ./
+
+# 创建必要的目录
+RUN mkdir -p uploads && mkdir -p data && mkdir -p /var/log/supervisor
+
+# 复制Nginx配置
+COPY docker/unified/nginx.conf /etc/nginx/nginx.conf
+
+# 复制Supervisor配置
+COPY docker/unified/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# 设置环境变量
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# 暴露端口
+EXPOSE 80 3000
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# 启动应用（使用supervisor管理多个进程）
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

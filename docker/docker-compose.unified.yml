@@ -1,0 +1,56 @@
+# 单容器Docker Compose配置
+# 使用统一的Docker镜像，包含前端和后端服务
+
+services:
+  # 统一应用服务
+  app:
+    image: ${IMAGE_PREFIX:-annual-leave}-unified:${UNIFIED_TAG:-latest}
+    container_name: annual-leave-unified
+    ports:
+      - "${FRONTEND_PORT}:80"
+      - "${BACKEND_PORT}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - app-uploads:/app/uploads
+      - app-data:/app/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:80/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    build:
+      context: ..
+      dockerfile: docker/unified/Dockerfile
+      args:
+        - VITE_API_BASE_URL=/backend
+
+# 网络配置
+networks:
+  app-network:
+    driver: bridge
+
+# 卷配置
+volumes:
+  app-uploads:
+    driver: local
+  app-data:
+    driver: local

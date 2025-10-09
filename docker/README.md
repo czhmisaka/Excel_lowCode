@@ -1,6 +1,6 @@
 # Excel_lowCode - Docker部署指南
 
-本文档介绍如何使用Docker部署Excel_lowCode系统的前后端应用。
+本文档介绍如何使用Docker部署Excel_lowCode系统的前后端应用，支持多容器和单容器两种部署模式。
 
 ## 项目结构
 
@@ -11,8 +11,13 @@ docker/
 │   └── nginx.conf        # Nginx配置
 ├── backend/              # 后端相关配置
 │   └── Dockerfile        # 后端Dockerfile
+├── unified/              # 单容器相关配置
+│   ├── Dockerfile        # 统一Dockerfile
+│   ├── nginx.conf        # 单容器Nginx配置
+│   └── supervisord.conf  # 进程管理配置
 ├── docker-compose.yml    # Docker Compose配置（生产环境）
 ├── docker-compose.local.yml # Docker Compose配置（本地开发环境）
+├── docker-compose.unified.yml # 单容器Docker Compose配置
 ├── .env.template         # 环境变量模板
 ├── .env.local            # 本地开发环境配置
 ├── init-database.sql     # 数据库初始化脚本
@@ -21,6 +26,7 @@ docker/
 ├── localRun.sh          # 本地开发环境部署脚本
 ├── export-images.sh     # 镜像导出脚本
 ├── import-images.sh     # 镜像导入脚本
+├── test-unified.sh      # 单容器部署测试脚本
 └── README.md           # 本文档
 ```
 
@@ -90,6 +96,25 @@ BACKEND_TAG=latest
 
 # 部署后恢复数据
 ./deploy.sh --restore backup-file.tar.gz
+```
+
+#### 单容器模式部署（推荐用于简化部署）
+
+```bash
+# 构建单容器镜像
+./build.sh --unified
+
+# 部署单容器服务
+./deploy.sh --unified
+
+# 停止单容器服务
+./deploy.sh --stop-only --unified
+
+# 启动单容器服务
+./deploy.sh --start-only --unified
+
+# 完整单容器部署流程
+./build.sh --unified && ./deploy.sh --unified
 ```
 
 #### 本地开发环境部署（包含MySQL数据库）
@@ -232,6 +257,49 @@ docker load -i backend.tar
 - 使用自定义桥接网络 `app-network`
 - 前端可通过 `backend` 主机名访问后端服务
 - 后端可通过 `mysql` 主机名访问数据库服务
+
+## 单容器部署模式
+
+单容器模式将所有前端和后端服务打包到一个Docker容器中，使用Supervisor管理多个进程，简化部署流程。
+
+### 单容器架构
+
+```
+单容器 (annual-leave-unified)
+├── Nginx (端口80)
+│   ├── 前端静态文件服务
+│   └── 后端API代理 (/backend/*)
+└── Node.js后端服务 (端口3000)
+    ├── Express API服务
+    └── SQLite数据库支持
+```
+
+### 单容器优势
+
+1. **简化部署**: 只需构建和部署一个镜像
+2. **减少依赖**: 消除对本地npm的依赖
+3. **资源优化**: 减少容器数量，降低资源占用
+4. **网络简化**: 内部进程间通信，无需网络配置
+5. **一致性**: 确保前后端版本一致性
+
+### 单容器服务配置
+
+- **容器名**: annual-leave-unified
+- **端口映射**: 8080:80 (前端)
+- **健康检查**: http://localhost:8080/health
+- **进程管理**: Supervisor管理Nginx和Node.js进程
+- **API代理**: 前端通过 `/backend/*` 路径访问后端API
+
+### 验证单容器部署
+
+```bash
+# 运行单容器测试脚本
+./test-unified.sh
+
+# 手动验证服务
+curl http://localhost:8080/health          # 前端健康检查
+curl http://localhost:8080/backend/health  # 后端健康检查
+```
 
 ## 服务配置说明
 

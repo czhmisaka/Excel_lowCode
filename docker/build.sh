@@ -55,17 +55,28 @@ load_env() {
 build_images() {
     log_info "开始构建Docker镜像..."
     
-    # 构建前端镜像（在项目根目录构建）
-    log_info "构建前端镜像..."
-    docker build \
-        -t ${IMAGE_PREFIX:-annual-leave}-frontend:${FRONTEND_TAG:-latest} \
-        -f docker/frontend/Dockerfile \
-        --build-arg VITE_API_BASE_URL=${API_BASE_URL:-http://localhost:3000} \
-        .
-    
-    # 构建后端镜像（在项目根目录构建）
-    log_info "构建后端镜像..."
-    docker build -t ${IMAGE_PREFIX:-annual-leave}-backend:${BACKEND_TAG:-latest} -f docker/backend/Dockerfile .
+    # 检查是否使用单容器模式
+    if [ "$1" = "--unified" ]; then
+        log_info "使用单容器模式构建..."
+        # 构建统一镜像
+        docker build \
+            -t ${IMAGE_PREFIX:-annual-leave}-unified:${UNIFIED_TAG:-latest} \
+            -f docker/unified/Dockerfile \
+            --build-arg VITE_API_BASE_URL=/backend \
+            .
+    else
+        # 构建前端镜像（在项目根目录构建）
+        log_info "构建前端镜像..."
+        docker build \
+            -t ${IMAGE_PREFIX:-annual-leave}-frontend:${FRONTEND_TAG:-latest} \
+            -f docker/frontend/Dockerfile \
+            --build-arg VITE_API_BASE_URL=${API_BASE_URL:-http://localhost:3000} \
+            .
+        
+        # 构建后端镜像（在项目根目录构建）
+        log_info "构建后端镜像..."
+        docker build -t ${IMAGE_PREFIX:-annual-leave}-backend:${BACKEND_TAG:-latest} -f docker/backend/Dockerfile .
+    fi
     
     log_success "镜像构建完成"
 }
@@ -73,7 +84,11 @@ build_images() {
 # 显示镜像信息
 show_images() {
     log_info "当前镜像列表:"
-    docker images | grep ${IMAGE_PREFIX:-annual-leave} || log_warning "未找到相关镜像"
+    if [ "$1" = "--unified" ]; then
+        docker images | grep ${IMAGE_PREFIX:-annual-leave}-unified || log_warning "未找到统一镜像"
+    else
+        docker images | grep ${IMAGE_PREFIX:-annual-leave} || log_warning "未找到相关镜像"
+    fi
 }
 
 # 清理构建缓存
@@ -93,13 +108,13 @@ main() {
     load_env
     
     # 构建镜像
-    build_images
+    build_images "$@"
     
     # 显示镜像信息
-    show_images
+    show_images "$@"
     
     # 可选清理
-    if [ "$1" = "--clean" ]; then
+    if [ "$1" = "--clean" ] || [ "$2" = "--clean" ]; then
         clean_cache
     fi
     
