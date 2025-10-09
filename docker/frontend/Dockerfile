@@ -14,7 +14,7 @@ RUN npm ci
 COPY fe/ ./
 
 # 复制生产环境配置文件
-COPY .env.production ./
+COPY ./fe/.env.production ./
 
 # 设置构建时的环境变量（后端API地址）
 ARG VITE_API_BASE_URL=/backend
