@@ -407,7 +407,8 @@ main() {
     esac
     
     log_success "部署流程完成"
-    log_info "前端访问地址: http://localhost:${FRONTEND_PORT}"
+    local server_ip=$(get_server_ip)
+    log_info "前端访问地址: http://${server_ip}:${FRONTEND_PORT}"
     log_info "后端API地址: ${API_BASE_URL}"
     log_info "API文档地址: ${API_BASE_URL}/api-docs"
 }
