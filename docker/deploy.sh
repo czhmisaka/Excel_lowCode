@@ -199,12 +199,51 @@ stop_services() {
     log_info "使用Docker Compose文件: $compose_file"
     
     # 检查Docker Compose文件是否存在
-    # if [ ! -f "$compose_file" ]; then
-    #     log_error "Docker Compose文件不存在: $compose_file"
-    #     exit 1
-    # fi
+    if [ ! -f "$compose_file" ]; then
+        log_warning "Docker Compose文件不存在: $compose_file，尝试停止当前项目容器..."
+        # 如果Compose文件不存在，只停止当前项目的容器
+        stop_current_project_containers
+        return 0
+    fi
     
-    ($compose_cmd -f "$compose_file" down --remove-orphans || true)
+    # 使用特定的项目名称来避免影响其他服务
+    local project_name="annual-leave"
+    ($compose_cmd -f "$compose_file" -p "$project_name" down --remove-orphans || true)
+}
+
+# 停止当前项目的容器（安全模式）
+stop_current_project_containers() {
+    log_info "安全停止当前项目容器..."
+    
+    # 定义当前项目的容器名称模式
+    local container_patterns=(
+        "annual-leave-*"
+        "docker-*"  # 匹配docker-compose.yml中的容器
+    )
+    
+    # 停止匹配的容器
+    for pattern in "${container_patterns[@]}"; do
+        local containers=$(docker ps -q --filter "name=$pattern" 2>/dev/null || true)
+        if [ -n "$containers" ]; then
+            log_info "停止容器: $containers"
+            docker stop $containers >/dev/null 2>&1 || true
+            docker rm $containers >/dev/null 2>&1 || true
+        fi
+    done
+    
+    # 清理孤儿网络和卷
+    cleanup_orphans
+}
+
+# 清理孤儿网络和卷
+cleanup_orphans() {
+    log_info "清理孤儿资源..."
+    
+    # 清理未使用的网络
+    docker network prune -f >/dev/null 2>&1 || true
+    
+    # 清理未使用的卷（只清理未挂载的卷）
+    docker volume ls -q --filter "dangling=true" | xargs -r docker volume rm >/dev/null 2>&1 || true
 }
 
 # 构建前端镜像
@@ -243,12 +282,14 @@ start_services() {
     log_info "使用Docker Compose文件: $compose_file"
     
     # 检查Docker Compose文件是否存在
-    # if [ ! -f "$compose_file" ]; then
-    #     log_error "Docker Compose文件不存在: $compose_file"
-    #     exit 1
-    # fi
+    if [ ! -f "$compose_file" ]; then
+        log_error "Docker Compose文件不存在: $compose_file"
+        exit 1
+    fi
     
-    ($compose_cmd -f "$compose_file" up -d)
+    # 使用特定的项目名称来避免影响其他服务
+    local project_name="annual-leave"
+    ($compose_cmd -f "$compose_file" -p "$project_name" up -d)
     
     # 等待服务启动
     log_info "等待服务启动..."
@@ -293,10 +334,12 @@ show_services_status() {
         exit 1
     fi
     
-    (cd docker && $compose_cmd -f "$(basename "$compose_file")" ps)
+    # 使用特定的项目名称来显示正确的服务状态
+    local project_name="annual-leave"
+    (cd docker && $compose_cmd -f "$(basename "$compose_file")" -p "$project_name" ps)
     
     log_info "容器日志:"
-    (cd docker && $compose_cmd -f "$(basename "$compose_file")" logs --tail=10)
+    (cd docker && $compose_cmd -f "$(basename "$compose_file")" -p "$project_name" logs --tail=10)
 }
 
 # 备份数据
