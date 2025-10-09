@@ -124,6 +124,10 @@ get_server_ip() {
 
 # 检查环境文件
 check_env() {
+    # 保存命令行传入的端口配置（如果存在）
+    local saved_backend_port="$BACKEND_PORT"
+    local saved_frontend_port="$FRONTEND_PORT"
+    
     # 根据运行模式选择环境文件
     local env_file="docker/.env"
     if [ "$RUN_MODE" = "sqlite" ]; then
@@ -151,6 +155,17 @@ check_env() {
         source .env
         set +a
         log_info "加载项目根目录环境变量文件: .env"
+    fi
+    
+    # 恢复命令行传入的端口配置（优先级最高）
+    if [ -n "$saved_backend_port" ]; then
+        BACKEND_PORT="$saved_backend_port"
+        log_info "使用命令行指定的后端端口: $BACKEND_PORT"
+    fi
+    
+    if [ -n "$saved_frontend_port" ]; then
+        FRONTEND_PORT="$saved_frontend_port"
+        log_info "使用命令行指定的前端端口: $FRONTEND_PORT"
     fi
 
     # 设置默认端口（如果未设置）
