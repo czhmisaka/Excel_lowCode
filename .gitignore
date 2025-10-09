@@ -43,13 +43,11 @@ logs/
 
 # 环境变量文件
 .env
-.env.*
 !.env.example
-
+!.env.*
 # 后端特定文件
 uploads/
 temp/
-*.sqlite
 *.db
 
 # 测试相关

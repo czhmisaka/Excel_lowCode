@@ -10,8 +10,12 @@ WORKDIR /app/frontend
 # 复制前端package.json
 COPY fe/package*.json ./
 
-# 安装前端依赖（包含开发依赖，用于构建）
-RUN npm ci
+# 设置npm配置并安装前端依赖（优化网络和缓存）
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm config set fetch-retry-maxtimeout 60000 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set progress false && \
+    npm ci --no-optional --prefer-offline
 
 # 复制前端源代码
 COPY fe/ ./
@@ -23,8 +27,8 @@ COPY ./fe/.env.production ./
 ARG VITE_API_BASE_URL=/backend
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
-# 构建前端应用
-RUN npm run build
+# 构建前端应用（添加重试机制）
+RUN npm run build || (rm -rf node_modules package-lock.json && npm install && npm run build)
 
 # 第二阶段：后端构建
 FROM node:16-alpine AS backend-builder
@@ -38,8 +42,9 @@ WORKDIR /app/backend
 # 复制后端package.json
 COPY backend/package*.json ./
 
-# 安装后端依赖（包括dev依赖用于编译）
-RUN npm ci
+# 设置国内npm镜像源并安装后端依赖
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm ci
 
 # 复制后端源代码
 COPY backend/ ./
