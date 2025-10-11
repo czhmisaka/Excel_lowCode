@@ -41,6 +41,12 @@
 - **Web服务器**: Nginx
 - **数据库**: MySQL 8.0
 
+### MCP 服务器技术
+- **MCP 协议**: Model Context Protocol
+- **传输模式**: stdio、HTTP streams
+- **开发语言**: TypeScript
+- **核心依赖**: @modelcontextprotocol/sdk、express、axios
+
 ## 📁 项目结构
 
 ```
@@ -106,6 +112,18 @@ Excel_lowCode/
 │   ├── docker-compose.local.yml # 本地开发配置
 │   ├── init-database.sql     # 数据库初始化脚本
 │   └── README.md             # Docker部署文档
+├── MCPServer/                # MCP 服务器
+│   ├── src/                 # 源代码
+│   │   ├── main.ts         # 主服务器入口
+│   │   ├── tools/          # 工具定义
+│   │   │   ├── excelTools.ts   # Excel 相关工具
+│   │   │   ├── dataTools.ts    # 数据操作工具
+│   │   │   └── mappingTools.ts # 映射关系工具
+│   │   └── utils/          # 工具类
+│   │       └── httpClient.ts   # HTTP 客户端
+│   ├── build/              # 编译输出
+│   ├── package.json        # 依赖配置
+│   └── README.md           # MCP 服务器文档
 ├── run.sh                    # 启动脚本
 └── ReadMe.md                 # 项目文档
 ```
@@ -160,6 +178,23 @@ CREATE DATABASE excel_lowcode;
 
 -- 导入初始化脚本
 source docker/init-database.sql
+```
+
+#### 5. MCP Server 配置（可选）
+```bash
+cd MCPServer
+
+# 安装依赖
+npm install
+
+# 构建项目
+npm run build
+
+# 启动MCP服务器（stdio模式）
+npm start
+
+# 或者启动HTTP streams模式
+MODE=http-streams npm start
 ```
 
 ### Docker部署（推荐）
@@ -223,6 +258,170 @@ cp .env.template .env
 - 接口文档查看
 - 接口测试工具
 - 使用示例
+
+## 🤖 MCP Server 安装和使用指南
+
+### 前置要求
+
+1. **Node.js**: >= 18.0.0 (推荐 20.x)
+2. **Excel数据管理系统**: 运行在 http://localhost:3000
+3. **MCP客户端**: Claude Desktop 或其他支持 MCP 协议的客户端
+
+### 安装和配置
+
+#### 1. 安装依赖
+```bash
+cd MCPServer
+npm install
+```
+
+#### 2. 构建项目
+```bash
+npm run build
+```
+
+#### 3. 环境配置
+复制 `.env` 文件并根据需要修改配置：
+```bash
+# Excel数据管理系统API配置
+API_BASE_URL=http://localhost:3000
+API_TIMEOUT=30000
+
+# MCP服务器配置
+MCP_SERVER_PORT=3001
+NODE_ENV=development
+
+# 传输模式配置
+MODE=stdio  # 可选: stdio, http-streams
+
+# API密钥（HTTP streams模式需要）
+API_KEYS=your_api_key1,your_api_key2
+```
+
+### 启动和使用
+
+#### 开发模式
+```bash
+# 开发模式（支持热重载）
+npm run dev
+
+# 或者
+npm run start:dev
+```
+
+#### 生产模式
+```bash
+# 构建项目
+npm run build
+
+# 启动服务器
+npm start
+```
+
+#### 传输模式
+
+**stdio 模式（默认）**
+适用于Claude Desktop等本地客户端：
+```bash
+MODE=stdio npm start
+```
+
+**HTTP streams 模式**
+适用于Web客户端和远程连接：
+```bash
+MODE=http-streams npm start
+```
+
+### Claude Desktop 集成
+
+在Claude Desktop的配置文件中添加MCP服务器：
+
+```json
+{
+  "mcpServers": {
+    "excel-data-mcp-server": {
+      "command": "node",
+      "args": [
+        "--env-file=/path/to/your/MCPServer/.env",
+        "/path/to/your/MCPServer/build/main.js"
+      ]
+    }
+  }
+}
+```
+
+### HTTP Streams 模式集成
+
+当运行在HTTP streams模式时，服务器提供以下端点：
+
+**基础URL:** `http://localhost:3001` (或配置的端口)
+
+**端点:**
+- `POST /mcp` - 初始化会话或发送MCP消息
+- `GET /mcp` - 检索服务器到客户端通知（需要会话ID）
+- `DELETE /mcp` - 终止MCP会话
+- `GET /health` - 健康检查端点
+- `GET /info` - 服务器信息端点
+
+**会话管理:**
+HTTP streams模式使用基于会话的通信。在初始化后，在请求中包含 `mcp-session-id` 头：
+
+```bash
+# 初始化新会话
+curl -X POST \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0.0"}}}' \
+  http://localhost:3001/mcp
+
+# 在后续请求中使用返回的会话ID
+curl -X POST \
+  -H "x-api-key: your_api_key" \
+  -H "mcp-session-id: your-session-id" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
+  http://localhost:3001/mcp
+```
+
+**认证:**
+为所有请求设置 `x-api-key` 头，使用配置的API密钥之一。
+
+### 测试
+
+#### 健康检查
+```bash
+curl http://localhost:3001/health
+```
+
+#### 服务器信息
+```bash
+curl http://localhost:3001/info
+```
+
+#### 测试WebSocket连接
+```bash
+node test-websocket.js
+```
+
+## 🤖 MCP Server 功能特性
+
+### Excel 文件操作工具
+- **`upload_excel_file`** - 上传Excel文件并创建对应的数据表
+- **`list_excel_files`** - 列出所有已上传的Excel文件及其映射关系
+- **`get_excel_metadata`** - 根据哈希值获取Excel文件的详细信息
+
+### 数据操作工具
+- **`query_table_data`** - 根据哈希值查询对应表的数据（支持分页和条件查询）
+- **`add_table_record`** - 向指定表中新增数据记录
+- **`update_table_record`** - 根据条件更新表中的数据记录
+- **`delete_table_record`** - 根据条件删除表中的数据记录
+
+### 映射关系操作工具
+- **`list_table_mappings`** - 列出所有Excel文件与动态表的映射关系
+- **`get_table_info`** - 根据哈希值获取表的详细信息
+- **`update_table_name`** - 根据哈希值更新表映射关系的表名
+- **`delete_table_mapping`** - 根据哈希值删除表映射关系，并同步删除对应的数据表
+- **`check_system_health`** - 检查Excel数据管理系统的健康状态
 
 ## 🔧 API接口
 
@@ -392,6 +591,21 @@ npm test
    - 清理Docker缓存
    - 检查网络连接
    - 重新构建镜像
+
+5. **MCP Server 连接失败**
+   - 检查Excel数据管理系统是否运行在指定端口
+   - 验证API_BASE_URL配置是否正确
+   - 检查网络连接和防火墙设置
+
+6. **MCP 工具调用失败**
+   - 检查MCP客户端配置是否正确
+   - 查看MCP服务器日志获取详细错误信息
+   - 验证传输模式配置（stdio/http-streams）
+
+7. **MCP Server 构建错误**
+   - 运行 `npm run build` 确保TypeScript编译成功
+   - 检查所有依赖是否已安装
+   - 验证Node.js版本是否符合要求（>=18.0.0）
 
 ### 日志查看
 
