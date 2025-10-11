@@ -111,11 +111,17 @@ export class DataToolsHandler {
             const limit = args.limit || 10;
             const conditions = args.conditions || {};
 
-            const result = await httpClient.get(`/api/data/${args.hash}`, {
+            // 正确编码查询条件为JSON字符串，通过search参数传递
+            const params: any = {
                 page,
-                limit,
-                ...conditions
-            });
+                limit
+            };
+
+            if (Object.keys(conditions).length > 0) {
+                params.search = JSON.stringify(conditions);
+            }
+
+            const result = await httpClient.get(`/api/data/${args.hash}`, params);
 
             return {
                 content: [{
@@ -138,7 +144,18 @@ export class DataToolsHandler {
                 throw new Error('无法连接到Excel数据管理系统API，请检查服务是否运行');
             }
 
-            const result = await httpClient.post(`/api/data/${args.hash}/add`, args.data);
+            // 修正请求格式：后端期望 { data: {...} } 格式
+            const requestBody = {
+                data: args.data
+            };
+
+            console.log('发送新增记录请求:', {
+                hash: args.hash,
+                data: args.data,
+                requestBody: requestBody
+            });
+
+            const result = await httpClient.post(`/api/data/${args.hash}/add`, requestBody);
 
             return {
                 content: [{
@@ -147,7 +164,12 @@ export class DataToolsHandler {
                 }]
             };
         } catch (error: any) {
-            throw new Error(`新增表记录失败: ${error.message}`);
+            // 提供更详细的错误信息
+            const errorMessage = error.message.includes('400')
+                ? `新增表记录失败: 请求格式错误 (400) - 请检查数据格式是否符合表结构要求`
+                : `新增表记录失败: ${error.message}`;
+
+            throw new Error(errorMessage);
         }
     }
 
@@ -187,7 +209,10 @@ export class DataToolsHandler {
                 throw new Error('无法连接到Excel数据管理系统API，请检查服务是否运行');
             }
 
-            const result = await httpClient.delete(`/api/data/${args.hash}?conditions=${encodeURIComponent(JSON.stringify(args.conditions))}`);
+            // 使用请求体传递删除条件，而不是URL参数
+            const result = await httpClient.delete(`/api/data/${args.hash}`, {
+                conditions: args.conditions
+            });
 
             return {
                 content: [{

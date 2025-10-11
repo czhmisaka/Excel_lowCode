@@ -147,7 +147,7 @@ export class MappingToolsHandler {
             }
 
             const result = await httpClient.put(`/api/mappings/${args.hash}`, {
-                table_name: args.new_table_name
+                tableName: args.new_table_name
             });
 
             return {

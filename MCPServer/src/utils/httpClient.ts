@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-10-11 11:32:26
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-11 11:32:58
+ * @LastEditTime: 2025-10-11 14:04:44
  * @FilePath: /lowCode_excel/MCPServer/src/utils/httpClient.ts
  */
 import axios from 'axios';
@@ -82,9 +82,10 @@ class HttpClient {
     /**
      * 发送DELETE请求
      */
-    async delete(endpoint: string): Promise<any> {
+    async delete(endpoint: string, data?: any): Promise<any> {
         try {
             const response = await axios.delete(`${this.baseURL}${endpoint}`, {
+                data,
                 timeout: this.timeout
             });
             return response.data;

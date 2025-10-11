@@ -122,7 +122,11 @@ export class DataToolsHandler {
             const params = {};
             if (args.page) params.page = args.page;
             if (args.limit) params.limit = args.limit;
-            if (args.search) params.search = args.search;
+
+            // 正确编码查询条件为JSON字符串，通过search参数传递
+            if (args.conditions && Object.keys(args.conditions).length > 0) {
+                params.search = JSON.stringify(args.conditions);
+            }
 
             const response = await httpClient.get(`/api/data/${args.hash}`, params);
 
@@ -183,9 +187,18 @@ export class DataToolsHandler {
      */
     static async addTableRecord(args) {
         try {
-            const response = await httpClient.post(`/api/data/${args.hash}/add`, {
+            // 修正请求格式：后端期望 { data: {...} } 格式
+            const requestBody = {
                 data: args.data
+            };
+
+            console.log('发送新增记录请求:', {
+                hash: args.hash,
+                data: args.data,
+                requestBody: requestBody
             });
+
+            const response = await httpClient.post(`/api/data/${args.hash}/add`, requestBody);
 
             if (!response.success) {
                 throw new Error(response.message || '新增数据失败');
@@ -202,11 +215,16 @@ export class DataToolsHandler {
                 ]
             };
         } catch (error) {
+            // 提供更详细的错误信息
+            const errorMessage = error.message.includes('400')
+                ? `新增表记录失败: 请求格式错误 (400) - 请检查数据格式是否符合表结构要求`
+                : `新增表记录失败: ${error.message}`;
+
             return {
                 content: [
                     {
                         type: 'text',
-                        text: `新增表记录失败：${error.message}`
+                        text: errorMessage
                     }
                 ],
                 isError: true
