@@ -1,0 +1,41 @@
+{
+    "name": "excel-data-mcp-server",
+    "version": "1.0.0",
+    "description": "Excel数据管理系统的MCP服务器",
+    "main": "build/main.js",
+    "type": "module",
+    "bin": {
+        "excel-data-mcp-server": "./build/main.js"
+    },
+    "scripts": {
+        "build": "tsc --project tsconfig.json",
+        "dev": "tsc-watch --onSuccess \"node --env-file=.env build/main.js\"",
+        "start:dev": "tsc-watch --onSuccess \"node --env-file .env build/main.js\"",
+        "start": "node --env-file .env build/main.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "mcp",
+        "excel",
+        "data-management",
+        "model-context-protocol"
+    ],
+    "author": "CZH",
+    "license": "MIT",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.17.3",
+        "axios": "^1.6.0",
+        "dotenv": "^16.3.1",
+        "express": "^5.1.0",
+        "zod": "^3.24.2"
+    },
+    "devDependencies": {
+        "@types/express": "^5.0.3",
+        "@types/node": "^22.14.0",
+        "tsc-watch": "^7.1.1",
+        "typescript": "^5.8.3"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}
