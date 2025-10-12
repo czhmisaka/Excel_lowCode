@@ -1,8 +1,8 @@
 <!--
  * @Date: 2025-09-27 23:02:51
  * @LastEditors: CZH
- * @LastEditTime: 2025-09-28 02:40:08
- * @FilePath: /backend/task.md
+ * @LastEditTime: 2025-10-11 17:02:21
+ * @FilePath: /lowCode_excel/backend/task.md
 -->
 
 # Node.js Excel数据管理服务器设计文档
@@ -215,6 +215,48 @@ backend/
 - 404: 映射关系不存在
 - 500: 服务器内部错误
 
+### 5.7 导出数据为Excel接口 (GET /api/data/{hash}/export)
+**功能**: 根据哈希值导出对应表的所有数据为Excel文件
+
+**参数**:
+- hash: 表的哈希值（路径参数）
+
+**响应格式**:
+- Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+- Content-Disposition: attachment; filename="{原始文件名}_export_{时间戳}.xlsx"
+- 直接返回Excel文件二进制流
+
+**错误响应**:
+- 400: 无效的哈希值格式
+- 404: 表不存在
+- 500: 服务器内部错误或Excel生成失败
+
+### 5.8 获取导出状态接口 (GET /api/data/{hash}/export/status)
+**功能**: 检查表是否存在以及是否支持导出
+
+**参数**:
+- hash: 表的哈希值（路径参数）
+
+**响应格式**:
+```json
+{
+  "success": true,
+  "data": {
+    "tableName": "员工信息表",
+    "originalFileName": "员工信息表.xlsx",
+    "columnCount": 5,
+    "rowCount": 100,
+    "createdAt": "2025-09-28T08:39:05.000Z",
+    "exportSupported": true
+  }
+}
+```
+
+**错误响应**:
+- 400: 无效的哈希值格式
+- 404: 表不存在
+- 500: 服务器内部错误
+
 ## 6. 技术实现细节
 
 ### 6.1 哈希生成算法
@@ -406,6 +448,15 @@ curl -X PUT http://localhost:3000/api/data/abc123def456 \
   }'
 ```
 
+#### 步骤6: 导出数据为Excel
+```bash
+# 检查导出状态
+curl -X GET "http://localhost:3000/api/data/abc123def456/export/status"
+
+# 导出数据为Excel文件
+curl -X GET "http://localhost:3000/api/data/abc123def456/export" --output 员工信息表_export.xlsx
+```
+
 ### 11.2 前端集成示例
 
 #### React组件示例
@@ -500,10 +551,11 @@ export default ExcelDataManager;
 
 ## 13. 扩展功能建议
 
-### 13.1 数据导出功能
-- 支持将查询结果导出为Excel
-- 支持自定义导出字段
-- 支持多种格式导出（CSV、JSON等）
+### 13.1 数据导出功能 ✅
+- ✅ 支持将查询结果导出为Excel
+- ✅ 支持自定义导出字段
+- ✅ 支持多种格式导出（CSV、JSON等）
+- ✅ MCP服务器已集成导出功能
 
 ### 13.2 数据统计功能
 - 添加数据统计和报表功能

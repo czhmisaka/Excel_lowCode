@@ -3,6 +3,7 @@ const router = express.Router();
 const { TableMapping, getDynamicModel } = require('../models');
 const queryController = require('../controllers/queryController');
 const editController = require('../controllers/editController');
+const exportController = require('../controllers/exportController');
 
 /**
  * @swagger
@@ -457,5 +458,93 @@ router.delete('/:hash', async (req, res) => {
         });
     }
 });
+
+/**
+ * @swagger
+ * /api/data/{hash}/export:
+ *   get:
+ *     summary: 导出数据为Excel
+ *     description: 根据哈希值导出对应表的所有数据为Excel文件
+ *     tags:
+ *       - 数据操作
+ *     parameters:
+ *       - in: path
+ *         name: hash
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 表的哈希值
+ *     responses:
+ *       200:
+ *         description: 成功导出Excel文件
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: 无效的哈希值格式
+ *       404:
+ *         description: 表不存在
+ *       500:
+ *         description: 服务器内部错误或Excel生成失败
+ */
+router.get('/:hash/export', exportController.exportData);
+
+/**
+ * @swagger
+ * /api/data/{hash}/export/status:
+ *   get:
+ *     summary: 获取导出状态
+ *     description: 检查表是否存在以及是否支持导出
+ *     tags:
+ *       - 数据操作
+ *     parameters:
+ *       - in: path
+ *         name: hash
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 表的哈希值
+ *     responses:
+ *       200:
+ *         description: 成功获取导出状态
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     tableName:
+ *                       type: string
+ *                       example: "员工信息表"
+ *                     originalFileName:
+ *                       type: string
+ *                       example: "员工信息表.xlsx"
+ *                     columnCount:
+ *                       type: integer
+ *                       example: 5
+ *                     rowCount:
+ *                       type: integer
+ *                       example: 100
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     exportSupported:
+ *                       type: boolean
+ *                       example: true
+ *       400:
+ *         description: 无效的哈希值格式
+ *       404:
+ *         description: 表不存在
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.get('/:hash/export/status', exportController.getExportStatus);
 
 module.exports = router;

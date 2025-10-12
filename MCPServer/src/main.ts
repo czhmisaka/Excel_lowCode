@@ -5,6 +5,8 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import * as express from "express";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import * as fs from "fs";
+import * as path from "path";
 import httpClient from "./utils/httpClient.js";
 import { excelTools, ExcelToolsHandler } from "./tools/excelTools.js";
 import { dataTools, DataToolsHandler } from "./tools/dataTools.js";
@@ -134,6 +136,33 @@ mcpServer.registerTool(
     },
     async (args: any) => {
         return await DataToolsHandler.deleteTableRecord(args);
+    }
+);
+
+mcpServer.registerTool(
+    "export_table_to_excel",
+    {
+        description: "根据哈希值导出表的所有数据为Excel文件",
+        inputSchema: {
+            hash: z.string().describe("表的哈希值"),
+            output_path: z.string().optional().describe("Excel文件保存路径（可选）")
+        }
+    },
+    async (args: any) => {
+        return await DataToolsHandler.exportTableToExcel(args);
+    }
+);
+
+mcpServer.registerTool(
+    "check_export_status",
+    {
+        description: "检查表是否存在以及是否支持导出",
+        inputSchema: {
+            hash: z.string().describe("表的哈希值")
+        }
+    },
+    async (args: any) => {
+        return await DataToolsHandler.checkExportStatus(args);
     }
 );
 
@@ -355,6 +384,11 @@ async function main() {
             );
             next();
         });
+
+        // 静态文件服务 - 提供导出文件下载
+        const exportsDir = path.join(process.cwd(), 'exports');
+        app.use('/export', express.static(exportsDir));
+        console.log(`Export files available at: http://localhost:${port}/export/`);
 
         if (mode === "sse") {
             const { sseRouter } = sseTransportFactory(mcpServer);

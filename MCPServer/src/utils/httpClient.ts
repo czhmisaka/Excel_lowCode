@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-10-11 11:32:26
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-11 14:04:44
+ * @LastEditTime: 2025-10-11 15:26:03
  * @FilePath: /lowCode_excel/MCPServer/src/utils/httpClient.ts
  */
 import axios from 'axios';
@@ -91,6 +91,22 @@ class HttpClient {
             return response.data;
         } catch (error: any) {
             throw new Error(`DELETE请求失败: ${error.message}`);
+        }
+    }
+
+    /**
+     * 发送GET请求获取二进制数据
+     */
+    async getBinary(endpoint: string, params?: any): Promise<Buffer> {
+        try {
+            const response = await axios.get(`${this.baseURL}${endpoint}`, {
+                params,
+                timeout: this.timeout,
+                responseType: 'arraybuffer'
+            });
+            return Buffer.from(response.data);
+        } catch (error: any) {
+            throw new Error(`GET二进制请求失败: ${error.message}`);
         }
     }
 }
