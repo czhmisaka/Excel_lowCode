@@ -76,7 +76,6 @@ const queryData = async (req, res) => {
         // 构建查询条件
         const whereClause = {};
         let hasNumberLikeCondition = false;
-        let numberLikeCondition = '';
 
         if (search) {
             try {
@@ -122,9 +121,9 @@ const queryData = async (req, res) => {
                             for (const [operator, value] of Object.entries(condition)) {
                                 // 特殊处理数字字段的 $like 操作符
                                 if (operator === '$like' && fieldType === 'number') {
-                                    // 对于数字字段的模糊查询，使用 CAST 转换为字符串
+                                    // 对于数字字段的模糊查询，标记需要特殊处理
                                     hasNumberLikeCondition = true;
-                                    numberLikeCondition = `CAST(\`${field}\` AS CHAR) LIKE '${value}'`;
+                                    fieldCondition[Op.like] = value;
                                 } else {
                                     switch (operator) {
                                         case '$eq':
@@ -185,7 +184,9 @@ const queryData = async (req, res) => {
         console.log('执行查询，条件:', JSON.stringify(whereClause, null, 2));
         console.log('查询条件类型检查:', typeof whereClause, Array.isArray(whereClause));
         console.log('是否有数字字段的like条件:', hasNumberLikeCondition);
-        console.log('数字字段like条件:', numberLikeCondition);
+        console.log('原始搜索参数:', search);
+        console.log('表哈希:', hash);
+        console.log('分页参数:', { page, limit, offset });
 
         try {
             let count, rows;
@@ -193,45 +194,138 @@ const queryData = async (req, res) => {
             if (hasNumberLikeCondition) {
                 // 对于数字字段的模糊查询，使用原始SQL查询
                 const tableName = `data_${hash}`;
-                let whereSQL = '';
-                const whereParams = [];
 
-                // 构建WHERE子句
-                if (Object.keys(whereClause).length > 0) {
-                    // 这里简化处理，实际应该递归构建复杂的WHERE条件
-                    const conditions = [];
-                    for (const [field, condition] of Object.entries(whereClause)) {
-                        if (condition && typeof condition === 'object') {
-                            for (const [op, value] of Object.entries(condition)) {
-                                if (op === Op.eq) {
-                                    conditions.push(`\`${field}\` = ?`);
-                                    whereParams.push(value);
+                // 简化处理：只处理包含数字字段模糊查询的简单条件
+                // 对于复杂的 $or 条件，回退到正常查询
+                try {
+                    // 尝试使用正常查询
+                    const result = await DynamicModel.findAndCountAll({
+                        where: whereClause,
+                        limit: parseInt(limit),
+                        offset: offset,
+                        order: [['id', 'ASC']]
+                    });
+                    count = result.count;
+                    rows = result.rows;
+                } catch (error) {
+                    console.log('正常查询失败，尝试原始SQL查询:', error.message);
+
+                    // 构建完整的WHERE条件
+                    const buildCompleteWhereSQL = (conditions, columnDefs = columnDefinitions) => {
+                        const sqlConditions = [];
+                        const params = [];
+
+                        const processCondition = (condition, parentField = null) => {
+                            for (const [field, value] of Object.entries(condition)) {
+                                // 处理特殊操作符
+                                if (field === '$or' && Array.isArray(value)) {
+                                    const orConditions = [];
+                                    for (const orCondition of value) {
+                                        const orResult = processCondition(orCondition);
+                                        if (orResult.conditions.length > 0) {
+                                            orConditions.push(`(${orResult.conditions.join(' AND ')})`);
+                                            params.push(...orResult.params);
+                                        }
+                                    }
+                                    if (orConditions.length > 0) {
+                                        sqlConditions.push(`(${orConditions.join(' OR ')})`);
+                                    }
+                                } else if (field === '$and' && Array.isArray(value)) {
+                                    const andConditions = [];
+                                    for (const andCondition of value) {
+                                        const andResult = processCondition(andCondition);
+                                        if (andResult.conditions.length > 0) {
+                                            andConditions.push(`(${andResult.conditions.join(' AND ')})`);
+                                            params.push(...andResult.params);
+                                        }
+                                    }
+                                    if (andConditions.length > 0) {
+                                        sqlConditions.push(`(${andConditions.join(' AND ')})`);
+                                    }
+                                } else {
+                                    // 处理普通字段条件
+                                    if (value && typeof value === 'object' && !Array.isArray(value)) {
+                                        // 字段操作符条件
+                                        for (const [operator, opValue] of Object.entries(value)) {
+                                            let sqlOperator = '';
+                                            let processedValue = opValue;
+
+                                            switch (operator) {
+                                                case '$eq':
+                                                    sqlOperator = '=';
+                                                    break;
+                                                case '$ne':
+                                                    sqlOperator = '!=';
+                                                    break;
+                                                case '$like':
+                                                    sqlOperator = 'LIKE';
+                                                    // 检查字段类型
+                                                    const columnDef = columnDefs.find(col => col.name === field);
+                                                    const fieldType = columnDef ? columnDef.type : 'string';
+
+                                                    if (fieldType === 'number') {
+                                                        // 数字字段的模糊查询需要类型转换
+                                                        sqlConditions.push(`CAST(\`${field}\` AS CHAR) LIKE ?`);
+                                                    } else {
+                                                        // 字符串字段直接使用
+                                                        sqlConditions.push(`\`${field}\` LIKE ?`);
+                                                    }
+                                                    params.push(processedValue);
+                                                    continue; // 跳过后续处理
+                                                case '$gt':
+                                                    sqlOperator = '>';
+                                                    break;
+                                                case '$lt':
+                                                    sqlOperator = '<';
+                                                    break;
+                                                case '$gte':
+                                                    sqlOperator = '>=';
+                                                    break;
+                                                case '$lte':
+                                                    sqlOperator = '<=';
+                                                    break;
+                                                default:
+                                                    continue; // 跳过不支持的操作符
+                                            }
+
+                                            if (sqlOperator) {
+                                                sqlConditions.push(`\`${field}\` ${sqlOperator} ?`);
+                                                params.push(processedValue);
+                                            }
+                                        }
+                                    } else {
+                                        // 简单相等条件
+                                        sqlConditions.push(`\`${field}\` = ?`);
+                                        params.push(value);
+                                    }
                                 }
-                                // 可以添加更多操作符支持
                             }
-                        }
+                            return { conditions: sqlConditions, params };
+                        };
+
+                        return processCondition(conditions);
+                    };
+
+                    const whereResult = buildCompleteWhereSQL(whereClause);
+                    let whereSQL = '';
+                    if (whereResult.conditions.length > 0) {
+                        whereSQL = `WHERE ${whereResult.conditions.join(' AND ')}`;
                     }
-                    if (conditions.length > 0) {
-                        whereSQL = `WHERE ${conditions.join(' AND ')} AND ${numberLikeCondition}`;
-                    } else {
-                        whereSQL = `WHERE ${numberLikeCondition}`;
-                    }
-                } else {
-                    whereSQL = `WHERE ${numberLikeCondition}`;
+
+                    // 执行原始查询
+                    const countQuery = `SELECT COUNT(*) as total FROM \`${tableName}\` ${whereSQL}`;
+                    const dataQuery = `SELECT * FROM \`${tableName}\` ${whereSQL} ORDER BY id ASC LIMIT ${offset}, ${limit}`;
+
+                    console.log('执行原始查询 - count:', countQuery);
+                    console.log('执行原始查询 - data:', dataQuery);
+                    console.log('查询参数:', whereResult.params);
+
+                    const [countResult] = await sequelize.query(countQuery, { replacements: whereResult.params });
+                    const [dataResult] = await sequelize.query(dataQuery, { replacements: whereResult.params });
+
+                    count = countResult[0].total;
+                    rows = dataResult;
                 }
-
-                // 执行原始查询
-                const countQuery = `SELECT COUNT(*) as total FROM \`${tableName}\` ${whereSQL}`;
-                const dataQuery = `SELECT * FROM \`${tableName}\` ${whereSQL} ORDER BY id ASC LIMIT ${offset}, ${limit}`;
-
-                console.log('执行原始查询 - count:', countQuery);
-                console.log('执行原始查询 - data:', dataQuery);
-
-                const [countResult] = await sequelize.query(countQuery, { replacements: whereParams });
-                const [dataResult] = await sequelize.query(dataQuery, { replacements: whereParams });
-
-                count = countResult[0].total;
-                rows = dataResult;
             } else {
                 // 正常查询
                 const result = await DynamicModel.findAndCountAll({

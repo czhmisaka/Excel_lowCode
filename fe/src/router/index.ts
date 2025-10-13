@@ -1,11 +1,12 @@
 /*
  * @Date: 2025-08-28 07:54:03
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-09 01:47:14
+ * @LastEditTime: 2025-10-12 14:32:12
  * @FilePath: /lowCode_excel/fe/src/router/index.ts
  */
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/components/Layout/MainLayout.vue'
+import QueryOnlyLayout from '@/components/Layout/QueryOnlyLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -43,6 +44,17 @@ const router = createRouter({
           path: '/api-guide',
           name: 'ApiGuide',
           component: () => import('@/views/ApiGuide.vue')
+        }
+      ]
+    },
+    {
+      path: '/query',
+      component: QueryOnlyLayout,
+      children: [
+        {
+          path: '',
+          name: 'QueryOnly',
+          component: () => import('@/views/QueryOnlyView.vue')
         }
       ]
     }
