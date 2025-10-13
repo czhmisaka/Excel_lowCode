@@ -57,6 +57,19 @@
                     </el-breadcrumb>
                 </div>
                 <div class="header-right">
+                    <el-dropdown @command="handleCommand">
+                        <span class="user-info">
+                            <el-icon>
+                                <User />
+                            </el-icon>
+                            {{ authStore.userInfo?.username }}
+                        </span>
+                        <template #dropdown>
+                            <el-dropdown-menu>
+                                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </template>
+                    </el-dropdown>
                     <el-button type="text" @click="toggleTheme">
                         <el-icon>
                             <Sunny />
@@ -76,6 +89,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessageBox } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
 import {
     House,
     Folder,
@@ -83,10 +98,12 @@ import {
     Edit,
     Connection,
     Sunny,
-    Document
+    Document,
+    User
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
+const authStore = useAuthStore()
 
 // 当前激活的菜单
 const activeMenu = computed(() => route.path)
@@ -107,6 +124,22 @@ const currentRouteName = computed(() => {
 // 切换主题（暂未实现）
 const toggleTheme = () => {
     console.log('切换主题')
+}
+
+// 处理下拉菜单命令
+const handleCommand = async (command: string) => {
+    if (command === 'logout') {
+        try {
+            await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            })
+            authStore.logout()
+        } catch (error) {
+            // 用户取消操作
+        }
+    }
 }
 </script>
 
@@ -151,6 +184,26 @@ const toggleTheme = () => {
 .header-left {
     display: flex;
     align-items: center;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.user-info:hover {
+    background-color: #f5f7fa;
 }
 
 .main-content {

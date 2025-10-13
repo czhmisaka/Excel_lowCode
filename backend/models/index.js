@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-09-27 23:17:13
  * @LastEditors: CZH
- * @LastEditTime: 2025-09-28 02:33:14
- * @FilePath: /backend/models/index.js
+ * @LastEditTime: 2025-10-13 10:48:22
+ * @FilePath: /lowCode_excel/backend/models/index.js
  */
 const { sequelize } = require('../config/database');
 const TableMapping = require('./TableMapping');
@@ -93,20 +93,49 @@ const getDynamicModel = (hashValue, columnDefinitions) => {
 const dropDynamicTable = async (hashValue) => {
     try {
         const tableName = `data_${hashValue}`;
+        const dialect = sequelize.getDialect();
 
-        // 检查表是否存在
-        const [results] = await sequelize.query(
-            `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
-             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`,
-            {
-                replacements: [sequelize.config.database, tableName],
-                type: sequelize.QueryTypes.SELECT
-            }
-        );
+        console.log(`开始删除动态表 ${tableName} (数据库类型: ${dialect})`);
 
-        if (results) {
+        let tableExists = false;
+
+        // 根据数据库类型检查表是否存在
+        if (dialect === 'mysql') {
+            // MySQL: 使用 INFORMATION_SCHEMA.TABLES
+            const [results] = await sequelize.query(
+                `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
+                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`,
+                {
+                    replacements: [sequelize.config.database, tableName],
+                    type: sequelize.QueryTypes.SELECT
+                }
+            );
+            tableExists = !!results;
+        } else if (dialect === 'sqlite') {
+            // SQLite: 使用 sqlite_master 表
+            const [results] = await sequelize.query(
+                `SELECT name FROM sqlite_master 
+                 WHERE type='table' AND name = ?`,
+                {
+                    replacements: [tableName],
+                    type: sequelize.QueryTypes.SELECT
+                }
+            );
+            tableExists = !!results;
+        } else {
+            throw new Error(`不支持的数据库类型: ${dialect}`);
+        }
+
+        if (tableExists) {
             // 表存在，执行删除
-            await sequelize.query(`DROP TABLE \`${tableName}\``);
+            let dropQuery;
+            if (dialect === 'mysql') {
+                dropQuery = `DROP TABLE \`${tableName}\``;
+            } else {
+                dropQuery = `DROP TABLE "${tableName}"`;
+            }
+
+            await sequelize.query(dropQuery);
             console.log(`动态表 ${tableName} 删除成功`);
             return true;
         } else {
@@ -115,6 +144,17 @@ const dropDynamicTable = async (hashValue) => {
         }
     } catch (error) {
         console.error(`删除动态表失败 (hash: ${hashValue}):`, error);
+
+        // 如果是表不存在的错误，直接返回false而不是抛出错误
+        if (error.message && (
+            error.message.includes('doesn\'t exist') ||
+            error.message.includes('Unknown table') ||
+            error.message.includes('no such table')
+        )) {
+            console.log(`动态表 data_${hashValue} 不存在，无需删除`);
+            return false;
+        }
+
         throw error;
     }
 };

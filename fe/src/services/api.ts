@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
 
 console.log('API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
 // API基础配置 - 使用相对路径通过nginx代理
@@ -16,7 +17,11 @@ const apiClient = axios.create({
 // 请求拦截器
 apiClient.interceptors.request.use(
     (config) => {
-        // 可以在这里添加认证token等
+        // 添加认证token
+        const authStore = useAuthStore()
+        if (authStore.token) {
+            config.headers.Authorization = `Bearer ${authStore.token}`
+        }
         return config
     },
     (error) => {
@@ -31,6 +36,13 @@ apiClient.interceptors.response.use(
     },
     (error) => {
         console.error('API请求错误:', error)
+
+        // 处理认证失败
+        if (error.response?.status === 401) {
+            const authStore = useAuthStore()
+            authStore.logout()
+        }
+
         return Promise.reject(error)
     }
 )
