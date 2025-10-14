@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-10-13 10:08:31
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-13 10:28:03
+ * @LastEditTime: 2025-10-14 20:35:43
  * @FilePath: /lowCode_excel/fe/src/stores/auth.ts
  */
 import { defineStore } from 'pinia'
@@ -27,7 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
     const login = async (username: string, password: string) => {
         try {
             // 验证管理员账户
-            if (username === 'admin' && password === 'admin') {
+            if (username === 'admin' && password === '1017005349') {
                 const mockToken = 'mock_jwt_token_' + Date.now()
                 const mockUserInfo: UserInfo = {
                     id: 1,
@@ -45,7 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
 
                 return { success: true, message: '登录成功' }
             } else {
-                return { success: false, message: '用户名或密码错误，请使用 admin/admin' }
+                return { success: false, message: '用户名或密码错误' }
             }
         } catch (error) {
             console.error('登录失败:', error)

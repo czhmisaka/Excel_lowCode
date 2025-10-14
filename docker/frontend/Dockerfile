@@ -17,7 +17,7 @@ COPY fe/ ./
 COPY ./fe/.env.production ./
 
 # 设置构建时的环境变量（后端API地址）
-ARG VITE_API_BASE_URL=/backend
+ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 # 构建应用

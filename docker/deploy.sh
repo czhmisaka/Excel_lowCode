@@ -259,6 +259,14 @@ build_frontend() {
     docker build -t annual-leave-frontend:latest \
         --build-arg VITE_API_BASE_URL="$api_base_url" \
         -f ./docker/frontend/Dockerfile .
+    
+    # 验证构建是否成功
+    if [ $? -eq 0 ]; then
+        log_success "前端镜像构建成功，API地址: $api_base_url"
+    else
+        log_error "前端镜像构建失败"
+        exit 1
+    fi
 }
 
 # 选择Docker Compose文件
