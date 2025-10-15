@@ -9,6 +9,7 @@ services:
     ports:
       - "${FRONTEND_PORT}:80"
       - "${BACKEND_PORT}:3000"
+      - "${MCP_SERVER_PORT}:3001"
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -19,9 +20,12 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - SQLITE_DB_PATH=${SQLITE_DB_PATH}
+      - MCP_SERVER_PORT=3001
+      - API_BASE_URL=http://localhost:3000
     volumes:
       - app-uploads:/app/uploads
       - app-data:/app/data
+      - app-exports:/app/exports
     networks:
       - app-network
     restart: unless-stopped
@@ -55,4 +59,6 @@ volumes:
   app-uploads:
     driver: local
   app-data:
+    driver: local
+  app-exports:
     driver: local

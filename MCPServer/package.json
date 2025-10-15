@@ -9,9 +9,9 @@
     },
     "scripts": {
         "build": "tsc --project tsconfig.json",
-        "dev": "tsc-watch --onSuccess \"node --env-file=.env build/main.js\"",
-        "start:dev": "tsc-watch --onSuccess \"node --env-file .env build/main.js\"",
-        "start": "node --env-file .env build/main.js",
+        "dev": "tsc-watch --onSuccess \"node build/main.js\"",
+        "start:dev": "tsc-watch --onSuccess \"node build/main.js\"",
+        "start": "node build/main.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "keywords": [

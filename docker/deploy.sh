@@ -127,6 +127,7 @@ check_env() {
     # 保存命令行传入的端口配置（如果存在）
     local saved_backend_port="$BACKEND_PORT"
     local saved_frontend_port="$FRONTEND_PORT"
+    local saved_mcp_port="$MCP_SERVER_PORT"
     
     # 根据运行模式选择环境文件
     local env_file="docker/.env"
@@ -167,6 +168,11 @@ check_env() {
         FRONTEND_PORT="$saved_frontend_port"
         log_info "使用命令行指定的前端端口: $FRONTEND_PORT"
     fi
+    
+    if [ -n "$saved_mcp_port" ]; then
+        MCP_SERVER_PORT="$saved_mcp_port"
+        log_info "使用命令行指定的MCP服务器端口: $MCP_SERVER_PORT"
+    fi
 
     # 设置默认端口（如果未设置）
     if [ -z "$FRONTEND_PORT" ]; then
@@ -177,6 +183,11 @@ check_env() {
     if [ -z "$BACKEND_PORT" ]; then
         BACKEND_PORT="3000"
         log_info "使用默认后端端口: $BACKEND_PORT"
+    fi
+    
+    if [ -z "$MCP_SERVER_PORT" ]; then
+        MCP_SERVER_PORT="3001"
+        log_info "使用默认MCP服务器端口: $MCP_SERVER_PORT"
     fi
    
     # 设置API基础URL（如果未配置）
@@ -383,11 +394,19 @@ show_usage() {
     echo "  --unified         使用单容器模式部署"
     echo "  --help            显示此帮助信息"
     echo ""
+    echo "端口配置:"
+    echo "  通过环境变量配置:"
+    echo "  BACKEND_PORT      后端服务端口（默认: 3000）"
+    echo "  FRONTEND_PORT     前端服务端口（默认: 8080）"
+    echo "  MCP_SERVER_PORT   MCP服务器端口（默认: 3001）"
+    echo ""
     echo "示例:"
     echo "  $0                    # 完整部署流程"
     echo "  $0 --backup           # 备份后部署"
     echo "  $0 --restore backup.tar.gz  # 恢复备份后部署"
     echo "  $0 --unified          # 使用单容器模式部署"
+    echo ""
+    echo "注意: 端口配置通过环境变量传递，支持所有参数组合"
 }
 
 # 主函数

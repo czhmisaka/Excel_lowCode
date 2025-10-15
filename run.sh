@@ -101,9 +101,31 @@ run_build() {
 run_deploy() {
     log_info "=== 开始部署阶段 ==="
     
-    log_info "执行部署命令: docker/deploy.sh $*"
+    # 过滤部署参数，只传递docker/deploy.sh支持的参数
+    local deploy_args=()
+    for arg in "$@"; do
+        case $arg in
+            --backup|--restore|--stop-only|--start-only|--unified|--help)
+                deploy_args+=("$arg")
+                ;;
+            --run-local|--backend-port|--frontend-port|--mcp-port|--clean)
+                # 这些参数通过环境变量传递，不传递给deploy.sh
+                ;;
+            *)
+                # 其他参数传递给deploy.sh（可能包含值参数）
+                if [[ "$arg" =~ ^--restore=.* ]] || [[ "$arg" =~ ^--backend-port=.* ]] || [[ "$arg" =~ ^--frontend-port=.* ]] || [[ "$arg" =~ ^--mcp-port=.* ]]; then
+                    # 跳过这些参数，它们已经通过环境变量处理
+                    :
+                else
+                    deploy_args+=("$arg")
+                fi
+                ;;
+        esac
+    done
     
-    if docker/deploy.sh "$@"; then
+    log_info "执行部署命令: docker/deploy.sh ${deploy_args[*]}"
+    
+    if docker/deploy.sh "${deploy_args[@]}"; then
         log_success "部署阶段完成"
         return 0
     else
@@ -122,9 +144,10 @@ show_usage() {
     echo "  --run-local        使用本地SQLite数据库模式"
     echo "  --unified          使用单容器模式部署（推荐）"
     echo ""
-    echo "端口配置选项:"
-    echo "  --backend-port PORT  设置后端服务端口（默认: 3000）"
-    echo "  --frontend-port PORT 设置前端服务端口（默认: 8080）"
+echo "端口配置选项:"
+echo "  --backend-port PORT  设置后端服务端口（默认: 3000）"
+echo "  --frontend-port PORT 设置前端服务端口（默认: 8080）"
+echo "  --mcp-port PORT      设置MCP Server端口（默认: 3001）"
     echo ""
     echo "构建选项 (传递给 build.sh):"
     echo "  --clean            构建完成后清理Docker缓存"
@@ -136,15 +159,17 @@ show_usage() {
     echo "  --start-only      仅启动服务，不停止"
     echo "  --help            显示此帮助信息"
     echo ""
-    echo "示例:"
-    echo "  $0                    # 完整构建和部署流程"
-    echo "  $0 --clean            # 构建后清理缓存并部署"
-    echo "  $0 --backup           # 备份后构建和部署"
-    echo "  $0 --stop-only        # 仅构建和停止服务"
-    echo "  $0 --run-local        # 使用SQLite数据库本地运行"
-    echo "  $0 --unified          # 使用单容器模式部署"
-    echo "  $0 --run-local --backend-port 4000 --frontend-port 9000  # 自定义端口运行"
-    echo "  $0 --unified --backend-port 4000 --frontend-port 9000    # 单容器自定义端口"
+echo "示例:"
+echo "  $0                    # 完整构建和部署流程"
+echo "  $0 --clean            # 构建后清理缓存并部署"
+echo "  $0 --backup           # 备份后构建和部署"
+echo "  $0 --stop-only        # 仅构建和停止服务"
+echo "  $0 --run-local        # 使用SQLite数据库本地运行"
+echo "  $0 --unified          # 使用单容器模式部署"
+echo "  $0 --run-local --backend-port 4000 --frontend-port 9000  # 自定义端口运行"
+echo "  $0 --unified --backend-port 4000 --frontend-port 9000    # 单容器自定义端口"
+echo "  $0 --mcp-port 9100    # 设置MCP Server端口为9100"
+echo "  $0 --backend-port 4000 --frontend-port 9000 --mcp-port 9100  # 自定义所有端口"
     echo ""
     echo "注意: 此脚本会按顺序调用 docker/build.sh 和 docker/deploy.sh"
 }
@@ -154,6 +179,7 @@ parse_arguments() {
     local run_local=false
     local backend_port=""
     local frontend_port=""
+    local mcp_port=""
     local unified_mode=false
     local deploy_args=()
     
@@ -161,13 +187,13 @@ parse_arguments() {
         case $1 in
             --run-local)
                 run_local=true
-                deploy_args+=("$1")
+                # 不添加到deploy_args，通过环境变量传递
                 shift
                 ;;
             --backend-port)
                 if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
                     backend_port="$2"
-                    deploy_args+=("$1" "$2")
+                    # 不添加到deploy_args，通过环境变量传递
                     shift 2
                 else
                     log_error "--backend-port 需要有效的端口号"
@@ -177,10 +203,20 @@ parse_arguments() {
             --frontend-port)
                 if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
                     frontend_port="$2"
-                    deploy_args+=("$1" "$2")
+                    # 不添加到deploy_args，通过环境变量传递
                     shift 2
                 else
                     log_error "--frontend-port 需要有效的端口号"
+                    exit 1
+                fi
+                ;;
+            --mcp-port)
+                if [[ -n "$2" && "$2" =~ ^[0-9]+$ ]]; then
+                    mcp_port="$2"
+                    # 不添加到deploy_args，通过环境变量传递
+                    shift 2
+                else
+                    log_error "--mcp-port 需要有效的端口号"
                     exit 1
                 fi
                 ;;
@@ -189,9 +225,23 @@ parse_arguments() {
                 deploy_args+=("$1")
                 shift
                 ;;
-            *)
+            --backup|--restore|--stop-only|--start-only|--help|--clean)
                 deploy_args+=("$1")
                 shift
+                ;;
+            --restore)
+                if [[ -n "$2" ]]; then
+                    deploy_args+=("$1" "$2")
+                    shift 2
+                else
+                    log_error "--restore 需要指定备份文件路径"
+                    exit 1
+                fi
+                ;;
+            *)
+                log_error "未知参数: $1"
+                show_usage
+                exit 1
                 ;;
         esac
     done
@@ -215,6 +265,11 @@ parse_arguments() {
     if [ -n "$frontend_port" ]; then
         export FRONTEND_PORT="$frontend_port"
         log_info "前端端口: $frontend_port"
+    fi
+    
+    if [ -n "$mcp_port" ]; then
+        export MCP_SERVER_PORT="$mcp_port"
+        log_info "MCP Server 端口: $mcp_port"
     fi
     
     # 返回部署参数数组（使用全局变量）
@@ -254,6 +309,7 @@ main() {
     export RUN_MODE="$RUN_MODE"
     export BACKEND_PORT="$BACKEND_PORT"
     export FRONTEND_PORT="$FRONTEND_PORT"
+    export MCP_SERVER_PORT="$MCP_SERVER_PORT"
     if ! run_deploy "${DEPLOY_ARGS[@]}"; then
         log_error "部署失败"
         exit 1
