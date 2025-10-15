@@ -101,6 +101,50 @@ export interface DataResponse {
     }
 }
 
+// 系统信息
+export interface SystemInfo {
+    system: {
+        environment: string
+        nodeVersion: string
+        platform: string
+        uptime: number
+        timestamp: string
+    }
+    database: {
+        type: string
+        host: string
+        port: number
+        name: string
+        status: string
+        tableCount: number
+        totalRecords: number
+        dialect: string
+    }
+    services: {
+        backend: {
+            status: string
+            port: number
+            version: string
+        }
+        frontend: {
+            status: string
+            port: number
+            version: string
+        }
+        mcpServer: {
+            status: string
+            port: number
+            version: string
+        }
+    }
+    deployment: {
+        mode: string
+        composeVersion: string
+        healthChecks: boolean
+        volumes: string[]
+    }
+}
+
 // API服务类
 class ApiService {
     // 文件上传
@@ -237,6 +281,12 @@ class ApiService {
     async healthCheck(): Promise<any> {
         const response = await apiClient.get('/health')
         return response.data
+    }
+
+    // 获取系统信息
+    async getSystemInfo(): Promise<SystemInfo> {
+        const response = await apiClient.get('/api/system/info')
+        return response.data.data
     }
 }
 
