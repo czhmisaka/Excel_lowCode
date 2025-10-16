@@ -308,6 +308,13 @@ start_services() {
     
     # 使用特定的项目名称来避免影响其他服务
     local project_name="annual-leave"
+    
+    # 对于unified模式，强制重新构建镜像，确保所有构建在容器内完成
+    if [ "$1" = "--unified" ]; then
+        log_info "强制重新构建统一镜像，确保所有构建在容器内完成..."
+        ($compose_cmd -f "$compose_file" -p "$project_name" build --no-cache)
+    fi
+    
     ($compose_cmd -f "$compose_file" -p "$project_name" up -d)
     
     # 等待服务启动

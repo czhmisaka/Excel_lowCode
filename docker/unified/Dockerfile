@@ -17,6 +17,11 @@ RUN npm config set registry https://registry.npmmirror.com && \
     npm config set progress false && \
     npm ci --no-optional --prefer-offline
 
+# 确保npm-run-all2包正确安装并具有执行权限
+RUN npm list npm-run-all2 || npm install npm-run-all2 && \
+    find node_modules/.bin -name "run-p" -exec chmod +x {} \; && \
+    find node_modules/.bin -name "npm-run-all2" -exec chmod +x {} \;
+
 # 复制前端源代码
 COPY fe/ ./
 
@@ -27,7 +32,7 @@ COPY ./fe/.env.production ./
 ARG VITE_API_BASE_URL=/backend
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
-# 构建前端应用（添加重试机制）
+# 构建前端应用（添加重试机制和权限修复）
 RUN npm run build || (rm -rf node_modules package-lock.json && npm install && npm run build)
 
 # 第二阶段：后端构建
@@ -42,9 +47,11 @@ WORKDIR /app/backend
 # 复制后端package.json
 COPY backend/package*.json ./
 
-# 设置国内npm镜像源并安装后端依赖
+# 设置国内npm镜像源并安装后端依赖（添加重试机制和网络超时设置）
 RUN npm config set registry https://registry.npmmirror.com && \
-    npm ci
+    npm config set fetch-retry-maxtimeout 60000 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm ci --no-optional
 
 # 复制后端源代码
 COPY backend/ ./

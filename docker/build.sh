@@ -58,12 +58,9 @@ build_images() {
     # 检查是否使用单容器模式
     if [ "$1" = "--unified" ]; then
         log_info "使用单容器模式构建..."
-        # 构建统一镜像
-        docker build \
-            -t ${IMAGE_PREFIX:-annual-leave}-unified:${UNIFIED_TAG:-latest} \
-            -f docker/unified/Dockerfile \
-            --build-arg VITE_API_BASE_URL=/backend \
-            .
+        log_info "统一镜像将通过docker-compose在部署时构建，确保所有构建在容器内完成"
+        # 对于unified模式，不在这里构建，让docker-compose处理构建
+        # 这样可以确保所有构建过程都在容器内完成
     else
         # 构建前端镜像（在项目根目录构建）
         log_info "构建前端镜像..."
