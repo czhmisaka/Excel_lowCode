@@ -19,8 +19,14 @@ RUN npm config set registry https://registry.npmmirror.com && \
 
 # 确保npm-run-all2包正确安装并具有执行权限
 RUN npm list npm-run-all2 || npm install npm-run-all2 && \
+    # 修复整个node_modules/.bin目录的权限，确保所有二进制文件可执行
+    chmod -R +x node_modules/.bin && \
+    # 特别确保run-p和npm-run-all2有执行权限
     find node_modules/.bin -name "run-p" -exec chmod +x {} \; && \
-    find node_modules/.bin -name "npm-run-all2" -exec chmod +x {} \;
+    find node_modules/.bin -name "npm-run-all2" -exec chmod +x {} \; && \
+    # 验证权限设置
+    ls -la node_modules/.bin/run-p && \
+    ls -la node_modules/.bin/npm-run-all2
 
 # 复制前端源代码
 COPY fe/ ./

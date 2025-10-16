@@ -6,9 +6,10 @@
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
+  "license": "GPL-3.0-or-later",
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build": "npm run build-only",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build"

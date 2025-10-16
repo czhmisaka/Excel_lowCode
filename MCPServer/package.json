@@ -21,7 +21,7 @@
         "model-context-protocol"
     ],
     "author": "CZH",
-    "license": "MIT",
+    "license": "GPL-3.0-or-later",
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.17.3",
         "axios": "^1.6.0",
