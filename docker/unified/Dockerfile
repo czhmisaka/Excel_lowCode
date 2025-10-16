@@ -28,6 +28,7 @@ RUN npm list npm-run-all2 || npm install npm-run-all2 && \
     ls -la node_modules/.bin/run-p && \
     ls -la node_modules/.bin/npm-run-all2
 
+
 # 复制前端源代码
 COPY fe/ ./
 
@@ -84,6 +85,13 @@ COPY MCPServer/package*.json ./
 RUN npm config set registry https://registry.npmmirror.com && \
     npm ci
 
+# 修复node_modules/.bin目录权限，确保tsc等二进制文件可执行
+RUN chmod -R +x node_modules/.bin && \
+    # 特别确保tsc有执行权限
+    find node_modules/.bin -name "tsc" -exec chmod +x {} \; && \
+    # 验证权限设置
+    ls -la node_modules/.bin/tsc
+
 # 复制MCP服务器源代码
 COPY MCPServer/ ./
 
@@ -104,6 +112,10 @@ WORKDIR /app
 
 # 从前端构建阶段复制构建好的静态文件
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
+
+# 修复文件权限 - 确保Nginx可以访问前端文件
+RUN chown -R nginx:nginx /usr/share/nginx/html/ && \
+    chmod -R 755 /usr/share/nginx/html/
 
 # 从后端构建阶段复制后端代码和依赖
 COPY --from=backend-builder /app/backend ./
