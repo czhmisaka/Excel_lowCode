@@ -1,12 +1,14 @@
 /*
  * @Date: 2025-09-27 23:20:53
  * @LastEditors: CZH
- * @LastEditTime: 2025-09-27 23:21:32
- * @FilePath: /backend/controllers/uploadController.js
+ * @LastEditTime: 2025-10-17 11:01:39
+ * @FilePath: /lowCode_excel/backend/controllers/uploadController.js
  */
 const { generateHash } = require('../utils/hashGenerator');
 const { parseExcel } = require('../utils/excelParser');
+const StreamExcelParser = require('../utils/streamExcelParser');
 const { TableMapping, getDynamicModel } = require('../models');
+const fs = require('fs');
 
 /**
  * 文件上传控制器
