@@ -319,7 +319,7 @@ start_services() {
     
     # 等待服务启动
     log_info "等待服务启动..."
-    sleep 30
+    sleep 60
     
     # 检查服务状态
     check_services_health
@@ -329,21 +329,53 @@ start_services() {
 check_services_health() {
     log_info "检查服务健康状态..."
     
-    # 检查前端服务
-    if curl -f http://localhost:${FRONTEND_PORT}/health > /dev/null 2>&1; then
-        log_success "前端服务运行正常"
-    else
-        log_error "前端服务健康检查失败"
+    # 检查前端服务（增加重试机制）
+    local frontend_healthy=false
+    for i in {1..5}; do
+        log_info "尝试检查前端服务健康状态 (第 $i 次)..."
+        if curl -f http://localhost:${FRONTEND_PORT}/health > /dev/null 2>&1; then
+            log_success "前端服务运行正常"
+            frontend_healthy=true
+            break
+        else
+            log_warning "前端服务健康检查失败 (第 $i 次)，等待 10 秒后重试..."
+            sleep 10
+        fi
+    done
+    
+    if [ "$frontend_healthy" = false ]; then
+        log_error "前端服务健康检查失败，请检查容器日志"
+        log_info "尝试获取容器状态..."
+        docker ps -a | grep annual-leave || true
+        log_info "尝试获取容器日志..."
+        docker logs annual-leave-unified --tail=20 2>/dev/null || true
         return 1
     fi
     
-    # 检查后端服务
-    if curl -f http://localhost:${BACKEND_PORT}/health > /dev/null 2>&1; then
-        log_success "后端服务运行正常"
-    else
-        log_error "后端服务健康检查失败"
+    # 检查后端服务（增加重试机制）
+    local backend_healthy=false
+    for i in {1..5}; do
+        log_info "尝试检查后端服务健康状态 (第 $i 次)..."
+        if curl -f http://localhost:${BACKEND_PORT}/health > /dev/null 2>&1; then
+            log_success "后端服务运行正常"
+            backend_healthy=true
+            break
+        else
+            log_warning "后端服务健康检查失败 (第 $i 次)，等待 10 秒后重试..."
+            sleep 10
+        fi
+    done
+    
+    if [ "$backend_healthy" = false ]; then
+        log_error "后端服务健康检查失败，请检查容器日志"
+        log_info "尝试获取容器状态..."
+        docker ps -a | grep annual-leave || true
+        log_info "尝试获取容器日志..."
+        docker logs annual-leave-unified --tail=20 2>/dev/null || true
         return 1
     fi
+    
+    log_success "所有服务健康检查通过"
 }
 
 # 显示服务状态

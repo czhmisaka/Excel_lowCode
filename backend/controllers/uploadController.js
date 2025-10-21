@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-27 23:20:53
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-17 11:01:39
+ * @LastEditTime: 2025-10-21 10:50:30
  * @FilePath: /lowCode_excel/backend/controllers/uploadController.js
  */
 const { generateHash } = require('../utils/hashGenerator');
@@ -24,8 +24,23 @@ const uploadFile = async (req, res) => {
             });
         }
 
+        // 安全地获取文件内容
+        let fileBuffer;
+        if (file.buffer) {
+            // 如果文件在内存中
+            fileBuffer = file.buffer;
+        } else if (file.path && fs.existsSync(file.path)) {
+            // 如果文件在磁盘上，从磁盘读取
+            fileBuffer = fs.readFileSync(file.path);
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: '无法获取文件内容，请重新上传文件'
+            });
+        }
+
         // 生成唯一哈希值
-        const hashValue = generateHash(file.originalname, file.buffer);
+        const hashValue = generateHash(file.originalname, fileBuffer);
 
         // 检查是否已存在相同哈希值的表
         const existingMapping = await TableMapping.findOne({
@@ -40,7 +55,7 @@ const uploadFile = async (req, res) => {
         }
 
         // 解析Excel文件
-        const parseResult = parseExcel(file.buffer);
+        const parseResult = parseExcel(fileBuffer);
 
         if (!parseResult.success) {
             return res.status(400).json({
@@ -74,6 +89,15 @@ const uploadFile = async (req, res) => {
             rowCount: excelData.rowCount,
             columnDefinitions: excelData.columnDefinitions
         });
+
+        // 清理临时文件（如果存在）
+        if (file.path && fs.existsSync(file.path)) {
+            try {
+                fs.unlinkSync(file.path);
+            } catch (cleanupError) {
+                console.warn('临时文件清理失败:', cleanupError.message);
+            }
+        }
 
         res.json({
             success: true,

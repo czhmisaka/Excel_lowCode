@@ -20,6 +20,12 @@ const inferDataType = (value, fieldName = '') => {
     }
 
     if (typeof value === 'string') {
+        // 安全地处理字符串值
+        const trimmedValue = value.trim();
+        if (trimmedValue === '') {
+            return 'string';
+        }
+
         // 根据字段名关键词推断类型
         if (fieldName) {
             const lowerFieldName = fieldName.toLowerCase();
@@ -32,7 +38,7 @@ const inferDataType = (value, fieldName = '') => {
                 lowerFieldName.includes('数值') ||
                 lowerFieldName.includes('数字')) {
                 // 尝试解析为数字
-                if (!isNaN(Number(value)) && value.trim() !== '') {
+                if (!isNaN(Number(trimmedValue)) && trimmedValue !== '') {
                     return 'number';
                 }
             }
@@ -43,7 +49,7 @@ const inferDataType = (value, fieldName = '') => {
                 lowerFieldName.includes('到达') ||
                 lowerFieldName.includes('结束')) {
                 // 尝试解析为日期
-                const date = new Date(value);
+                const date = new Date(trimmedValue);
                 if (!isNaN(date.getTime())) {
                     return 'date';
                 }
@@ -51,18 +57,18 @@ const inferDataType = (value, fieldName = '') => {
         }
 
         // 尝试解析为日期
-        const date = new Date(value);
+        const date = new Date(trimmedValue);
         if (!isNaN(date.getTime())) {
             return 'date';
         }
 
         // 尝试解析为数字
-        if (!isNaN(Number(value)) && value.trim() !== '') {
+        if (!isNaN(Number(trimmedValue)) && trimmedValue !== '') {
             return 'number';
         }
 
         // 检查布尔值
-        const lowerValue = value.toLowerCase();
+        const lowerValue = trimmedValue.toLowerCase();
         if (lowerValue === 'true' || lowerValue === 'false') {
             return 'boolean';
         }
@@ -78,8 +84,22 @@ const inferDataType = (value, fieldName = '') => {
  */
 const parseExcel = (fileBuffer) => {
     try {
+        // 验证文件缓冲区
+        if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) {
+            throw new Error('无效的文件缓冲区');
+        }
+
+        if (fileBuffer.length === 0) {
+            throw new Error('文件内容为空');
+        }
+
         // 读取Excel文件
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+
+        // 验证工作簿
+        if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+            throw new Error('Excel文件格式无效或损坏');
+        }
 
         // 获取第一个工作表
         const firstSheetName = workbook.SheetNames[0];
@@ -92,7 +112,7 @@ const parseExcel = (fileBuffer) => {
         // 转换为JSON数据
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        if (jsonData.length === 0) {
+        if (!jsonData || jsonData.length === 0) {
             throw new Error('Excel文件为空或没有数据');
         }
 
@@ -104,12 +124,19 @@ const parseExcel = (fileBuffer) => {
 
         // 处理表头：移除特殊字符，转换为有效的字段名
         const processedHeaders = headers.map((header, index) => {
-            if (!header || header.toString().trim() === '') {
+            // 处理空值：检查是否为undefined、null或空字符串
+            if (header === undefined || header === null || header === '') {
+                return `column_${index + 1}`;
+            }
+
+            // 安全地转换为字符串
+            const headerString = String(header).trim();
+            if (headerString === '') {
                 return `column_${index + 1}`;
             }
 
             // 移除特殊字符，只保留字母、数字、下划线
-            let fieldName = header.toString()
+            let fieldName = headerString
                 .replace(/[^a-zA-Z0-9\u4e00-\u9fa5_]/g, '_')
                 .replace(/_+/g, '_')
                 .replace(/^_|_$/g, '');

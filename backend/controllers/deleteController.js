@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-09-28 02:33:00
  * @LastEditors: CZH
- * @LastEditTime: 2025-09-28 02:38:57
- * @FilePath: /backend/controllers/deleteController.js
+ * @LastEditTime: 2025-10-21 11:13:03
+ * @FilePath: /lowCode_excel/backend/controllers/deleteController.js
  */
 const { TableMapping, dropDynamicTable } = require('../models');
 
@@ -23,6 +23,9 @@ const deleteMapping = async (req, res) => {
     let transaction;
 
     try {
+        // 先删除动态数据表（在事务外执行，避免SQLite锁定问题）
+        const tableDropped = await dropDynamicTable(hash);
+
         // 开启事务
         transaction = await TableMapping.sequelize.transaction();
 
@@ -47,9 +50,6 @@ const deleteMapping = async (req, res) => {
             hashValue: mapping.hashValue,
             originalFileName: mapping.originalFileName
         };
-
-        // 删除动态数据表
-        const tableDropped = await dropDynamicTable(hash);
 
         // 删除映射关系记录
         await TableMapping.destroy({

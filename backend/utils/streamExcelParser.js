@@ -102,12 +102,19 @@ class StreamExcelParser {
      */
     processHeaders(headers) {
         return headers.map((header, index) => {
-            if (!header || header.toString().trim() === '') {
+            // 处理空值：检查是否为undefined、null或空字符串
+            if (header === undefined || header === null || header === '') {
+                return `column_${index + 1}`;
+            }
+
+            // 安全地转换为字符串
+            const headerString = String(header).trim();
+            if (headerString === '') {
                 return `column_${index + 1}`;
             }
 
             // 移除特殊字符，只保留字母、数字、下划线
-            let fieldName = header.toString()
+            let fieldName = headerString
                 .replace(/[^a-zA-Z0-9\u4e00-\u9fa5_]/g, '_')
                 .replace(/_+/g, '_')
                 .replace(/^_|_$/g, '');
