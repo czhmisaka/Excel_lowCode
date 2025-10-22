@@ -450,7 +450,7 @@ start_services() {
         
         # 等待服务启动
         log_info "等待服务启动..."
-        sleep 30
+        sleep 10
         
         # 检查服务状态
         if (cd docker && $compose_cmd ps | grep -q "Up"); then
