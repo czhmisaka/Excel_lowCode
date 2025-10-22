@@ -319,7 +319,7 @@ start_services() {
     
     # 等待服务启动
     log_info "等待服务启动..."
-    sleep 60
+    sleep 20
     
     # 检查服务状态
     check_services_health
