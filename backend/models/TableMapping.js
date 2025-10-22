@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-09-27 23:16:41
  * @LastEditors: CZH
- * @LastEditTime: 2025-09-27 23:30:51
- * @FilePath: /backend/models/TableMapping.js
+ * @LastEditTime: 2025-10-22 10:51:30
+ * @FilePath: /lowCode_excel/backend/models/TableMapping.js
  */
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
@@ -46,6 +46,13 @@ const TableMapping = sequelize.define('TableMapping', {
         defaultValue: 0,
         comment: '行数',
         field: 'row_count'
+    },
+    headerRow: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+        comment: '表头行号（从0开始）',
+        field: 'header_row'
     },
     columnDefinitions: {
         type: DataTypes.JSON,

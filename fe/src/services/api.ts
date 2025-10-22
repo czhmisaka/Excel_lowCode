@@ -47,6 +47,21 @@ apiClient.interceptors.response.use(
     }
 )
 
+// Excel预览响应
+export interface PreviewResponse {
+    success: boolean
+    message: string
+    data: {
+        sheetName: string
+        totalRows: number
+        totalColumns: number
+        rows: {
+            rowIndex: number
+            data: string[]
+        }[]
+    }
+}
+
 // 文件上传响应
 export interface UploadResponse {
     success: boolean
@@ -57,6 +72,7 @@ export interface UploadResponse {
         originalFileName: string
         recordCount: number
         columnCount: number
+        headerRow: number
         createdAt: string
     }
 }
@@ -147,10 +163,25 @@ export interface SystemInfo {
 
 // API服务类
 class ApiService {
-    // 文件上传
-    async uploadFile(file: File): Promise<UploadResponse> {
+    // 预览Excel文件
+    async previewExcelFile(file: File): Promise<PreviewResponse> {
         const formData = new FormData()
         formData.append('file', file)
+
+        const response = await apiClient.post('/api/upload/preview', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+
+        return response.data
+    }
+
+    // 文件上传（支持指定表头行）
+    async uploadFile(file: File, headerRow: number = 0): Promise<UploadResponse> {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('headerRow', headerRow.toString())
 
         const response = await apiClient.post('/api/upload', formData, {
             headers: {
