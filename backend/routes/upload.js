@@ -1,11 +1,11 @@
 /*
  * @Date: 2025-09-27 23:23:41
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-22 10:52:53
+ * @LastEditTime: 2025-10-22 15:19:59
  * @FilePath: /lowCode_excel/backend/routes/upload.js
  */
 const express = require('express');
-const { uploadFile, previewExcelFile } = require('../controllers/uploadController');
+const { uploadFile, previewExcelFile, dynamicParseExcel } = require('../controllers/uploadController');
 const { uploadLargeFile, getUploadProgress, smartUploadFile } = require('../controllers/largeFileUploadController');
 const { uploadMiddleware, validateFile } = require('../middleware/upload');
 
@@ -74,6 +74,90 @@ const router = express.Router();
  *         description: 服务器内部错误
  */
 router.post('/preview', uploadMiddleware, validateFile, previewExcelFile);
+
+/**
+ * @swagger
+ * /api/upload/dynamic-parse:
+ *   post:
+ *     summary: 动态解析Excel文件
+ *     description: 根据指定的表头行动态解析Excel文件，返回表结构信息
+ *     tags: [文件上传]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Excel文件 (.xlsx, .xls)
+ *               headerRow:
+ *                 type: integer
+ *                 description: 表头行号（从0开始），默认为0
+ *                 example: 0
+ *     responses:
+ *       200:
+ *         description: 动态解析成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Excel文件动态解析成功"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     sheetName:
+ *                       type: string
+ *                       description: 工作表名称
+ *                     headers:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: 处理后的字段名
+ *                     originalHeaders:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: 原始表头
+ *                     columnDefinitions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                           type:
+ *                             type: string
+ *                           originalName:
+ *                             type: string
+ *                           index:
+ *                             type: integer
+ *                     dataPreview:
+ *                       type: array
+ *                       description: 数据预览（前5行）
+ *                     rowCount:
+ *                       type: integer
+ *                       description: 总行数
+ *                     columnCount:
+ *                       type: integer
+ *                       description: 总列数
+ *                     headerRow:
+ *                       type: integer
+ *                       description: 使用的表头行号
+ *       400:
+ *         description: 动态解析失败
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.post('/dynamic-parse', uploadMiddleware, validateFile, dynamicParseExcel);
 
 /**
  * @swagger
