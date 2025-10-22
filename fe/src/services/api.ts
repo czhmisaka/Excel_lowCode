@@ -62,6 +62,22 @@ export interface PreviewResponse {
     }
 }
 
+// 动态解析响应
+export interface DynamicParseResponse {
+    success: boolean
+    message: string
+    data: {
+        sheetName: string
+        headers: string[]
+        originalHeaders: string[]
+        columnDefinitions: ColumnDefinition[]
+        dataPreview: any[]
+        rowCount: number
+        columnCount: number
+        headerRow: number
+    }
+}
+
 // 文件上传响应
 export interface UploadResponse {
     success: boolean
@@ -175,6 +191,42 @@ class ApiService {
         })
 
         return response.data
+    }
+
+    // 动态解析Excel文件
+    async dynamicParseExcel(file: File, headerRow: number = 0): Promise<DynamicParseResponse> {
+        try {
+            const formData = new FormData()
+            formData.append('file', file)
+            formData.append('headerRow', headerRow.toString())
+
+            const response = await apiClient.post('/api/upload/dynamic-parse', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                },
+                timeout: 30000 // 30秒超时
+            })
+
+            return response.data
+        } catch (error: any) {
+            // 处理浏览器扩展导致的错误
+            if (error.message?.includes('asynchronous response') || error.message?.includes('message channel closed')) {
+                console.warn('浏览器扩展导致的错误，忽略:', error.message)
+                // 重新尝试请求
+                const formData = new FormData()
+                formData.append('file', file)
+                formData.append('headerRow', headerRow.toString())
+
+                const response = await apiClient.post('/api/upload/dynamic-parse', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    },
+                    timeout: 30000
+                })
+                return response.data
+            }
+            throw error
+        }
     }
 
     // 文件上传（支持指定表头行）

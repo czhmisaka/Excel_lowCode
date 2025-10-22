@@ -56,7 +56,7 @@
         </el-dialog>
 
         <!-- 数据预览对话框 -->
-        <el-dialog v-model="showPreviewDialog" title="Excel数据预览" width="90%" top="5vh">
+        <el-dialog v-model="showPreviewDialog" title="Excel数据预览" fullscreen>
             <ExcelPreview v-if="selectedFile" :file="selectedFile" @confirm="handlePreviewConfirm"
                 @cancel="handlePreviewCancel" />
         </el-dialog>
