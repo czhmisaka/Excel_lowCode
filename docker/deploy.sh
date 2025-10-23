@@ -135,7 +135,12 @@ check_env() {
         env_file="docker/.env.sqlite"
         log_info "使用SQLite环境配置: $env_file"
     else
-        log_info "使用MySQL环境配置: $env_file"
+        # 统一模式默认使用MySQL，除非明确指定--run-local
+        if [ "$DEPLOY_MODE" = "unified" ]; then
+            log_info "统一模式默认使用MySQL环境配置: $env_file"
+        else
+            log_info "使用MySQL环境配置: $env_file"
+        fi
     fi
     
     # 检查环境文件是否存在
