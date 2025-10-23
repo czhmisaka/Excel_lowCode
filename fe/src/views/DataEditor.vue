@@ -151,7 +151,7 @@
 
                     <div class="pagination" v-if="tableData.length > 0">
                         <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
-                            :page-sizes="[10, 20, 50, 100]" :total="totalRecords"
+                            :page-sizes="[10, 20, 50, 100, 1000]" :total="totalRecords"
                             layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
                             @current-change="handleCurrentChange" />
                     </div>
@@ -194,82 +194,10 @@
         </el-dialog>
 
         <!-- Excel导入弹窗 -->
-        <el-dialog v-model="importDialogVisible" title="导入Excel数据" width="800px"
+        <el-dialog v-model="importDialogVisible" title="导入Excel数据" width="90%" fullscreen
             :before-close="handleImportDialogClose">
-            <div class="import-content">
-                <!-- 文件上传区域 -->
-                <div class="upload-section">
-                    <el-upload class="upload-demo" :auto-upload="false" :show-file-list="false"
-                        :on-change="handleFileChange" accept=".xlsx,.xls">
-                        <template #trigger>
-                            <el-button type="primary">选择Excel文件</el-button>
-                        </template>
-                        <template #tip>
-                            <div class="el-upload__tip">
-                                请选择.xlsx或.xls格式的Excel文件
-                            </div>
-                        </template>
-                    </el-upload>
-                    <div v-if="importFile" class="file-info">
-                        <el-icon>
-                            <Document />
-                        </el-icon>
-                        <span>{{ importFile.name }}</span>
-                        <el-button type="text" @click="clearFile">清除</el-button>
-                    </div>
-                </div>
-
-                <!-- 数据预览区域 -->
-                <div v-if="importPreviewData.length > 0" class="preview-section">
-                    <h4>数据预览 (共{{ importPreviewData.length }}条记录)</h4>
-                    <el-table :data="importPreviewData.slice(0, 5)" border height="200">
-                        <el-table-column v-for="column in Object.keys(importPreviewData[0] || {})" :key="column"
-                            :prop="column" :label="column" min-width="120" />
-                    </el-table>
-                    <div v-if="importPreviewData.length > 5" class="preview-tip">
-                        仅显示前5条记录，共{{ importPreviewData.length }}条记录
-                    </div>
-                </div>
-
-                <!-- 字段匹配验证 -->
-                <div v-if="importPreviewData.length > 0" class="validation-section">
-                    <h4>字段匹配验证</h4>
-                    <div v-if="isColumnsMatched" class="validation-success">
-                        <el-icon color="#67C23A">
-                            <SuccessFilled />
-                        </el-icon>
-                        <span v-if="missingColumnsCount === 0">
-                            Excel字段与当前表字段完全匹配
-                        </span>
-                        <span v-else>
-                            Excel字段与当前表字段部分匹配（{{ matchedColumnsCount }}/{{ totalColumnsCount }}个字段匹配，{{
-                                missingColumnsCount
-                            }}个字段缺失）
-                        </span>
-                    </div>
-                    <div v-else class="validation-error">
-                        <el-icon color="#F56C6C">
-                            <WarningFilled />
-                        </el-icon>
-                        <span>Excel字段与当前表字段不匹配，请检查文件格式</span>
-                    </div>
-                </div>
-
-                <!-- 导入进度 -->
-                <div v-if="importProgress > 0" class="progress-section">
-                    <h4>导入进度</h4>
-                    <el-progress :percentage="importProgress" :status="importProgress === 100 ? 'success' : ''" />
-                </div>
-            </div>
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button @click="handleImportDialogClose">取消</el-button>
-                    <el-button type="primary" @click="confirmImport" :loading="importLoading"
-                        :disabled="!importFile || importPreviewData.length === 0 || !isColumnsMatched">
-                        确认导入 ({{ importPreviewData.length }}条记录)
-                    </el-button>
-                </span>
-            </template>
+            <ExcelImport v-if="importDialogVisible" :target-hash="selectedHash" @confirm="handleImportConfirm"
+                @cancel="handleImportDialogClose" />
         </el-dialog>
     </div>
 </template>
@@ -281,8 +209,8 @@ import { useFilesStore } from '@/stores/files'
 import { useDataStore } from '@/stores/data'
 import { apiService } from '@/services/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Plus, Delete, Upload, Document, SuccessFilled, WarningFilled, Search, Close, Setting, Remove } from '@element-plus/icons-vue'
-import * as XLSX from 'xlsx'
+import { Refresh, Plus, Delete, Upload, Search, Close, Setting, Remove } from '@element-plus/icons-vue'
+import ExcelImport from '@/components/ExcelImport.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -313,10 +241,6 @@ const editingRecordId = ref<number | null>(null)
 
 // Excel导入相关状态
 const importDialogVisible = ref(false)
-const importLoading = ref(false)
-const importFile = ref<File | null>(null)
-const importPreviewData = ref<any[]>([])
-const importProgress = ref(0)
 
 // 表结构信息
 const tableStructure = ref<{
@@ -616,58 +540,6 @@ const deleteSingleRow = async (row: any, index: number) => {
 
 // Excel导入相关方法
 
-// 字段匹配验证计算属性
-const isColumnsMatched = computed(() => {
-    if (importPreviewData.value.length === 0 || tableColumns.value.length === 0) {
-        return false
-    }
-
-    const excelColumns = Object.keys(importPreviewData.value[0])
-    const tableColumnsLower = tableColumns.value.map(col => col.toLowerCase())
-    const excelColumnsLower = excelColumns.map(col => col.toLowerCase())
-
-    // 检查Excel列是否与表字段匹配（排除id列）
-    const filteredTableColumns = tableColumnsLower.filter(col => col !== 'id')
-
-    // 宽松匹配：只要至少有一个字段匹配就允许导入
-    return filteredTableColumns.some(col => excelColumnsLower.includes(col))
-})
-
-// 获取匹配的字段数量
-const matchedColumnsCount = computed(() => {
-    if (importPreviewData.value.length === 0 || tableColumns.value.length === 0) {
-        return 0
-    }
-
-    const excelColumns = Object.keys(importPreviewData.value[0])
-    const tableColumnsLower = tableColumns.value.map(col => col.toLowerCase())
-    const excelColumnsLower = excelColumns.map(col => col.toLowerCase())
-
-    const filteredTableColumns = tableColumnsLower.filter(col => col !== 'id')
-    return filteredTableColumns.filter(col => excelColumnsLower.includes(col)).length
-})
-
-// 获取缺失的字段数量
-const missingColumnsCount = computed(() => {
-    if (importPreviewData.value.length === 0 || tableColumns.value.length === 0) {
-        return 0
-    }
-
-    const excelColumns = Object.keys(importPreviewData.value[0])
-    const tableColumnsLower = tableColumns.value.map(col => col.toLowerCase())
-    const excelColumnsLower = excelColumns.map(col => col.toLowerCase())
-
-    const filteredTableColumns = tableColumnsLower.filter(col => col !== 'id')
-    return filteredTableColumns.filter(col => !excelColumnsLower.includes(col)).length
-})
-
-// 获取总字段数量（排除id）
-const totalColumnsCount = computed(() => {
-    if (tableColumns.value.length === 0) {
-        return 0
-    }
-    return tableColumns.value.filter(col => col.toLowerCase() !== 'id').length
-})
 
 // 处理Excel导入按钮点击
 const handleImportExcel = () => {
@@ -678,6 +550,13 @@ const handleImportExcel = () => {
     importDialogVisible.value = true
 }
 
+// 处理导入确认
+const handleImportConfirm = (result: { successCount: number; errorCount: number }) => {
+    ElMessage.success(`导入完成：成功 ${result.successCount} 条，失败 ${result.errorCount} 条`)
+    handleImportDialogClose()
+    loadData() // 重新加载数据
+}
+
 // 处理导入弹窗关闭
 const handleImportDialogClose = () => {
     importDialogVisible.value = false
@@ -686,154 +565,9 @@ const handleImportDialogClose = () => {
 
 // 清除导入数据
 const clearImportData = () => {
-    importFile.value = null
-    importPreviewData.value = []
-    importProgress.value = 0
+    // 清理导入相关数据（现在由ExcelImport组件管理）
 }
 
-// 清除文件
-const clearFile = () => {
-    importFile.value = null
-    importPreviewData.value = []
-}
-
-// 处理文件选择
-const handleFileChange = (file: any) => {
-    const fileObj = file.raw
-    if (!fileObj) return
-
-    // 检查文件类型
-    const validTypes = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']
-    if (!validTypes.includes(fileObj.type)) {
-        ElMessage.error('请选择有效的Excel文件 (.xlsx 或 .xls)')
-        return
-    }
-
-    importFile.value = fileObj
-    parseExcelFile(fileObj)
-}
-
-// 解析Excel文件
-const parseExcelFile = (file: File) => {
-    const reader = new FileReader()
-
-    reader.onload = (e) => {
-        try {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer)
-            const workbook = XLSX.read(data, { type: 'array' })
-
-            // 获取第一个工作表
-            const firstSheetName = workbook.SheetNames[0]
-            const worksheet = workbook.Sheets[firstSheetName]
-
-            // 将工作表转换为JSON
-            const jsonData = XLSX.utils.sheet_to_json(worksheet)
-
-            if (jsonData.length === 0) {
-                ElMessage.warning('Excel文件中没有数据')
-                return
-            }
-
-            importPreviewData.value = jsonData
-            ElMessage.success(`成功解析 ${jsonData.length} 条记录`)
-
-        } catch (error) {
-            console.error('Excel解析失败:', error)
-            ElMessage.error('Excel文件解析失败，请检查文件格式')
-        }
-    }
-
-    reader.onerror = () => {
-        ElMessage.error('文件读取失败')
-    }
-
-    reader.readAsArrayBuffer(file)
-}
-
-// 确认导入
-const confirmImport = async () => {
-    if (!importFile.value || importPreviewData.value.length === 0 || !isColumnsMatched.value) {
-        ElMessage.error('请先选择有效的Excel文件并确保字段匹配')
-        return
-    }
-
-    try {
-        await ElMessageBox.confirm(
-            `确定要导入 ${importPreviewData.value.length} 条记录吗？${missingColumnsCount.value > 0 ? ` (${missingColumnsCount.value}个字段将自动填充为空值)` : ''}`,
-            '确认导入',
-            {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
-                type: 'warning',
-            }
-        )
-
-        importLoading.value = true
-        importProgress.value = 0
-
-        // 批量导入数据
-        const totalRecords = importPreviewData.value.length
-        let successCount = 0
-        let errorCount = 0
-        const errorMessages: string[] = []
-
-        // 获取表字段列表（排除id）
-        const tableColumnsLower = tableColumns.value.map(col => col.toLowerCase())
-        const targetColumns = tableColumns.value.filter(col => col.toLowerCase() !== 'id')
-
-        for (let i = 0; i < totalRecords; i++) {
-            try {
-                const record = importPreviewData.value[i]
-
-                // 构建完整的数据对象，自动填充缺失字段
-                const completeRecord: any = {}
-
-                // 为每个目标字段设置值
-                targetColumns.forEach(column => {
-                    const columnLower = column.toLowerCase()
-                    // 查找Excel中对应的字段（不区分大小写）
-                    const excelKey = Object.keys(record).find(key => key.toLowerCase() === columnLower)
-
-                    if (excelKey !== undefined) {
-                        // 如果Excel中有这个字段，使用Excel的值
-                        completeRecord[column] = record[excelKey]
-                    } else {
-                        // 如果Excel中没有这个字段，填充为空值
-                        completeRecord[column] = ''
-                    }
-                })
-
-                await dataStore.addData(completeRecord)
-                successCount++
-            } catch (error: any) {
-                errorCount++
-                errorMessages.push(`第${i + 1}条记录导入失败: ${error.message}`)
-            }
-
-            // 更新进度
-            importProgress.value = Math.round(((i + 1) / totalRecords) * 100)
-        }
-
-        // 显示导入结果
-        if (errorCount === 0) {
-            ElMessage.success(`成功导入 ${successCount} 条记录${missingColumnsCount.value > 0 ? ` (${missingColumnsCount.value}个字段已自动填充为空值)` : ''}`)
-        } else {
-            ElMessage.warning(`导入完成：成功 ${successCount} 条，失败 ${errorCount} 条${missingColumnsCount.value > 0 ? ` (${missingColumnsCount.value}个字段已自动填充为空值)` : ''}`)
-            console.error('导入失败记录:', errorMessages)
-        }
-
-        // 关闭弹窗并重新加载数据
-        handleImportDialogClose()
-        await loadData()
-
-    } catch (error: any) {
-        if (error !== 'cancel') {
-            ElMessage.error(error.message || '导入失败')
-        }
-    } finally {
-        importLoading.value = false
-    }
-}
 
 // 搜索相关方法
 
