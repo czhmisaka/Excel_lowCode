@@ -180,6 +180,7 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/mappings', require('./routes/mappings'));
 app.use('/api/data', require('./routes/data'));
 app.use('/api/system', require('./routes/system'));
+app.use('/api/import', require('./routes/import'));
 
 // 404处理
 app.use('*', (req, res) => {

@@ -177,6 +177,27 @@ export interface SystemInfo {
     }
 }
 
+// 导入规则配置
+export interface ImportRules {
+    deduplicationFields: string[]
+    conflictStrategy: 'skip' | 'overwrite' | 'error'
+    validationRules: string[]
+}
+
+// 导入响应
+export interface ImportResponse {
+    success: boolean
+    message: string
+    data: {
+        successCount: number
+        errorCount: number
+        totalRecords: number
+        matchedColumns: string[]
+        missingColumns: string[]
+        errors: string[]
+    }
+}
+
 // API服务类
 class ApiService {
     // 预览Excel文件
@@ -370,6 +391,33 @@ class ApiService {
     async getSystemInfo(): Promise<SystemInfo> {
         const response = await apiClient.get('/api/system/info')
         return response.data.data
+    }
+
+    // 导入Excel数据到现有表
+    async importExcelData(
+        file: File,
+        targetHash: string,
+        headerRow: number = 0,
+        importRules: ImportRules = {
+            deduplicationFields: [],
+            conflictStrategy: 'skip',
+            validationRules: []
+        }
+    ): Promise<ImportResponse> {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('targetHash', targetHash)
+        formData.append('headerRow', headerRow.toString())
+        formData.append('importRules', JSON.stringify(importRules))
+
+        const response = await apiClient.post('/api/import/excel', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            },
+            timeout: 60000 // 60秒超时，导入可能比较耗时
+        })
+
+        return response.data
     }
 }
 
