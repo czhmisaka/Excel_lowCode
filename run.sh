@@ -105,10 +105,10 @@ run_deploy() {
     local deploy_args=()
     for arg in "$@"; do
         case $arg in
-            --backup|--restore|--stop-only|--start-only|--unified|--help)
+            --backup|--restore|--stop-only|--start-only|--unified|--help|--run-local)
                 deploy_args+=("$arg")
                 ;;
-            --run-local|--backend-port|--frontend-port|--mcp-port|--clean)
+            --backend-port|--frontend-port|--mcp-port|--clean)
                 # 这些参数通过环境变量传递，不传递给deploy.sh
                 ;;
             *)
@@ -187,7 +187,7 @@ parse_arguments() {
         case $1 in
             --run-local)
                 run_local=true
-                # 不添加到deploy_args，通过环境变量传递
+                deploy_args+=("$1")  # 添加到deploy_args，让deploy.sh也能处理
                 shift
                 ;;
             --backend-port)
@@ -250,6 +250,12 @@ parse_arguments() {
     if [ "$run_local" = true ]; then
         export RUN_MODE="sqlite"
         log_info "运行模式: SQLite 本地数据库"
+    else
+        # 统一模式默认使用MySQL，除非明确指定--run-local
+        if [ "$unified_mode" = true ]; then
+            export RUN_MODE="mysql"
+            log_info "运行模式: MySQL 数据库"
+        fi
     fi
     
     if [ "$unified_mode" = true ]; then

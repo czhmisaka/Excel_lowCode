@@ -155,14 +155,67 @@ export class DataToolsHandler {
 
             const result = await httpClient.get(`/api/data/${args.hash}`, params);
 
+            // 确保返回的数据是有效的JSON格式，处理编码问题
+            const sanitizedResult = this.sanitizeJsonData(result);
+
             return {
                 content: [{
                     type: 'text',
-                    text: `表数据查询结果 (第${page}页，每页${limit}条):\n${JSON.stringify(result, null, 2)}`
+                    text: `表数据查询结果 (第${page}页，每页${limit}条):\n${JSON.stringify(sanitizedResult, null, 2)}`
                 }]
             };
         } catch (error: any) {
             throw new Error(`查询表数据失败: ${error.message}`);
+        }
+    }
+
+    /**
+     * 清理JSON数据，确保编码正确
+     */
+    private static sanitizeJsonData(data: any): any {
+        if (typeof data === 'string') {
+            // 如果是字符串，尝试清理编码问题
+            return this.cleanString(data);
+        } else if (Array.isArray(data)) {
+            // 如果是数组，递归清理每个元素
+            return data.map(item => this.sanitizeJsonData(item));
+        } else if (data && typeof data === 'object') {
+            // 如果是对象，递归清理每个属性
+            const cleaned: any = {};
+            for (const [key, value] of Object.entries(data)) {
+                cleaned[this.cleanString(key)] = this.sanitizeJsonData(value);
+            }
+            return cleaned;
+        }
+        return data;
+    }
+
+    /**
+     * 清理字符串，移除无效字符和编码问题
+     */
+    private static cleanString(str: string): string {
+        if (typeof str !== 'string') return str;
+
+        // 移除控制字符和无效Unicode字符
+        let cleaned = str.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+
+        // 尝试修复常见的编码问题
+        cleaned = cleaned
+            .replace(/\\x([0-9A-Fa-f]{2})/g, (match, hex) => {
+                const charCode = parseInt(hex, 16);
+                return charCode >= 32 && charCode <= 126 ? String.fromCharCode(charCode) : '';
+            })
+            .replace(/\\u([0-9A-Fa-f]{4})/g, (match, hex) => {
+                const charCode = parseInt(hex, 16);
+                return charCode >= 32 && charCode <= 126 ? String.fromCharCode(charCode) : '';
+            });
+
+        // 确保字符串是有效的UTF-8
+        try {
+            return Buffer.from(cleaned, 'utf8').toString('utf8');
+        } catch {
+            // 如果UTF-8转换失败，返回原始清理后的字符串
+            return cleaned;
         }
     }
 
