@@ -69,6 +69,84 @@ check_script_files() {
     fi
 }
 
+# 检查并导入本地基础镜像
+check_and_import_base_images() {
+    log_info "=== 检查基础镜像状态 ==="
+    
+    # 定义需要的基础镜像
+    local required_images=("nginx:alpine" "node:20-alpine" "node:16-alpine")
+    local missing_images=()
+    local local_images_available=false
+    
+    # 检查本地镜像包是否存在
+    if [ -d "docker/docker-base-images-20251023" ]; then
+        log_info "发现本地镜像包: docker/docker-base-images-20251023"
+        local_images_available=true
+    elif [ -d "docker/base-images" ]; then
+        log_info "发现本地镜像目录: docker/base-images"
+        local_images_available=true
+    fi
+    
+    # 检查每个镜像是否存在
+    for image in "${required_images[@]}"; do
+        if docker image inspect "$image" > /dev/null 2>&1; then
+            local image_size=$(docker image inspect "$image" | grep -o '"Size": [0-9]*' | cut -d' ' -f2)
+            local human_size=$(numfmt --to=iec "$image_size")
+            log_success "✓ $image ($human_size)"
+        else
+            log_warning "✗ $image (未找到)"
+            missing_images+=("$image")
+        fi
+    done
+    
+    # 如果有缺失的镜像且本地镜像包可用，则自动导入
+    if [ ${#missing_images[@]} -gt 0 ] && [ "$local_images_available" = true ]; then
+        log_info "检测到 ${#missing_images[@]} 个缺失的基础镜像，尝试从本地导入..."
+        
+        # 优先使用完整的本地化包
+        if [ -d "docker/docker-base-images-20251023" ]; then
+            log_info "使用完整本地化包导入镜像..."
+            if docker/import-base-images.sh auto "docker/docker-base-images-20251023"; then
+                log_success "本地镜像导入成功"
+            else
+                log_warning "本地镜像导入失败，将尝试网络下载"
+            fi
+        elif [ -d "docker/base-images" ]; then
+            log_info "使用基础镜像目录导入..."
+            if docker/import-base-images.sh auto "docker/base-images"; then
+                log_success "本地镜像导入成功"
+            else
+                log_warning "本地镜像导入失败，将尝试网络下载"
+            fi
+        fi
+        
+        # 重新检查镜像状态
+        local still_missing=()
+        for image in "${missing_images[@]}"; do
+            if docker image inspect "$image" > /dev/null 2>&1; then
+                log_success "✓ $image (已从本地导入)"
+            else
+                still_missing+=("$image")
+            fi
+        done
+        
+        missing_images=("${still_missing[@]}")
+    fi
+    
+    # 如果仍有缺失的镜像，提示用户
+    if [ ${#missing_images[@]} -gt 0 ]; then
+        log_warning "以下基础镜像缺失，将在构建过程中从网络下载:"
+        for image in "${missing_images[@]}"; do
+            log_warning "  - $image"
+        done
+        log_info "如需离线构建，请先运行: docker/manage-base-images.sh pull"
+    else
+        log_success "所有基础镜像已就绪，可进行离线构建"
+    fi
+    
+    echo
+}
+
 # 执行构建阶段
 run_build() {
     log_info "=== 开始构建阶段 ==="
@@ -297,6 +375,9 @@ main() {
     # 环境检查
     check_current_directory
     check_script_files
+    
+    # 检查并导入本地基础镜像（避免网络加载）
+    check_and_import_base_images
     
     # 解析参数并设置环境变量
     parse_arguments "$@"

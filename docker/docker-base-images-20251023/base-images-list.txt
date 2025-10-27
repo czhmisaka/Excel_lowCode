@@ -1,0 +1,14 @@
+# Excel_lowCode 基础镜像列表
+# 生成时间: 2025年10月23日 星期四 17时02分32秒 CST
+# 项目: Excel_lowCode
+
+nginx:alpine
+node:20-alpine
+node:16-alpine
+
+# 可选的其他基础镜像
+# alpine:latest
+# busybox:latest
+# redis:alpine
+# postgres:alpine
+

@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-10-23 11:04:57
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-23 11:05:21
+ * @LastEditTime: 2025-10-23 15:03:13
  * @FilePath: /lowCode_excel/fix_database.js
  */
 const { Sequelize } = require('sequelize');
@@ -9,8 +9,8 @@ const { Sequelize } = require('sequelize');
 // 创建数据库连接
 const sequelize = new Sequelize({
     dialect: 'sqlite',
-    storage: '/app/data/annual_leave.db',
-    logging: false
+    storage: './backend/data/annual_leave.db',
+    logging: console.log
 });
 
 async function fixDatabase() {
