@@ -132,13 +132,13 @@ const parseExcel = (fileBuffer, headerRow = 0) => {
         const processedHeaders = headers.map((header, index) => {
             // 处理空值：检查是否为undefined、null或空字符串
             if (header === undefined || header === null || header === '') {
-                return `column_${index + 1}`;
+                return `未知字段${index + 1}`;
             }
 
             // 安全地转换为字符串
             const headerString = String(header).trim();
             if (headerString === '') {
-                return `column_${index + 1}`;
+                return `未知字段${index + 1}`;
             }
 
             // 移除特殊字符，只保留字母、数字、下划线
@@ -149,7 +149,7 @@ const parseExcel = (fileBuffer, headerRow = 0) => {
 
             // 如果处理后为空，使用默认字段名
             if (!fieldName) {
-                return `column_${index + 1}`;
+                return `未知字段${index + 1}`;
             }
 
             return fieldName;
@@ -157,7 +157,10 @@ const parseExcel = (fileBuffer, headerRow = 0) => {
 
         // 获取数据行（从表头行+1开始）
         const dataRows = jsonData.slice(headerRow + 1).filter(row =>
-            row && row.some(cell => cell !== null && cell !== undefined && cell !== '')
+            row && Array.isArray(row) && row.some(cell =>
+                cell !== null && cell !== undefined && cell !== '' &&
+                !String(cell).startsWith('=DISPIMG') // 过滤掉Excel图像函数
+            )
         );
 
         // 分析每列的数据类型
@@ -199,8 +202,8 @@ const parseExcel = (fileBuffer, headerRow = 0) => {
                 if (value === null || value === undefined || value === '') {
                     value = null;
                 } else {
-                    // 根据数据类型转换值
-                    const columnDef = columnDefinitions.find(def => def.index === columnIndex);
+                    // 根据数据类型转换值 - 添加安全检查
+                    const columnDef = columnDefinitions.find(def => def && def.index === columnIndex);
                     if (columnDef) {
                         if (columnDef.type === 'number') {
                             value = Number(value);
