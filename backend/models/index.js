@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-27 23:17:13
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-13 10:48:22
+ * @LastEditTime: 2025-10-27 12:08:31
  * @FilePath: /lowCode_excel/backend/models/index.js
  */
 const { sequelize } = require('../config/database');
@@ -10,8 +10,11 @@ const TableMapping = require('./TableMapping');
 // 初始化所有模型
 const initModels = async () => {
     try {
-        // 同步数据库表
-        await sequelize.sync({ force: false });
+        // 安全同步数据库表 - 只同步表结构，不删除数据
+        await sequelize.sync({
+            force: false,        // 不强制重建表
+            alter: true          // 安全地修改表结构，添加缺失的列
+        });
         console.log('数据库表同步成功');
 
         return {
