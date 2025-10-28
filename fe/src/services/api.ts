@@ -341,6 +341,34 @@ class ApiService {
         return response.data.data || []
     }
 
+    // 根据表哈希获取表结构信息
+    async getTableStructureByHash(hash: string): Promise<{
+        columns: ColumnDefinition[],
+        tableName: string
+    }> {
+        try {
+            // 先获取映射关系详情
+            const mappingResponse = await apiClient.get(`/api/mappings/${hash}`)
+            const mapping = mappingResponse.data.data
+
+            // 再获取列信息
+            const columnsResponse = await apiClient.get(`/api/mappings/${hash}/columns`)
+            const columns = columnsResponse.data.data || []
+
+            return {
+                columns,
+                tableName: mapping.tableName
+            }
+        } catch (error) {
+            console.error('获取表结构信息失败:', error)
+            // 如果获取失败，返回空结构
+            return {
+                columns: [],
+                tableName: ''
+            }
+        }
+    }
+
     // 获取表结构信息（包含搜索能力）
     async getTableStructure(hash: string): Promise<{
         columns: ColumnDefinition[],
@@ -417,6 +445,104 @@ class ApiService {
             timeout: 60000 // 60秒超时，导入可能比较耗时
         })
 
+        return response.data
+    }
+
+    // 用户登录
+    async login(username: string, password: string): Promise<any> {
+        const response = await apiClient.post('/api/auth/login', {
+            username,
+            password
+        })
+        return response.data
+    }
+
+    // 获取当前用户信息
+    async getCurrentUser(): Promise<any> {
+        const response = await apiClient.get('/api/auth/me')
+        return response.data
+    }
+
+    // 用户注册
+    async register(userData: {
+        username: string
+        password: string
+        email?: string
+        displayName?: string
+    }): Promise<any> {
+        const response = await apiClient.post('/api/auth/register', userData)
+        return response.data
+    }
+
+    // 获取用户列表（管理员权限）
+    async getUsers(): Promise<any> {
+        const response = await apiClient.get('/api/users')
+        return response.data
+    }
+
+    // 更新用户信息
+    async updateUser(userId: number, userData: any): Promise<any> {
+        const response = await apiClient.put(`/api/users/${userId}`, userData)
+        return response.data
+    }
+
+    // 删除用户（管理员权限）
+    async deleteUser(userId: number): Promise<any> {
+        const response = await apiClient.delete(`/api/users/${userId}`)
+        return response.data
+    }
+
+    // 获取操作日志
+    async getOperationLogs(params: {
+        tableHash?: string
+        page?: number
+        limit?: number
+    } = {}): Promise<any> {
+        const queryParams = new URLSearchParams()
+        if (params.tableHash) queryParams.append('tableHash', params.tableHash)
+        if (params.page) queryParams.append('page', params.page.toString())
+        if (params.limit) queryParams.append('limit', params.limit.toString())
+
+        const response = await apiClient.get(`/api/rollback/logs?${queryParams.toString()}`)
+        return response.data
+    }
+
+    // 获取日志列表（支持高级筛选）
+    async getLogs(params: {
+        operationType?: string
+        tableName?: string
+        username?: string
+        startTime?: string
+        endTime?: string
+        isRolledBack?: boolean
+        page?: number
+        limit?: number
+    } = {}): Promise<any> {
+        const queryParams = new URLSearchParams()
+        if (params.operationType) queryParams.append('operationType', params.operationType)
+        if (params.tableName) queryParams.append('tableName', params.tableName)
+        if (params.username) queryParams.append('username', params.username)
+        if (params.startTime) queryParams.append('startTime', params.startTime)
+        if (params.endTime) queryParams.append('endTime', params.endTime)
+        if (params.isRolledBack !== undefined) queryParams.append('isRolledBack', params.isRolledBack.toString())
+        if (params.page) queryParams.append('page', params.page.toString())
+        if (params.limit) queryParams.append('limit', params.limit.toString())
+
+        const response = await apiClient.get(`/api/rollback/logs?${queryParams.toString()}`)
+        return response.data
+    }
+
+    // 回退操作
+    async rollbackOperation(logId: number, description?: string): Promise<any> {
+        const response = await apiClient.post(`/api/rollback/logs/${logId}/rollback`, {
+            description
+        })
+        return response.data
+    }
+
+    // 回退日志（别名方法，与前端页面保持一致）
+    async rollbackLog(logId: number, data: { description?: string } = {}): Promise<any> {
+        const response = await apiClient.post(`/api/rollback/logs/${logId}/rollback`, data)
         return response.data
     }
 }

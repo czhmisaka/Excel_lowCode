@@ -1,13 +1,14 @@
 /*
  * @Date: 2025-09-27 23:20:53
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-22 15:49:51
+ * @LastEditTime: 2025-10-28 16:27:38
  * @FilePath: /lowCode_excel/backend/controllers/uploadController.js
  */
 const { generateHash } = require('../utils/hashGenerator');
 const { parseExcel, previewExcel } = require('../utils/excelParser');
 const StreamExcelParser = require('../utils/streamExcelParser');
 const { TableMapping, getDynamicModel } = require('../models');
+const OperationLogger = require('../utils/logger');
 const fs = require('fs');
 
 /**
@@ -219,6 +220,29 @@ const uploadFile = async (req, res) => {
             rowCount: excelData.rowCount,
             columnDefinitions: excelData.columnDefinitions,
             headerRow: parseInt(headerRow) // 保存表头行信息
+        });
+
+        // 记录操作日志
+        const userInfo = OperationLogger.extractUserInfo(req);
+        const clientInfo = OperationLogger.extractClientInfo(req);
+
+        await OperationLogger.logCreate({
+            tableName: excelData.sheetName,
+            tableHash: hashValue,
+            recordId: tableMapping.id,
+            oldData: null,
+            newData: {
+                tableName: excelData.sheetName,
+                hashValue: hashValue,
+                originalFileName: file.originalname,
+                columnCount: excelData.columnCount,
+                rowCount: excelData.rowCount,
+                headerRow: parseInt(headerRow)
+            },
+            description: `上传Excel文件并创建数据表: ${file.originalname}`,
+            user: userInfo,
+            ipAddress: clientInfo.ipAddress,
+            userAgent: clientInfo.userAgent
         });
 
         // 清理临时文件（如果存在）

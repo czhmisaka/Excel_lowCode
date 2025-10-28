@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-28 01:00:38
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-09 01:46:59
+ * @LastEditTime: 2025-10-28 15:31:04
  * @FilePath: /lowCode_excel/fe/vite.config.ts
  */
 import { fileURLToPath, URL } from 'node:url'
@@ -25,10 +25,10 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: {
-      '/backend/api': {
+      '/backend': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api').replace(/^\/backend/, '')
+        rewrite: (path) => path.replace(/^\/backend/, '')
       }
     }
   }

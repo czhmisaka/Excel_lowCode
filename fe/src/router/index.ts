@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-08-28 07:54:03
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-13 10:10:53
+ * @LastEditTime: 2025-10-28 15:39:24
  * @FilePath: /lowCode_excel/fe/src/router/index.ts
  */
 import { createRouter, createWebHistory } from 'vue-router'
@@ -51,6 +51,16 @@ const router = createRouter({
           path: '/api-guide',
           name: 'ApiGuide',
           component: () => import('@/views/ApiGuide.vue')
+        },
+        {
+          path: '/users',
+          name: 'UserManagement',
+          component: () => import('@/views/UserManagement.vue')
+        },
+        {
+          path: '/logs',
+          name: 'LogManagement',
+          component: () => import('@/views/LogManagement.vue')
         }
       ]
     },

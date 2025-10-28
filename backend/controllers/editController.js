@@ -1,5 +1,6 @@
 const { TableMapping, getDynamicModel } = require('../models');
 const { validateHash } = require('../utils/hashGenerator');
+const OperationLogger = require('../utils/logger');
 
 /**
  * 更新数据
@@ -47,10 +48,44 @@ const updateData = async (req, res) => {
         // 获取动态表模型
         const DynamicModel = getDynamicModel(hash, mapping.columnDefinitions);
 
+        // 查找要更新的记录（用于日志记录）
+        const recordsToUpdate = await DynamicModel.findAll({
+            where: conditions
+        });
+
+        if (recordsToUpdate.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '未找到匹配的记录'
+            });
+        }
+
         // 执行更新操作
         const [affectedRows] = await DynamicModel.update(updates, {
             where: conditions
         });
+
+        // 记录操作日志
+        const userInfo = OperationLogger.extractUserInfo(req);
+        const clientInfo = OperationLogger.extractClientInfo(req);
+
+        for (const record of recordsToUpdate) {
+            const updatedRecord = await DynamicModel.findOne({
+                where: { id: record.id }
+            });
+
+            await OperationLogger.logUpdate({
+                tableName: mapping.tableName,
+                tableHash: hash,
+                recordId: record.id,
+                oldData: record.toJSON(),
+                newData: updatedRecord.toJSON(),
+                description: `更新记录 #${record.id}`,
+                user: userInfo,
+                ipAddress: clientInfo.ipAddress,
+                userAgent: clientInfo.userAgent
+            });
+        }
 
         res.json({
             success: true,
@@ -73,7 +108,7 @@ const updateData = async (req, res) => {
 const addData = async (req, res) => {
     try {
         const { hash } = req.params;
-        const { updates } = req.body;
+        const { data } = req.body;
 
         // 验证哈希值
         if (!validateHash(hash)) {
@@ -96,7 +131,7 @@ const addData = async (req, res) => {
         }
 
         // 验证请求参数
-        if (!updates || typeof updates !== 'object') {
+        if (!data || typeof data !== 'object') {
             return res.status(400).json({
                 success: false,
                 message: '必须提供有效的新增数据'
@@ -107,7 +142,23 @@ const addData = async (req, res) => {
         const DynamicModel = getDynamicModel(hash, mapping.columnDefinitions);
 
         // 执行新增操作
-        const newRecord = await DynamicModel.create(updates);
+        const newRecord = await DynamicModel.create(data);
+
+        // 记录操作日志
+        const userInfo = OperationLogger.extractUserInfo(req);
+        const clientInfo = OperationLogger.extractClientInfo(req);
+
+        await OperationLogger.logCreate({
+            tableName: mapping.tableName,
+            tableHash: hash,
+            recordId: newRecord.id,
+            oldData: null,
+            newData: newRecord.toJSON(),
+            description: `新增记录 #${newRecord.id}`,
+            user: userInfo,
+            ipAddress: clientInfo.ipAddress,
+            userAgent: clientInfo.userAgent
+        });
 
         res.json({
             success: true,
@@ -163,10 +214,40 @@ const deleteData = async (req, res) => {
         // 获取动态表模型
         const DynamicModel = getDynamicModel(hash, mapping.columnDefinitions);
 
+        // 查找要删除的记录（用于日志记录）
+        const recordsToDelete = await DynamicModel.findAll({
+            where: conditions
+        });
+
+        if (recordsToDelete.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '未找到匹配的记录'
+            });
+        }
+
         // 执行删除操作
         const affectedRows = await DynamicModel.destroy({
             where: conditions
         });
+
+        // 记录操作日志
+        const userInfo = OperationLogger.extractUserInfo(req);
+        const clientInfo = OperationLogger.extractClientInfo(req);
+
+        for (const record of recordsToDelete) {
+            await OperationLogger.logDelete({
+                tableName: mapping.tableName,
+                tableHash: hash,
+                recordId: record.id,
+                oldData: record.toJSON(),
+                newData: null,
+                description: `删除记录 #${record.id}`,
+                user: userInfo,
+                ipAddress: clientInfo.ipAddress,
+                userAgent: clientInfo.userAgent
+            });
+        }
 
         res.json({
             success: true,

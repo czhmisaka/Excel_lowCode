@@ -1,11 +1,13 @@
 /*
  * @Date: 2025-09-27 23:17:13
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-27 12:08:31
+ * @LastEditTime: 2025-10-28 15:03:18
  * @FilePath: /lowCode_excel/backend/models/index.js
  */
 const { sequelize } = require('../config/database');
 const TableMapping = require('./TableMapping');
+const User = require('./User');
+const TableLog = require('./TableLog');
 
 // 初始化所有模型
 const initModels = async () => {
@@ -18,7 +20,9 @@ const initModels = async () => {
         console.log('数据库表同步成功');
 
         return {
-            TableMapping
+            TableMapping,
+            User,
+            TableLog
         };
     } catch (error) {
         console.error('数据库表同步失败:', error);
@@ -165,6 +169,8 @@ const dropDynamicTable = async (hashValue) => {
 module.exports = {
     initModels,
     TableMapping,
+    User,
+    TableLog,
     getDynamicModel,
     dropDynamicTable
 };

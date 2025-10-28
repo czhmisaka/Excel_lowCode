@@ -4,6 +4,7 @@ const { TableMapping, getDynamicModel } = require('../models');
 const queryController = require('../controllers/queryController');
 const editController = require('../controllers/editController');
 const exportController = require('../controllers/exportController');
+const { authenticateToken } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -76,7 +77,7 @@ const exportController = require('../controllers/exportController');
  *       500:
  *         description: 服务器内部错误
  */
-router.get('/:hash', queryController.queryData);
+router.get('/:hash', authenticateToken, queryController.queryData);
 
 /**
  * @swagger
@@ -135,95 +136,7 @@ router.get('/:hash', queryController.queryData);
  *       500:
  *         description: 服务器内部错误
  */
-router.put('/:hash', async (req, res) => {
-    try {
-        const { hash } = req.params;
-        const { conditions, updates } = req.body;
-
-        if (!conditions || !updates) {
-            return res.status(400).json({
-                success: false,
-                message: '缺少必要参数：conditions 和 updates'
-            });
-        }
-
-        // 验证映射关系是否存在
-        const mapping = await TableMapping.findOne({ where: { hashValue: hash } });
-        if (!mapping) {
-            return res.status(404).json({
-                success: false,
-                message: '表不存在'
-            });
-        }
-
-        // 创建动态模型
-        const DynamicModel = await getDynamicModel(hash, mapping.columnDefinitions);
-
-        // 预处理更新数据：处理空值和无效日期
-        const processedUpdates = { ...updates };
-
-        // 确保columnDefinitions是数组格式
-        let columnDefs = mapping.columnDefinitions;
-        if (typeof columnDefs === 'string') {
-            try {
-                columnDefs = JSON.parse(columnDefs);
-            } catch (error) {
-                console.error('解析columnDefinitions失败:', error);
-                columnDefs = [];
-            }
-        }
-
-        // 对每个字段进行预处理
-        if (columnDefs && Array.isArray(columnDefs)) {
-            columnDefs.forEach(column => {
-                const fieldName = column.name;
-                const value = processedUpdates[fieldName];
-
-                if (value !== undefined) {
-                    // 处理空值
-                    if (value === null || value === '') {
-                        processedUpdates[fieldName] = null;
-                    } else if (column.type === 'date') {
-                        // 日期字段特殊处理
-                        const date = new Date(value);
-                        if (isNaN(date.getTime())) {
-                            // 无效日期转换为null
-                            processedUpdates[fieldName] = null;
-                        } else {
-                            processedUpdates[fieldName] = date;
-                        }
-                    } else if (column.type === 'number') {
-                        // 数字字段特殊处理
-                        const numValue = Number(value);
-                        if (isNaN(numValue)) {
-                            processedUpdates[fieldName] = null;
-                        } else {
-                            processedUpdates[fieldName] = numValue;
-                        }
-                    }
-                }
-            });
-        }
-
-        // 更新数据
-        const [affectedRows] = await DynamicModel.update(processedUpdates, {
-            where: conditions
-        });
-
-        res.json({
-            success: true,
-            message: '数据更新成功',
-            affectedRows: affectedRows
-        });
-    } catch (error) {
-        console.error('更新数据失败:', error);
-        res.status(500).json({
-            success: false,
-            message: '更新数据失败',
-            error: error.message
-        });
-    }
-});
+router.put('/:hash', authenticateToken, editController.updateData);
 
 /**
  * @swagger
@@ -277,91 +190,7 @@ router.put('/:hash', async (req, res) => {
  *       500:
  *         description: 服务器内部错误
  */
-router.post('/:hash/add', async (req, res) => {
-    try {
-        const { hash } = req.params;
-        const { data } = req.body;
-
-        if (!data) {
-            return res.status(400).json({
-                success: false,
-                message: '缺少必要参数：data'
-            });
-        }
-
-        // 验证映射关系是否存在
-        const mapping = await TableMapping.findOne({ where: { hashValue: hash } });
-        if (!mapping) {
-            return res.status(404).json({
-                success: false,
-                message: '表不存在'
-            });
-        }
-
-        // 创建动态模型
-        const DynamicModel = await getDynamicModel(hash, mapping.columnDefinitions);
-
-        // 预处理数据：处理空值和无效日期
-        const processedData = { ...data };
-
-        // 确保columnDefinitions是数组格式
-        let columnDefs = mapping.columnDefinitions;
-        if (typeof columnDefs === 'string') {
-            try {
-                columnDefs = JSON.parse(columnDefs);
-            } catch (error) {
-                console.error('解析columnDefinitions失败:', error);
-                columnDefs = [];
-            }
-        }
-
-        // 对每个字段进行预处理
-        if (columnDefs && Array.isArray(columnDefs)) {
-            columnDefs.forEach(column => {
-                const fieldName = column.name;
-                const value = processedData[fieldName];
-
-                // 处理空值
-                if (value === null || value === undefined || value === '') {
-                    processedData[fieldName] = null;
-                } else if (column.type === 'date') {
-                    // 日期字段特殊处理
-                    const date = new Date(value);
-                    if (isNaN(date.getTime())) {
-                        // 无效日期转换为null
-                        processedData[fieldName] = null;
-                    } else {
-                        processedData[fieldName] = date;
-                    }
-                } else if (column.type === 'number') {
-                    // 数字字段特殊处理
-                    const numValue = Number(value);
-                    if (isNaN(numValue)) {
-                        processedData[fieldName] = null;
-                    } else {
-                        processedData[fieldName] = numValue;
-                    }
-                }
-            });
-        }
-
-        // 新增数据
-        const newData = await DynamicModel.create(processedData);
-
-        res.json({
-            success: true,
-            message: '数据新增成功',
-            data: newData
-        });
-    } catch (error) {
-        console.error('新增数据失败:', error);
-        res.status(500).json({
-            success: false,
-            message: '新增数据失败',
-            error: error.message
-        });
-    }
-});
+router.post('/:hash/add', authenticateToken, editController.addData);
 
 /**
  * @swagger
@@ -415,49 +244,7 @@ router.post('/:hash/add', async (req, res) => {
  *       500:
  *         description: 服务器内部错误
  */
-router.delete('/:hash', async (req, res) => {
-    try {
-        const { hash } = req.params;
-        const { conditions } = req.body;
-
-        if (!conditions) {
-            return res.status(400).json({
-                success: false,
-                message: '缺少必要参数：conditions'
-            });
-        }
-
-        // 验证映射关系是否存在
-        const mapping = await TableMapping.findOne({ where: { hashValue: hash } });
-        if (!mapping) {
-            return res.status(404).json({
-                success: false,
-                message: '表不存在'
-            });
-        }
-
-        // 创建动态模型
-        const DynamicModel = await getDynamicModel(hash, mapping.columnDefinitions);
-
-        // 删除数据
-        const affectedRows = await DynamicModel.destroy({
-            where: conditions
-        });
-
-        res.json({
-            success: true,
-            message: '数据删除成功',
-            affectedRows: affectedRows
-        });
-    } catch (error) {
-        console.error('删除数据失败:', error);
-        res.status(500).json({
-            success: false,
-            message: '删除数据失败',
-            error: error.message
-        });
-    }
-});
+router.delete('/:hash', authenticateToken, editController.deleteData);
 
 /**
  * @swagger

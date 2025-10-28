@@ -45,6 +45,14 @@ const options = {
         ],
         tags: [
             {
+                name: '认证',
+                description: '用户认证相关接口'
+            },
+            {
+                name: '用户管理',
+                description: '用户管理相关接口（管理员权限）'
+            },
+            {
                 name: '文件上传',
                 description: 'Excel文件上传相关接口'
             },
@@ -176,11 +184,14 @@ app.get('/health', async (req, res) => {
 });
 
 // API路由
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/mappings', require('./routes/mappings'));
 app.use('/api/data', require('./routes/data'));
 app.use('/api/system', require('./routes/system'));
 app.use('/api/import', require('./routes/import'));
+app.use('/api/rollback', require('./routes/rollback'));
 
 // 404处理
 app.use('*', (req, res) => {

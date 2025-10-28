@@ -1,11 +1,12 @@
 /*
  * @Date: 2025-10-22 16:58:00
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-22 17:15:03
+ * @LastEditTime: 2025-10-28 16:28:33
  * @FilePath: /lowCode_excel/backend/controllers/importController.js
  */
 const { parseExcel } = require('../utils/excelParser');
 const { TableMapping, getDynamicModel } = require('../models');
+const OperationLogger = require('../utils/logger');
 const fs = require('fs');
 
 /**
@@ -266,6 +267,29 @@ const importExcelData = async (req, res) => {
                 }
                 break;
         }
+
+        // 记录操作日志
+        const userInfo = OperationLogger.extractUserInfo(req);
+        const clientInfo = OperationLogger.extractClientInfo(req);
+
+        await OperationLogger.logCreate({
+            tableName: targetMapping.tableName,
+            tableHash: targetHash,
+            recordId: 0, // 批量操作使用0作为记录ID
+            oldData: null,
+            newData: {
+                successCount,
+                errorCount,
+                totalRecords: importData.length,
+                matchedColumns,
+                missingColumns,
+                conflictStrategy: importRules.conflictStrategy
+            },
+            description: `导入Excel数据到表 ${targetMapping.tableName}: ${file.originalname} (成功: ${successCount}, 失败: ${errorCount})`,
+            user: userInfo,
+            ipAddress: clientInfo.ipAddress,
+            userAgent: clientInfo.userAgent
+        });
 
         // 清理临时文件
         if (file.path && fs.existsSync(file.path)) {

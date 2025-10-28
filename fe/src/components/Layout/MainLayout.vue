@@ -43,6 +43,18 @@
                     </el-icon>
                     <span>数据表 CRUD API 指南</span>
                 </el-menu-item>
+                <el-menu-item index="/users">
+                    <el-icon>
+                        <User />
+                    </el-icon>
+                    <span>用户管理</span>
+                </el-menu-item>
+                <el-menu-item index="/logs">
+                    <el-icon>
+                        <Notebook />
+                    </el-icon>
+                    <span>操作日志</span>
+                </el-menu-item>
             </el-menu>
         </el-aside>
 
@@ -99,7 +111,8 @@ import {
     Connection,
     Sunny,
     Document,
-    User
+    User,
+    Notebook
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -116,7 +129,9 @@ const currentRouteName = computed(() => {
         '/data': '数据浏览',
         '/editor': '数据编辑',
         '/mappings': '映射关系',
-        '/api-guide': '数据表 CRUD API 指南'
+        '/api-guide': '数据表 CRUD API 指南',
+        '/users': '用户管理',
+        '/logs': '操作日志'
     }
     return routeMap[route.path] || '未知页面'
 })

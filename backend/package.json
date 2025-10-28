@@ -25,6 +25,7 @@
         "jsonwebtoken": "^9.0.2",
         "multer": "^1.4.5-lts.1",
         "mysql2": "^3.15.3",
+        "playwright": "^1.56.1",
         "sequelize": "^6.35.1",
         "sqlite3": "^5.1.6",
         "swagger-jsdoc": "^6.2.8",
