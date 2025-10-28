@@ -123,17 +123,14 @@ router.get('/info', async (req, res) => {
             dbStatus = 'connected';
 
             // 获取表数量
-            const mappings = await TableMapping.findAll();
+            const mappings = await TableMapping.findAll({
+                attributes: ['id', 'tableName', 'rowCount']
+            });
             tableCount = mappings.length;
 
-            // 获取总记录数（需要查询每个表）
+            // 获取总记录数（使用 TableMapping 中存储的 rowCount）
             for (const mapping of mappings) {
-                try {
-                    const [results] = await sequelize.query(`SELECT COUNT(*) as count FROM \`${mapping.tableName}\``);
-                    totalRecords += results[0].count;
-                } catch (error) {
-                    console.warn(`无法查询表 ${mapping.tableName} 的记录数:`, error.message);
-                }
+                totalRecords += mapping.rowCount || 0;
             }
         } catch (dbError) {
             console.error('数据库连接测试失败:', dbError.message);

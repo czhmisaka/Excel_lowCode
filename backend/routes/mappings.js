@@ -54,7 +54,7 @@ const { updateTableName } = require('../controllers/updateMappingController');
 router.get('/', async (req, res) => {
     try {
         const mappings = await TableMapping.findAll({
-            attributes: ['id', 'tableName', 'hashValue', 'columnDefinitions', 'headerRow', 'createdAt', 'updatedAt'],
+            attributes: ['id', 'tableName', 'hashValue', 'columnDefinitions', 'headerRow', 'rowCount', 'columnCount', 'createdAt', 'updatedAt'],
             order: [['createdAt', 'DESC']]
         });
 
