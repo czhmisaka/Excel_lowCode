@@ -9,7 +9,7 @@ const { sequelize } = require('../config/database');
 const getMappings = async (req, res) => {
     try {
         const mappings = await TableMapping.findAll({
-            attributes: ['id', 'tableName', 'hashValue', 'originalFileName', 'columnCount', 'rowCount', 'createdAt'],
+            attributes: ['id', 'tableName', 'hashValue', 'originalFileName', 'columnCount', 'rowCount', 'headerRow', 'createdAt'],
             order: [['createdAt', 'DESC']]
         });
 

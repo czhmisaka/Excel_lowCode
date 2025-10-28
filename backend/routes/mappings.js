@@ -54,7 +54,7 @@ const { updateTableName } = require('../controllers/updateMappingController');
 router.get('/', async (req, res) => {
     try {
         const mappings = await TableMapping.findAll({
-            attributes: ['id', 'tableName', 'hashValue', 'columnDefinitions', 'createdAt', 'updatedAt'],
+            attributes: ['id', 'tableName', 'hashValue', 'columnDefinitions', 'headerRow', 'rowCount', 'columnCount', 'createdAt', 'updatedAt'],
             order: [['createdAt', 'DESC']]
         });
 
@@ -129,7 +129,7 @@ router.get('/:hash', async (req, res) => {
         const { hash } = req.params;
         const mapping = await TableMapping.findOne({
             where: { hashValue: hash },
-            attributes: ['id', 'tableName', 'hashValue', 'columnDefinitions', 'createdAt', 'updatedAt']
+            attributes: ['id', 'tableName', 'hashValue', 'columnDefinitions', 'headerRow', 'createdAt', 'updatedAt']
         });
 
         if (!mapping) {

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { apiService, type UploadResponse, type Mapping } from '@/services/api'
+import { apiService, type UploadResponse, type PreviewResponse, type Mapping } from '@/services/api'
 
 // 文件项接口
 export interface FileItem {
@@ -20,6 +20,8 @@ export const useFilesStore = defineStore('files', () => {
     const loading = ref(false)
     const error = ref<string | null>(null)
     const uploadProgress = ref(0)
+    const previewData = ref<any>(null)
+    const previewLoading = ref(false)
 
     // 获取映射关系列表
     const fetchMappings = async () => {
@@ -43,8 +45,29 @@ export const useFilesStore = defineStore('files', () => {
         }
     }
 
-    // 上传文件
-    const uploadFile = async (file: File) => {
+    // 预览Excel文件
+    const previewExcelFile = async (file: File) => {
+        previewLoading.value = true
+        error.value = null
+        try {
+            const response: PreviewResponse = await apiService.previewExcelFile(file)
+            if (response.success) {
+                previewData.value = response.data
+                return response.data
+            } else {
+                throw new Error(response.message || '文件预览失败')
+            }
+        } catch (err: any) {
+            error.value = err.message || '文件预览失败'
+            console.error('文件预览失败:', err)
+            throw err
+        } finally {
+            previewLoading.value = false
+        }
+    }
+
+    // 上传文件（支持指定表头行）
+    const uploadFile = async (file: File, headerRow: number = 0) => {
         loading.value = true
         error.value = null
         uploadProgress.value = 0
@@ -57,7 +80,7 @@ export const useFilesStore = defineStore('files', () => {
                 }
             }, 200)
 
-            const response: UploadResponse = await apiService.uploadFile(file)
+            const response: UploadResponse = await apiService.uploadFile(file, headerRow)
 
             clearInterval(progressInterval)
             uploadProgress.value = 100
@@ -89,6 +112,11 @@ export const useFilesStore = defineStore('files', () => {
                 uploadProgress.value = 0
             }, 1000)
         }
+    }
+
+    // 清空预览数据
+    const clearPreviewData = () => {
+        previewData.value = null
     }
 
     // 删除文件
@@ -123,12 +151,16 @@ export const useFilesStore = defineStore('files', () => {
         loading,
         error,
         uploadProgress,
+        previewData,
+        previewLoading,
 
         // 方法
         fetchMappings,
+        previewExcelFile,
         uploadFile,
         deleteFile,
         getFileByHash,
-        clearError
+        clearError,
+        clearPreviewData
     }
 })

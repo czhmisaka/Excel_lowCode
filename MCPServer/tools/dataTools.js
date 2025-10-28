@@ -148,22 +148,26 @@ export class DataToolsHandler {
                 };
             }
 
+            // 确保返回的数据是有效的JSON格式，处理编码问题
+            const sanitizedData = this.sanitizeJsonData(data);
+            const sanitizedPagination = this.sanitizeJsonData(pagination);
+
             // 格式化数据展示
-            const dataRows = data.map((record, index) => {
+            const dataRows = sanitizedData.map((record, index) => {
                 const fields = Object.entries(record)
                     .map(([key, value]) => `    ${key}: ${value}`)
                     .join('\n');
                 return `记录 ${index + 1}:\n${fields}`;
             }).join('\n\n');
 
-            const paginationInfo = pagination.total ?
-                `\n\n分页信息：\n- 当前页：${pagination.page || 1}\n- 每页数量：${pagination.limit || 10}\n- 总记录数：${pagination.total}\n- 总页数：${pagination.pages || 1}` : '';
+            const paginationInfo = sanitizedPagination.total ?
+                `\n\n分页信息：\n- 当前页：${sanitizedPagination.page || 1}\n- 每页数量：${sanitizedPagination.limit || 10}\n- 总记录数：${sanitizedPagination.total}\n- 总页数：${sanitizedPagination.pages || 1}` : '';
 
             return {
                 content: [
                     {
                         type: 'text',
-                        text: `查询到 ${data.length} 条记录：\n\n${dataRows}${paginationInfo}`
+                        text: `查询到 ${sanitizedData.length} 条记录：\n\n${dataRows}${paginationInfo}`
                     }
                 ]
             };
@@ -177,6 +181,60 @@ export class DataToolsHandler {
                 ],
                 isError: true
             };
+        }
+    }
+
+    /**
+     * 清理JSON数据，确保编码正确
+     * @param {any} data - 要清理的数据
+     * @returns {any} 清理后的数据
+     */
+    static sanitizeJsonData(data) {
+        if (typeof data === 'string') {
+            // 如果是字符串，尝试清理编码问题
+            return this.cleanString(data);
+        } else if (Array.isArray(data)) {
+            // 如果是数组，递归清理每个元素
+            return data.map(item => this.sanitizeJsonData(item));
+        } else if (data && typeof data === 'object') {
+            // 如果是对象，递归清理每个属性
+            const cleaned = {};
+            for (const [key, value] of Object.entries(data)) {
+                cleaned[this.cleanString(key)] = this.sanitizeJsonData(value);
+            }
+            return cleaned;
+        }
+        return data;
+    }
+
+    /**
+     * 清理字符串，移除无效字符和编码问题
+     * @param {string} str - 要清理的字符串
+     * @returns {string} 清理后的字符串
+     */
+    static cleanString(str) {
+        if (typeof str !== 'string') return str;
+
+        // 移除控制字符和无效Unicode字符
+        let cleaned = str.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+
+        // 尝试修复常见的编码问题
+        cleaned = cleaned
+            .replace(/\\x([0-9A-Fa-f]{2})/g, (match, hex) => {
+                const charCode = parseInt(hex, 16);
+                return charCode >= 32 && charCode <= 126 ? String.fromCharCode(charCode) : '';
+            })
+            .replace(/\\u([0-9A-Fa-f]{4})/g, (match, hex) => {
+                const charCode = parseInt(hex, 16);
+                return charCode >= 32 && charCode <= 126 ? String.fromCharCode(charCode) : '';
+            });
+
+        // 确保字符串是有效的UTF-8
+        try {
+            return Buffer.from(cleaned, 'utf8').toString('utf8');
+        } catch {
+            // 如果UTF-8转换失败，返回原始清理后的字符串
+            return cleaned;
         }
     }
 

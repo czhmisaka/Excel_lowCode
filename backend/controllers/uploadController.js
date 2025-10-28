@@ -1,14 +1,143 @@
 /*
  * @Date: 2025-09-27 23:20:53
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-21 10:50:30
+ * @LastEditTime: 2025-10-22 15:49:51
  * @FilePath: /lowCode_excel/backend/controllers/uploadController.js
  */
 const { generateHash } = require('../utils/hashGenerator');
-const { parseExcel } = require('../utils/excelParser');
+const { parseExcel, previewExcel } = require('../utils/excelParser');
 const StreamExcelParser = require('../utils/streamExcelParser');
 const { TableMapping, getDynamicModel } = require('../models');
 const fs = require('fs');
+
+/**
+ * 预览Excel文件数据
+ */
+const previewExcelFile = async (req, res) => {
+    try {
+        const { file } = req;
+
+        if (!file) {
+            return res.status(400).json({
+                success: false,
+                message: '请选择要预览的Excel文件'
+            });
+        }
+
+        // 安全地获取文件内容
+        let fileBuffer;
+        if (file.buffer) {
+            // 如果文件在内存中
+            fileBuffer = file.buffer;
+        } else if (file.path && fs.existsSync(file.path)) {
+            // 如果文件在磁盘上，从磁盘读取
+            fileBuffer = fs.readFileSync(file.path);
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: '无法获取文件内容，请重新上传文件'
+            });
+        }
+
+        // 预览Excel文件
+        const previewResult = previewExcel(fileBuffer);
+
+        if (!previewResult.success) {
+            return res.status(400).json({
+                success: false,
+                message: `Excel文件预览失败: ${previewResult.error}`
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Excel文件预览成功',
+            data: previewResult.data
+        });
+
+    } catch (error) {
+        console.error('Excel文件预览错误:', error);
+        res.status(500).json({
+            success: false,
+            message: `Excel文件预览失败: ${error.message}`
+        });
+    }
+};
+
+/**
+ * 动态解析Excel文件（支持指定表头行）
+ */
+const dynamicParseExcel = async (req, res) => {
+    try {
+        const { file } = req;
+        // 对于multipart/form-data请求，参数可能在req.body中，也可能在req.query中
+        let headerRow = 0;
+        if (req.body && req.body.headerRow !== undefined) {
+            headerRow = req.body.headerRow;
+        } else if (req.query && req.query.headerRow !== undefined) {
+            headerRow = req.query.headerRow;
+        }
+
+        console.log('动态解析请求参数:', { headerRow, fileName: file?.originalname });
+
+        if (!file) {
+            return res.status(400).json({
+                success: false,
+                message: '请提供Excel文件'
+            });
+        }
+
+        // 安全地获取文件内容
+        let fileBuffer;
+        if (file.buffer) {
+            // 如果文件在内存中
+            fileBuffer = file.buffer;
+        } else if (file.path && fs.existsSync(file.path)) {
+            // 如果文件在磁盘上，从磁盘读取
+            fileBuffer = fs.readFileSync(file.path);
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: '无法获取文件内容'
+            });
+        }
+
+        // 使用指定表头行解析Excel文件
+        const parseResult = parseExcel(fileBuffer, parseInt(headerRow));
+
+        if (!parseResult.success) {
+            return res.status(400).json({
+                success: false,
+                message: `Excel文件解析失败: ${parseResult.error}`
+            });
+        }
+
+        const { data: excelData } = parseResult;
+
+        // 返回解析结果，包含表结构信息
+        res.json({
+            success: true,
+            message: 'Excel文件动态解析成功',
+            data: {
+                sheetName: excelData.sheetName,
+                headers: excelData.headers,
+                originalHeaders: excelData.originalHeaders,
+                columnDefinitions: excelData.columnDefinitions,
+                dataPreview: excelData.data.slice(0, 5), // 只返回前5行数据预览
+                rowCount: excelData.rowCount,
+                columnCount: excelData.columnCount,
+                headerRow: parseInt(headerRow)
+            }
+        });
+
+    } catch (error) {
+        console.error('Excel文件动态解析错误:', error);
+        res.status(500).json({
+            success: false,
+            message: `Excel文件动态解析失败: ${error.message}`
+        });
+    }
+};
 
 /**
  * 文件上传控制器
@@ -16,6 +145,7 @@ const fs = require('fs');
 const uploadFile = async (req, res) => {
     try {
         const { file } = req;
+        const { headerRow = 0 } = req.body; // 默认为0（第一行）
 
         if (!file) {
             return res.status(400).json({
@@ -54,8 +184,8 @@ const uploadFile = async (req, res) => {
             });
         }
 
-        // 解析Excel文件
-        const parseResult = parseExcel(fileBuffer);
+        // 解析Excel文件（支持指定表头行）
+        const parseResult = parseExcel(fileBuffer, parseInt(headerRow));
 
         if (!parseResult.success) {
             return res.status(400).json({
@@ -87,7 +217,8 @@ const uploadFile = async (req, res) => {
             originalFileName: file.originalname,
             columnCount: excelData.columnCount,
             rowCount: excelData.rowCount,
-            columnDefinitions: excelData.columnDefinitions
+            columnDefinitions: excelData.columnDefinitions,
+            headerRow: parseInt(headerRow) // 保存表头行信息
         });
 
         // 清理临时文件（如果存在）
@@ -108,6 +239,7 @@ const uploadFile = async (req, res) => {
                 originalFileName: file.originalname,
                 recordCount: excelData.rowCount,
                 columnCount: excelData.columnCount,
+                headerRow: parseInt(headerRow),
                 createdAt: tableMapping.createdAt
             }
         });
@@ -122,5 +254,7 @@ const uploadFile = async (req, res) => {
 };
 
 module.exports = {
-    uploadFile
+    uploadFile,
+    previewExcelFile,
+    dynamicParseExcel
 };

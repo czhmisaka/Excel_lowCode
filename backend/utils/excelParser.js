@@ -80,9 +80,10 @@ const inferDataType = (value, fieldName = '') => {
 /**
  * 解析Excel文件
  * @param {Buffer} fileBuffer - Excel文件缓冲区
+ * @param {number} headerRow - 表头行号（从0开始），默认为0
  * @returns {Object} 解析结果
  */
-const parseExcel = (fileBuffer) => {
+const parseExcel = (fileBuffer, headerRow = 0) => {
     try {
         // 验证文件缓冲区
         if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) {
@@ -116,23 +117,28 @@ const parseExcel = (fileBuffer) => {
             throw new Error('Excel文件为空或没有数据');
         }
 
-        // 获取表头（第一行）
-        const headers = jsonData[0];
+        // 验证表头行号
+        if (headerRow < 0 || headerRow >= jsonData.length) {
+            throw new Error(`无效的表头行号: ${headerRow}，有效范围为 0 到 ${jsonData.length - 1}`);
+        }
+
+        // 获取表头（指定行）
+        const headers = jsonData[headerRow];
         if (!headers || headers.length === 0) {
-            throw new Error('Excel文件没有表头');
+            throw new Error(`Excel文件第${headerRow + 1}行没有有效的表头数据`);
         }
 
         // 处理表头：移除特殊字符，转换为有效的字段名
         const processedHeaders = headers.map((header, index) => {
             // 处理空值：检查是否为undefined、null或空字符串
             if (header === undefined || header === null || header === '') {
-                return `column_${index + 1}`;
+                return `未知字段${index + 1}`;
             }
 
             // 安全地转换为字符串
             const headerString = String(header).trim();
             if (headerString === '') {
-                return `column_${index + 1}`;
+                return `未知字段${index + 1}`;
             }
 
             // 移除特殊字符，只保留字母、数字、下划线
@@ -143,15 +149,18 @@ const parseExcel = (fileBuffer) => {
 
             // 如果处理后为空，使用默认字段名
             if (!fieldName) {
-                return `column_${index + 1}`;
+                return `未知字段${index + 1}`;
             }
 
             return fieldName;
         });
 
-        // 获取数据行（从第二行开始）
-        const dataRows = jsonData.slice(1).filter(row =>
-            row && row.some(cell => cell !== null && cell !== undefined && cell !== '')
+        // 获取数据行（从表头行+1开始）
+        const dataRows = jsonData.slice(headerRow + 1).filter(row =>
+            row && Array.isArray(row) && row.some(cell =>
+                cell !== null && cell !== undefined && cell !== '' &&
+                !String(cell).startsWith('=DISPIMG') // 过滤掉Excel图像函数
+            )
         );
 
         // 分析每列的数据类型
@@ -193,8 +202,8 @@ const parseExcel = (fileBuffer) => {
                 if (value === null || value === undefined || value === '') {
                     value = null;
                 } else {
-                    // 根据数据类型转换值
-                    const columnDef = columnDefinitions.find(def => def.index === columnIndex);
+                    // 根据数据类型转换值 - 添加安全检查
+                    const columnDef = columnDefinitions.find(def => def && def.index === columnIndex);
                     if (columnDef) {
                         if (columnDef.type === 'number') {
                             value = Number(value);
@@ -234,7 +243,75 @@ const parseExcel = (fileBuffer) => {
     }
 };
 
+/**
+ * 预览Excel文件数据
+ * @param {Buffer} fileBuffer - Excel文件缓冲区
+ * @returns {Object} 预览结果
+ */
+const previewExcel = (fileBuffer) => {
+    try {
+        // 验证文件缓冲区
+        if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) {
+            throw new Error('无效的文件缓冲区');
+        }
+
+        if (fileBuffer.length === 0) {
+            throw new Error('文件内容为空');
+        }
+
+        // 读取Excel文件
+        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+
+        // 验证工作簿
+        if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+            throw new Error('Excel文件格式无效或损坏');
+        }
+
+        // 获取第一个工作表
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        if (!worksheet) {
+            throw new Error('Excel文件中没有找到工作表');
+        }
+
+        // 转换为JSON数据
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        if (!jsonData || jsonData.length === 0) {
+            throw new Error('Excel文件为空或没有数据');
+        }
+
+        // 返回所有行数据供预览
+        return {
+            success: true,
+            data: {
+                sheetName: firstSheetName,
+                totalRows: jsonData.length,
+                totalColumns: jsonData[0] ? jsonData[0].length : 0,
+                rows: jsonData.map((row, index) => ({
+                    rowIndex: index,
+                    data: row.map(cell => {
+                        // 处理空值
+                        if (cell === null || cell === undefined || cell === '') {
+                            return '';
+                        }
+                        return String(cell);
+                    })
+                }))
+            }
+        };
+
+    } catch (error) {
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+};
+
 module.exports = {
     parseExcel,
+    previewExcel,
     inferDataType
 };

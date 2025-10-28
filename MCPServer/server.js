@@ -94,23 +94,29 @@ class SimpleMCPServer {
             // 设置消息处理器
             ws.on('message', async (data) => {
                 try {
-                    const message = JSON.parse(data.toString());
+                    // 确保数据是有效的UTF-8编码
+                    const messageString = this.ensureUtf8Encoding(data);
+                    const message = JSON.parse(messageString);
                     console.log('[MCP WebSocket] 收到消息:', message);
 
                     // 处理MCP消息
                     const response = await this.handleMessage(message, connectionId);
                     if (response) {
-                        ws.send(JSON.stringify(response));
+                        // 确保响应数据是有效的UTF-8编码
+                        const responseString = this.sanitizeJsonForTransmission(JSON.stringify(response));
+                        ws.send(responseString);
                     }
                 } catch (error) {
                     console.error('[MCP WebSocket] 消息处理错误:', error);
-                    ws.send(JSON.stringify({
+                    const errorResponse = {
                         jsonrpc: '2.0',
                         error: {
                             code: -32603,
-                            message: error.message
+                            message: this.cleanErrorMessage(error.message)
                         }
-                    }));
+                    };
+                    const errorString = this.sanitizeJsonForTransmission(JSON.stringify(errorResponse));
+                    ws.send(errorString);
                 }
             });
 
@@ -412,6 +418,105 @@ class SimpleMCPServer {
         } catch (error) {
             console.error('[MCP Server] 启动失败:', error);
             process.exit(1);
+        }
+    }
+
+    /**
+     * 确保数据是有效的UTF-8编码
+     * @param {Buffer|string} data - 输入数据
+     * @returns {string} 有效的UTF-8字符串
+     */
+    ensureUtf8Encoding(data) {
+        try {
+            if (Buffer.isBuffer(data)) {
+                return data.toString('utf8');
+            } else if (typeof data === 'string') {
+                // 验证字符串是否为有效的UTF-8
+                return Buffer.from(data, 'utf8').toString('utf8');
+            } else {
+                return String(data);
+            }
+        } catch (error) {
+            console.error('[Encoding Error] UTF-8编码验证失败:', error);
+            // 如果UTF-8转换失败，尝试清理字符串
+            return this.cleanString(String(data));
+        }
+    }
+
+    /**
+     * 清理字符串，移除无效字符和编码问题
+     * @param {string} str - 要清理的字符串
+     * @returns {string} 清理后的字符串
+     */
+    cleanString(str) {
+        if (typeof str !== 'string') return str;
+
+        // 移除控制字符和无效Unicode字符
+        let cleaned = str.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+
+        // 尝试修复常见的编码问题
+        cleaned = cleaned
+            .replace(/\\x([0-9A-Fa-f]{2})/g, (match, hex) => {
+                const charCode = parseInt(hex, 16);
+                return charCode >= 32 && charCode <= 126 ? String.fromCharCode(charCode) : '';
+            })
+            .replace(/\\u([0-9A-Fa-f]{4})/g, (match, hex) => {
+                const charCode = parseInt(hex, 16);
+                return charCode >= 32 && charCode <= 126 ? String.fromCharCode(charCode) : '';
+            });
+
+        // 确保字符串是有效的UTF-8
+        try {
+            return Buffer.from(cleaned, 'utf8').toString('utf8');
+        } catch {
+            // 如果UTF-8转换失败，返回原始清理后的字符串
+            return cleaned;
+        }
+    }
+
+    /**
+     * 清理错误消息，移除可能导致JSON解析问题的字符
+     * @param {string} errorMessage - 原始错误消息
+     * @returns {string} 清理后的错误消息
+     */
+    cleanErrorMessage(errorMessage) {
+        if (typeof errorMessage !== 'string') return 'Unknown error';
+
+        // 移除可能导致JSON解析问题的字符
+        return errorMessage
+            .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+            .replace(/"/g, "'")
+            .replace(/\\/g, '/')
+            .substring(0, 500); // 限制长度避免传输问题
+    }
+
+    /**
+     * 为传输清理JSON字符串
+     * @param {string} jsonString - JSON字符串
+     * @returns {string} 清理后的JSON字符串
+     */
+    sanitizeJsonForTransmission(jsonString) {
+        try {
+            // 首先验证JSON是否有效
+            JSON.parse(jsonString);
+
+            // 清理字符串中的无效字符
+            const cleaned = this.cleanString(jsonString);
+
+            // 再次验证清理后的JSON
+            JSON.parse(cleaned);
+
+            return cleaned;
+        } catch (error) {
+            console.error('[JSON Sanitization] JSON清理失败:', error);
+            // 如果清理失败，返回安全的错误响应
+            return JSON.stringify({
+                jsonrpc: '2.0',
+                error: {
+                    code: -32603,
+                    message: '数据传输错误：JSON格式无效'
+                }
+            });
         }
     }
 

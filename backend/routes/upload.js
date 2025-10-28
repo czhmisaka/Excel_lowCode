@@ -1,11 +1,11 @@
 /*
  * @Date: 2025-09-27 23:23:41
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-17 11:04:53
+ * @LastEditTime: 2025-10-22 15:19:59
  * @FilePath: /lowCode_excel/backend/routes/upload.js
  */
 const express = require('express');
-const { uploadFile } = require('../controllers/uploadController');
+const { uploadFile, previewExcelFile, dynamicParseExcel } = require('../controllers/uploadController');
 const { uploadLargeFile, getUploadProgress, smartUploadFile } = require('../controllers/largeFileUploadController');
 const { uploadMiddleware, validateFile } = require('../middleware/upload');
 
@@ -13,10 +13,10 @@ const router = express.Router();
 
 /**
  * @swagger
- * /api/upload:
+ * /api/upload/preview:
  *   post:
- *     summary: 上传Excel文件
- *     description: 上传Excel文件并创建对应的数据表
+ *     summary: 预览Excel文件数据
+ *     description: 预览Excel文件的所有行数据，用于选择表头行
  *     tags: [文件上传]
  *     requestBody:
  *       required: true
@@ -29,6 +29,158 @@ const router = express.Router();
  *                 type: string
  *                 format: binary
  *                 description: Excel文件 (.xlsx, .xls)
+ *     responses:
+ *       200:
+ *         description: 文件预览成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Excel文件预览成功"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     sheetName:
+ *                       type: string
+ *                       description: 工作表名称
+ *                     totalRows:
+ *                       type: integer
+ *                       description: 总行数
+ *                     totalColumns:
+ *                       type: integer
+ *                       description: 总列数
+ *                     rows:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           rowIndex:
+ *                             type: integer
+ *                             description: 行索引（从0开始）
+ *                           data:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                             description: 行数据
+ *       400:
+ *         description: 文件预览失败
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.post('/preview', uploadMiddleware, validateFile, previewExcelFile);
+
+/**
+ * @swagger
+ * /api/upload/dynamic-parse:
+ *   post:
+ *     summary: 动态解析Excel文件
+ *     description: 根据指定的表头行动态解析Excel文件，返回表结构信息
+ *     tags: [文件上传]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Excel文件 (.xlsx, .xls)
+ *               headerRow:
+ *                 type: integer
+ *                 description: 表头行号（从0开始），默认为0
+ *                 example: 0
+ *     responses:
+ *       200:
+ *         description: 动态解析成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Excel文件动态解析成功"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     sheetName:
+ *                       type: string
+ *                       description: 工作表名称
+ *                     headers:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: 处理后的字段名
+ *                     originalHeaders:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       description: 原始表头
+ *                     columnDefinitions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                           type:
+ *                             type: string
+ *                           originalName:
+ *                             type: string
+ *                           index:
+ *                             type: integer
+ *                     dataPreview:
+ *                       type: array
+ *                       description: 数据预览（前5行）
+ *                     rowCount:
+ *                       type: integer
+ *                       description: 总行数
+ *                     columnCount:
+ *                       type: integer
+ *                       description: 总列数
+ *                     headerRow:
+ *                       type: integer
+ *                       description: 使用的表头行号
+ *       400:
+ *         description: 动态解析失败
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.post('/dynamic-parse', uploadMiddleware, validateFile, dynamicParseExcel);
+
+/**
+ * @swagger
+ * /api/upload:
+ *   post:
+ *     summary: 上传Excel文件
+ *     description: 上传Excel文件并创建对应的数据表，支持指定表头行
+ *     tags: [文件上传]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *                 description: Excel文件 (.xlsx, .xls)
+ *               headerRow:
+ *                 type: integer
+ *                 description: 表头行号（从0开始），默认为0
+ *                 example: 0
  *     responses:
  *       200:
  *         description: 文件上传成功
@@ -61,6 +213,9 @@ const router = express.Router();
  *                     columnCount:
  *                       type: integer
  *                       description: 列数量
+ *                     headerRow:
+ *                       type: integer
+ *                       description: 表头行号
  *                     createdAt:
  *                       type: string
  *                       format: date-time

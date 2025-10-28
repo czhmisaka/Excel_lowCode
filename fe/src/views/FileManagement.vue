@@ -49,10 +49,16 @@
             </div>
             <template #footer>
                 <el-button @click="showUploadDialog = false">取消</el-button>
-                <el-button type="primary" @click="uploadFile" :loading="uploading">
-                    上传
+                <el-button type="primary" @click="previewFile" :loading="previewLoading">
+                    预览并上传
                 </el-button>
             </template>
+        </el-dialog>
+
+        <!-- 数据预览对话框 -->
+        <el-dialog v-model="showPreviewDialog" title="Excel数据预览" fullscreen>
+            <ExcelPreview v-if="selectedFile" :file="selectedFile" @confirm="handlePreviewConfirm"
+                @cancel="handlePreviewCancel" />
         </el-dialog>
     </div>
 </template>
@@ -63,6 +69,7 @@ import { useRouter } from 'vue-router'
 import { useFilesStore } from '@/stores/files'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, UploadFilled } from '@element-plus/icons-vue'
+import ExcelPreview from '@/components/ExcelPreview.vue'
 
 const router = useRouter()
 const filesStore = useFilesStore()
@@ -70,6 +77,8 @@ const filesStore = useFilesStore()
 // 状态
 const loading = ref(false)
 const showUploadDialog = ref(false)
+const showPreviewDialog = ref(false)
+const previewLoading = ref(false)
 const uploading = ref(false)
 const selectedFile = ref<File | null>(null)
 const fileList = ref<any[]>([])
@@ -109,7 +118,39 @@ const beforeUpload = (file: File) => {
     return true
 }
 
-// 上传文件
+// 预览文件
+const previewFile = async () => {
+    if (!selectedFile.value) {
+        ElMessage.warning('请选择要上传的文件')
+        return
+    }
+
+    previewLoading.value = true
+    try {
+        await filesStore.previewExcelFile(selectedFile.value)
+        showUploadDialog.value = false
+        showPreviewDialog.value = true
+    } catch (error: any) {
+        ElMessage.error(error.message || '文件预览失败')
+    } finally {
+        previewLoading.value = false
+    }
+}
+
+// 处理预览确认
+const handlePreviewConfirm = () => {
+    showPreviewDialog.value = false
+    selectedFile.value = null
+    initData() // 刷新文件列表
+}
+
+// 处理预览取消
+const handlePreviewCancel = () => {
+    showPreviewDialog.value = false
+    selectedFile.value = null
+}
+
+// 上传文件（旧版本，保持向后兼容）
 const uploadFile = async () => {
     if (!selectedFile.value) {
         ElMessage.warning('请选择要上传的文件')
