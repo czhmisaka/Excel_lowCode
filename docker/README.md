@@ -1,6 +1,6 @@
 # Excel_lowCode - Docker部署指南
 
-本文档介绍如何使用Docker部署Excel_lowCode系统的前后端应用，支持多容器和单容器两种部署模式。
+本文档介绍如何使用Docker部署Excel_lowCode系统的前后端应用，支持多容器和单容器两种部署模式。基于代码审查，确保部署配置准确反映实际架构。
 
 ## 项目结构
 
