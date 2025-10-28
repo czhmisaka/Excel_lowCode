@@ -103,6 +103,10 @@ docs/_templates/
 *.zip
 *.rar
 *.7z
+docker/docker-base-images/*
+docker/base-images/
+docker/docker-base-images-20251023/
+docker/exports/
 
 # 备份文件
 *.bak
