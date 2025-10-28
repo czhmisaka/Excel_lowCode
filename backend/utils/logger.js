@@ -207,7 +207,8 @@ class OperationLogger {
     static extractUserInfo(req) {
         return {
             id: req.user?.id,
-            username: req.user?.username
+            username: req.user?.username,
+            displayName: req.user?.displayName
         };
     }
 

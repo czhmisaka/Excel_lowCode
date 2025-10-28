@@ -14,6 +14,15 @@ const apiClient = axios.create({
     }
 })
 
+// 创建公开表单专用的axios实例（不携带认证token）
+const publicApiClient = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 10000,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+})
+
 // 请求拦截器
 apiClient.interceptors.request.use(
     (config) => {
@@ -543,6 +552,23 @@ class ApiService {
     // 回退日志（别名方法，与前端页面保持一致）
     async rollbackLog(logId: number, data: { description?: string } = {}): Promise<any> {
         const response = await apiClient.post(`/api/rollback/logs/${logId}/rollback`, data)
+        return response.data
+    }
+
+    // 公开表单 - 获取表结构信息（免认证）
+    async getPublicFormStructure(hash: string): Promise<{
+        columns: ColumnDefinition[],
+        tableName: string
+    }> {
+        const response = await publicApiClient.get(`/api/public/form/${hash}/structure`)
+        return response.data.data
+    }
+
+    // 公开表单 - 提交数据（免认证）
+    async submitPublicForm(hash: string, data: any): Promise<any> {
+        const response = await publicApiClient.post(`/api/public/form/${hash}/submit`, {
+            data
+        })
         return response.data
     }
 }

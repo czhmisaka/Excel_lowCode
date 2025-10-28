@@ -1,13 +1,14 @@
 /*
  * @Date: 2025-08-28 07:54:03
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-28 15:39:24
+ * @LastEditTime: 2025-10-29 00:53:22
  * @FilePath: /lowCode_excel/fe/src/router/index.ts
  */
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import MainLayout from '@/components/Layout/MainLayout.vue'
 import QueryOnlyLayout from '@/components/Layout/QueryOnlyLayout.vue'
+import FormFillLayout from '@/components/Layout/FormFillLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -61,6 +62,17 @@ const router = createRouter({
           path: '/logs',
           name: 'LogManagement',
           component: () => import('@/views/LogManagement.vue')
+        }
+      ]
+    },
+    {
+      path: '/form',
+      component: FormFillLayout,
+      children: [
+        {
+          path: '',
+          name: 'FormFill',
+          component: () => import('@/views/FormFillView.vue')
         }
       ]
     },

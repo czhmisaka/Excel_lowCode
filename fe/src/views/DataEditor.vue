@@ -113,6 +113,15 @@
                                 </el-icon>
                                 导入Excel
                             </el-button>
+                            <el-button type="info" @click="generateQRCode" :disabled="!selectedHash">
+                                <el-icon>
+                                    <svg viewBox="0 0 1024 1024" width="1em" height="1em">
+                                        <path d="M128 128h768v768H128z" fill="currentColor"></path>
+                                        <path d="M384 384h256v256H384z" fill="currentColor"></path>
+                                    </svg>
+                                </el-icon>
+                                生成填写二维码
+                            </el-button>
                             <el-button type="danger" @click="deleteSelectedRows" :disabled="selectedRows.length === 0">
                                 <el-icon>
                                     <Delete />
@@ -199,6 +208,33 @@
             <ExcelImport v-if="importDialogVisible" :target-hash="selectedHash" @confirm="handleImportConfirm"
                 @cancel="handleImportDialogClose" />
         </el-dialog>
+
+        <!-- 二维码弹窗 -->
+        <el-dialog v-model="qrCodeDialogVisible" title="表单填写二维码" width="400px" :before-close="handleQRCodeDialogClose">
+            <div class="qr-code-content">
+                <div class="qr-code-image" v-if="qrCodeImageUrl">
+                    <img :src="qrCodeImageUrl" alt="表单填写二维码" style="width: 100%; max-width: 300px; height: auto;" />
+                </div>
+                <div class="qr-code-info" v-if="selectedHash">
+                    <p class="qr-code-url">
+                        <strong>表单链接：</strong>
+                        <span>{{ formUrl }}</span>
+                    </p>
+                    <p class="qr-code-tip">使用手机扫描二维码即可访问表单填写页面</p>
+                </div>
+                <div v-else class="qr-code-loading">
+                    <el-skeleton :rows="1" animated />
+                </div>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="handleQRCodeDialogClose">关闭</el-button>
+                    <el-button type="primary" @click="copyFormUrl" v-if="selectedHash">
+                        复制链接
+                    </el-button>
+                </span>
+            </template>
+        </el-dialog>
     </div>
 </template>
 
@@ -211,6 +247,7 @@ import { apiService } from '@/services/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh, Plus, Delete, Upload, Search, Close, Setting, Remove } from '@element-plus/icons-vue'
 import ExcelImport from '@/components/ExcelImport.vue'
+import QRCode from 'qrcode'
 
 const route = useRoute()
 const router = useRouter()
@@ -241,6 +278,11 @@ const editingRecordId = ref<number | null>(null)
 
 // Excel导入相关状态
 const importDialogVisible = ref(false)
+
+// 二维码相关状态
+const qrCodeDialogVisible = ref(false)
+const qrCodeImageUrl = ref('')
+const qrCodeLoading = ref(false)
 
 // 表结构信息
 const tableStructure = ref<{
@@ -279,6 +321,12 @@ const hasSearchCondition = computed(() => {
         advancedConditions.value.some(condition =>
             condition.column && condition.value.trim() !== ''
         )
+})
+
+// 表单URL计算属性
+const formUrl = computed(() => {
+    if (!selectedHash.value) return ''
+    return `${window.location.origin}/form?table=${selectedHash.value}`
 })
 
 // 可用的搜索列（从表结构中获取）
@@ -763,6 +811,66 @@ const loadData = async () => {
         console.error('加载数据失败:', error)
     } finally {
         loading.value = false
+    }
+}
+
+// 生成二维码
+const generateQRCode = async () => {
+    if (!selectedHash.value) {
+        ElMessage.warning('请先选择文件')
+        return
+    }
+
+    qrCodeLoading.value = true
+    try {
+        // 构建表单页面的URL
+        const formUrl = `${window.location.origin}/form?table=${selectedHash.value}`
+
+        // 生成二维码
+        const qrCodeDataUrl = await QRCode.toDataURL(formUrl, {
+            width: 300,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            }
+        })
+
+        qrCodeImageUrl.value = qrCodeDataUrl
+        qrCodeDialogVisible.value = true
+        ElMessage.success('二维码生成成功')
+    } catch (error) {
+        console.error('生成二维码失败:', error)
+        ElMessage.error('生成二维码失败')
+    } finally {
+        qrCodeLoading.value = false
+    }
+}
+
+// 处理二维码弹窗关闭
+const handleQRCodeDialogClose = () => {
+    qrCodeDialogVisible.value = false
+    qrCodeImageUrl.value = ''
+}
+
+// 复制表单链接
+const copyFormUrl = async () => {
+    if (!selectedHash.value) return
+
+    const formUrl = `${window.location.origin}/form?table=${selectedHash.value}`
+    try {
+        await navigator.clipboard.writeText(formUrl)
+        ElMessage.success('表单链接已复制到剪贴板')
+    } catch (error) {
+        console.error('复制失败:', error)
+        // 备用复制方法
+        const textArea = document.createElement('textarea')
+        textArea.value = formUrl
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        ElMessage.success('表单链接已复制到剪贴板')
     }
 }
 
