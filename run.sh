@@ -237,6 +237,9 @@ echo "  --mcp-port PORT      设置MCP Server端口（默认: 3001）"
     echo "  --start-only      仅启动服务，不停止"
     echo "  --help            显示此帮助信息"
     echo ""
+    echo "清理选项:"
+    echo "  --clean --unified  部署完成后清理所有中间产物（前端dist、MCP构建文件等）"
+    echo ""
 echo "示例:"
 echo "  $0                    # 完整构建和部署流程"
 echo "  $0 --clean            # 构建后清理缓存并部署"
@@ -248,6 +251,7 @@ echo "  $0 --run-local --backend-port 4000 --frontend-port 9000  # 自定义端�
 echo "  $0 --unified --backend-port 4000 --frontend-port 9000    # 单容器自定义端口"
 echo "  $0 --mcp-port 9100    # 设置MCP Server端口为9100"
 echo "  $0 --backend-port 4000 --frontend-port 9000 --mcp-port 9100  # 自定义所有端口"
+echo "  $0 --clean --unified  # 构建部署后清理所有中间产物"
     echo ""
     echo "注意: 此脚本会按顺序调用 docker/build.sh 和 docker/deploy.sh"
 }
@@ -360,6 +364,43 @@ parse_arguments() {
     DEPLOY_ARGS=("${deploy_args[@]}")
 }
 
+# 清理中间产物
+clean_intermediate_files() {
+    log_info "=== 清理构建中间产物 ==="
+    
+    # 清理前端构建产物
+    if [ -d "fe/dist" ]; then
+        log_info "清理前端构建产物: fe/dist/"
+        rm -rf fe/dist
+        log_success "前端构建产物已清理"
+    else
+        log_info "未找到前端构建产物: fe/dist/"
+    fi
+    
+    # 清理MCP服务器构建产物
+    if [ -d "MCPServer/build" ]; then
+        log_info "清理MCP服务器构建产物: MCPServer/build/"
+        rm -rf MCPServer/build
+        log_success "MCP服务器构建产物已清理"
+    else
+        log_info "未找到MCP服务器构建产物: MCPServer/build/"
+    fi
+    
+    # 清理TypeScript构建信息文件
+    if [ -f "MCPServer/tsconfig.tsbuildinfo" ]; then
+        log_info "清理TypeScript构建信息文件: MCPServer/tsconfig.tsbuildinfo"
+        rm -f MCPServer/tsconfig.tsbuildinfo
+        log_success "TypeScript构建信息文件已清理"
+    fi
+    
+    # 清理Docker构建缓存
+    log_info "清理Docker构建缓存..."
+    docker system prune -f
+    log_success "Docker构建缓存已清理"
+    
+    log_success "所有中间产物清理完成"
+}
+
 # 主函数
 main() {
     # 检查是否显示帮助
@@ -400,6 +441,25 @@ main() {
     if ! run_deploy "${DEPLOY_ARGS[@]}"; then
         log_error "部署失败"
         exit 1
+    fi
+    
+    # 检查是否需要清理中间产物（--clean --unified 参数组合）
+    local clean_unified=false
+    for arg in "$@"; do
+        if [ "$arg" = "--clean" ]; then
+            for other_arg in "$@"; do
+                if [ "$other_arg" = "--unified" ]; then
+                    clean_unified=true
+                    break
+                fi
+            done
+            break
+        fi
+    done
+    
+    if [ "$clean_unified" = true ]; then
+        echo
+        clean_intermediate_files
     fi
     
     echo
