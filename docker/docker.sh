@@ -299,15 +299,13 @@ restore_data_volumes() {
 package_export() {
     local export_dir=$1
     local version_tag=$2
-    # 缩短包名避免文件名过长
-    local timestamp=$(echo "$version_tag" | sed 's/unified-//' | cut -d'-' -f1-2)
-    local git_hash=$(echo "$version_tag" | grep -o '[^-]*$')
-    local package_name="excel-lowcode-${timestamp}-${git_hash}"
+    # 使用固定包名避免文件名过长
+    local package_name="excel-lowcode-deployment"
     
     log_info "开始打包导出文件..."
     
-    # 创建临时打包目录
-    local temp_dir="${export_dir}/temp-${version_tag}"
+    # 创建临时打包目录（使用更短的名称）
+    local temp_dir="${export_dir}/temp-package"
     mkdir -p "$temp_dir"
     
     # 复制镜像文件

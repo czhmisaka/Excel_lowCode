@@ -314,17 +314,17 @@ start_services() {
     # 使用特定的项目名称来避免影响其他服务
     local project_name="annual-leave"
     
-    # 对于unified模式，强制重新构建镜像，确保所有构建在容器内完成
+    # 对于unified模式，使用缓存构建镜像（提高构建速度）
     if [ "$1" = "--unified" ]; then
-        log_info "强制重新构建统一镜像，确保所有构建在容器内完成..."
-        ($compose_cmd -f "$compose_file" -p "$project_name" build --no-cache)
+        log_info "构建统一镜像（使用缓存）..."
+        ($compose_cmd -f "$compose_file" -p "$project_name" build)
     fi
     
     ($compose_cmd -f "$compose_file" -p "$project_name" up -d)
     
-    # 等待服务启动
+    # 等待服务启动（减少等待时间）
     log_info "等待服务启动..."
-    sleep 20
+    sleep 10
     
     # 检查服务状态
     check_services_health
@@ -334,17 +334,17 @@ start_services() {
 check_services_health() {
     log_info "检查服务健康状态..."
     
-    # 检查前端服务（增加重试机制）
+    # 检查前端服务（优化重试机制，减少等待时间）
     local frontend_healthy=false
-    for i in {1..5}; do
+    for i in {1..3}; do
         log_info "尝试检查前端服务健康状态 (第 $i 次)..."
         if curl -f http://localhost:${FRONTEND_PORT}/health > /dev/null 2>&1; then
             log_success "前端服务运行正常"
             frontend_healthy=true
             break
         else
-            log_warning "前端服务健康检查失败 (第 $i 次)，等待 10 秒后重试..."
-            sleep 10
+            log_warning "前端服务健康检查失败 (第 $i 次)，等待 5 秒后重试..."
+            sleep 5
         fi
     done
     
@@ -357,17 +357,17 @@ check_services_health() {
         return 1
     fi
     
-    # 检查后端服务（增加重试机制）
+    # 检查后端服务（优化重试机制，减少等待时间）
     local backend_healthy=false
-    for i in {1..5}; do
+    for i in {1..3}; do
         log_info "尝试检查后端服务健康状态 (第 $i 次)..."
         if curl -f http://localhost:${BACKEND_PORT}/health > /dev/null 2>&1; then
             log_success "后端服务运行正常"
             backend_healthy=true
             break
         else
-            log_warning "后端服务健康检查失败 (第 $i 次)，等待 10 秒后重试..."
-            sleep 10
+            log_warning "后端服务健康检查失败 (第 $i 次)，等待 5 秒后重试..."
+            sleep 5
         fi
     done
     
