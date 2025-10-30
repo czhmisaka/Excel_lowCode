@@ -1,6 +1,6 @@
 <template>
     <div class="dashboard fade-in-up">
-        <!-- 统计卡片 - 精炼紧凑设计 -->
+        <!-- 统计卡片 - 保留背景图标矩阵，增强数据可视化 -->
         <el-row :gutter="16">
             <el-col :span="6">
                 <div class="compact-stat-card file-stat">
@@ -17,8 +17,18 @@
                     </div>
                     <div class="compact-stat-content">
                         <div class="compact-stat-info">
-                            <div class="compact-stat-value">{{ fileCount }}</div>
-                            <div class="compact-stat-label">文件数</div>
+                            <div class="stat-value-container">
+                                <div v-if="loading" class="skeleton skeleton-value"></div>
+                                <div v-else class="compact-stat-value">{{ fileCount }}</div>
+                                <div v-if="!loading" class="trend-indicator trend-up">
+                                    <el-icon>
+                                        <ArrowUp />
+                                    </el-icon>
+                                    <span>12%</span>
+                                </div>
+                            </div>
+                            <div v-if="loading" class="skeleton skeleton-label"></div>
+                            <div v-else class="compact-stat-label">文件数</div>
                         </div>
                     </div>
                 </div>
@@ -39,8 +49,10 @@
                     </div>
                     <div class="compact-stat-content">
                         <div class="compact-stat-info">
-                            <div class="compact-stat-value">{{ totalRecords }}</div>
-                            <div class="compact-stat-label">记录数</div>
+                            <div v-if="loading" class="skeleton skeleton-value"></div>
+                            <div v-else class="compact-stat-value">{{ totalRecords }}</div>
+                            <div v-if="loading" class="skeleton skeleton-label"></div>
+                            <div v-else class="compact-stat-label">记录数</div>
                         </div>
                     </div>
                 </div>
@@ -61,8 +73,10 @@
                     </div>
                     <div class="compact-stat-content">
                         <div class="compact-stat-info">
-                            <div class="compact-stat-value">{{ systemStatus }}</div>
-                            <div class="compact-stat-label">系统状态</div>
+                            <div v-if="loading" class="skeleton skeleton-value"></div>
+                            <div v-else class="compact-stat-value">{{ systemStatus }}</div>
+                            <div v-if="loading" class="skeleton skeleton-label"></div>
+                            <div v-else class="compact-stat-label">系统状态</div>
                         </div>
                     </div>
                 </div>
@@ -83,8 +97,10 @@
                     </div>
                     <div class="compact-stat-content">
                         <div class="compact-stat-info">
-                            <div class="compact-stat-value">{{ lastUpdate }}</div>
-                            <div class="compact-stat-label">最后更新</div>
+                            <div v-if="loading" class="skeleton skeleton-value"></div>
+                            <div v-else class="compact-stat-value">{{ lastUpdate }}</div>
+                            <div v-if="loading" class="skeleton skeleton-label"></div>
+                            <div v-else class="compact-stat-label">最后更新</div>
                         </div>
                     </div>
                 </div>
@@ -267,7 +283,8 @@ import {
     Plus,
     Edit,
     Delete,
-    Document
+    Document,
+    ArrowUp
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -697,7 +714,26 @@ onMounted(() => {
 
 .compact-button:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.compact-button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* 增强卡片悬停效果 */
+.compact-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modern-card:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 紧凑信息网格 */
@@ -919,6 +955,71 @@ onMounted(() => {
     margin-left: 8px;
 }
 
+/* 趋势指示器样式 */
+.stat-value-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.trend-indicator {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 4px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+.trend-indicator .el-icon {
+    font-size: 10px;
+}
+
+.trend-up {
+    color: #52c41a;
+}
+
+.trend-down {
+    color: #ff4d4f;
+}
+
+.trend-neutral {
+    color: #faad14;
+}
+
+/* 骨架屏样式 */
+.skeleton {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.2) 25%, rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0.2) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+.skeleton-value {
+    height: 44px;
+    width: 80px;
+    margin-bottom: 2px;
+}
+
+.skeleton-label {
+    height: 12px;
+    width: 40px;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .compact-stat-card {
@@ -970,6 +1071,54 @@ onMounted(() => {
         flex-direction: column;
         align-items: flex-start;
         gap: 4px;
+    }
+
+    /* 移动端趋势指示器优化 */
+    .stat-value-container {
+        gap: 6px;
+    }
+
+    .trend-indicator {
+        font-size: 9px;
+        padding: 1px 3px;
+    }
+
+    .trend-indicator .el-icon {
+        font-size: 9px;
+    }
+}
+
+/* 超小屏幕优化 */
+@media (max-width: 480px) {
+    .compact-stat-card {
+        min-height: 70px;
+        padding: 8px;
+    }
+
+    .compact-stat-value {
+        font-size: 16px;
+    }
+
+    .compact-stat-label {
+        font-size: 11px;
+    }
+
+    .icon-matrix {
+        gap: 2px;
+        transform: rotate(-2deg);
+    }
+
+    .icon-row {
+        gap: 2px;
+    }
+
+    .icon-item .el-icon {
+        font-size: 16px;
+    }
+
+    /* 超小屏幕趋势指示器隐藏 */
+    .trend-indicator {
+        display: none;
     }
 }
 
