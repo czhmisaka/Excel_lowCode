@@ -122,6 +122,12 @@
                                 </el-icon>
                                 生成填写二维码
                             </el-button>
+                            <el-button type="info" @click="goToTableStructureEditor" :disabled="!selectedHash">
+                                <el-icon>
+                                    <Edit />
+                                </el-icon>
+                                表结构编辑
+                            </el-button>
                             <el-button type="danger" @click="deleteSelectedRows" :disabled="selectedRows.length === 0">
                                 <el-icon>
                                     <Delete />
@@ -872,6 +878,19 @@ const copyFormUrl = async () => {
         document.body.removeChild(textArea)
         ElMessage.success('表单链接已复制到剪贴板')
     }
+}
+
+
+// 跳转到表结构编辑器
+const goToTableStructureEditor = () => {
+    if (!selectedHash.value) {
+        ElMessage.warning('请先选择文件')
+        return
+    }
+    router.push({
+        path: '/table-structure',
+        query: { hash: selectedHash.value }
+    })
 }
 
 onMounted(() => {

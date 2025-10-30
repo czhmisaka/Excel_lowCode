@@ -16,12 +16,14 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@lljj/vue3-form-element": "^1.19.0",
     "axios": "^1.12.2",
     "element-plus": "^2.11.4",
     "pinia": "^3.0.3",
     "qrcode": "^1.5.4",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1",
+    "vuedraggable": "^4.1.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

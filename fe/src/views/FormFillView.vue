@@ -61,6 +61,7 @@
                         <el-input v-else v-model="formData[field.name]" :placeholder="`请输入${field.name}`" clearable />
                     </el-form-item>
 
+
                     <!-- 表单操作 -->
                     <el-form-item class="form-actions">
                         <el-button type="primary" @click="submitForm" :loading="submitting">
@@ -196,6 +197,7 @@ const initFormRules = () => {
     })
     formRules.value = rules
 }
+
 
 // 加载表结构信息
 const loadTableStructure = async () => {
@@ -390,6 +392,7 @@ watch(
 .success-content {
     text-align: center;
 }
+
 
 /* 响应式设计 */
 @media (max-width: 768px) {

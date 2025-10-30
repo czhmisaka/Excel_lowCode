@@ -193,6 +193,7 @@ app.use('/api/system', require('./routes/system'));
 app.use('/api/import', require('./routes/import'));
 app.use('/api/rollback', require('./routes/rollback'));
 app.use('/api/public/form', require('./routes/publicForm'));
+app.use('/api/field-config', require('./routes/fieldConfig'));
 
 // 404处理
 app.use('*', (req, res) => {

@@ -571,6 +571,26 @@ class ApiService {
         })
         return response.data
     }
+
+    // 获取字段配置
+    async getFieldConfig(hash: string): Promise<any> {
+        const response = await apiClient.get(`/api/field-config/${hash}`)
+        return response.data.data
+    }
+
+    // 更新字段配置
+    async updateFieldConfig(hash: string, config: any): Promise<any> {
+        const response = await apiClient.put(`/api/field-config/${hash}`, {
+            fieldConfig: config
+        })
+        return response.data
+    }
+
+    // 获取表结构信息（包含字段配置）
+    async getTableStructureWithConfig(hash: string): Promise<any> {
+        const response = await apiClient.get(`/api/field-config/${hash}/structure`)
+        return response.data.data
+    }
 }
 
 export const apiService = new ApiService()

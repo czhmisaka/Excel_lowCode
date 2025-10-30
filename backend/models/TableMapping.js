@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-27 23:16:41
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-22 10:51:30
+ * @LastEditTime: 2025-10-30 09:10:29
  * @FilePath: /lowCode_excel/backend/models/TableMapping.js
  */
 const { DataTypes } = require('sequelize');
@@ -59,6 +59,12 @@ const TableMapping = sequelize.define('TableMapping', {
         allowNull: true,
         comment: '列定义信息',
         field: 'column_definitions'
+    },
+    formConfig: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        comment: '表单配置信息（JSON Schema格式）',
+        field: 'form_config'
     },
     createdAt: {
         type: DataTypes.DATE,

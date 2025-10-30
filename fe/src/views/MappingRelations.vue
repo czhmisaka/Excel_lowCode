@@ -59,7 +59,10 @@
                     <p>记录数: {{ selectedMapping.rowCount }} | 列数: {{ selectedMapping.columnCount }}</p>
                 </div>
 
-                <el-table :data="selectedMapping.columnDefinitions" border>
+                <div v-if="loadingStructure" class="loading-structure">
+                    <el-skeleton :rows="5" animated />
+                </div>
+                <el-table v-else :data="selectedMapping.columnDefinitions" border>
                     <el-table-column prop="name" label="列名" width="150" />
                     <el-table-column prop="type" label="数据类型" width="120" />
                     <el-table-column prop="nullable" label="可空" width="80">
@@ -112,6 +115,7 @@ const loading = ref(false)
 const mappingList = ref<any[]>([])
 const showColumnDialog = ref(false)
 const selectedMapping = ref<any>(null)
+const loadingStructure = ref(false)
 
 // 编辑表名相关状态
 const showEditTableNameDialog = ref(false)
@@ -183,9 +187,26 @@ const formatHash = (hash: string) => {
 }
 
 // 查看列定义
-const viewColumnDefinitions = (mapping: any) => {
-    selectedMapping.value = mapping
-    showColumnDialog.value = true
+const viewColumnDefinitions = async (mapping: any) => {
+    loadingStructure.value = true
+    try {
+        // 从后端获取真实的表结构信息
+        const structure = await apiService.getTableStructure(mapping.hashValue)
+
+        selectedMapping.value = {
+            ...mapping,
+            columnDefinitions: structure.columns || []
+        }
+        showColumnDialog.value = true
+    } catch (error) {
+        console.error('获取表结构信息失败:', error)
+        // 如果获取失败，使用模拟数据作为备用
+        selectedMapping.value = mapping
+        showColumnDialog.value = true
+        ElMessage.warning('获取表结构信息失败，显示模拟数据')
+    } finally {
+        loadingStructure.value = false
+    }
 }
 
 // 显示编辑表名对话框
@@ -338,5 +359,9 @@ onMounted(() => {
 
 .table-name-cell:hover .edit-icon {
     opacity: 1;
+}
+
+.loading-structure {
+    padding: 20px 0;
 }
 </style>

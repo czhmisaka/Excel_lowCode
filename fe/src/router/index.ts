@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-08-28 07:54:03
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-29 00:53:22
+ * @LastEditTime: 2025-10-30 10:26:12
  * @FilePath: /lowCode_excel/fe/src/router/index.ts
  */
 import { createRouter, createWebHistory } from 'vue-router'
@@ -62,6 +62,11 @@ const router = createRouter({
           path: '/logs',
           name: 'LogManagement',
           component: () => import('@/views/LogManagement.vue')
+        },
+        {
+          path: '/table-structure',
+          name: 'TableStructureEditor',
+          component: () => import('@/views/TableStructureEditorView.vue')
         }
       ]
     },
