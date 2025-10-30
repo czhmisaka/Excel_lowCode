@@ -1,12 +1,7 @@
 <template>
-    <div class="user-management">
-        <div class="page-header">
-            <h1>用户管理</h1>
-            <p>管理系统用户账户和权限</p>
-        </div>
-
+    <div class="user-management fade-in-up">
         <!-- 搜索和操作栏 -->
-        <div class="toolbar">
+        <div class="modern-toolbar">
             <el-row :gutter="20">
                 <el-col :span="8">
                     <el-input v-model="searchKeyword" placeholder="搜索用户名、邮箱或显示名称" clearable @clear="handleSearch"
@@ -28,93 +23,97 @@
         </div>
 
         <!-- 用户表格 -->
-        <el-table v-loading="loading" :data="userList" border stripe style="width: 100%">
-            <el-table-column prop="id" label="ID" width="80" />
-            <el-table-column prop="username" label="用户名" min-width="120" />
-            <el-table-column prop="email" label="邮箱" min-width="180" />
-            <el-table-column prop="displayName" label="显示名称" min-width="120" />
-            <el-table-column prop="role" label="角色" width="100">
-                <template #default="{ row }">
-                    <el-tag :type="row.role === 'admin' ? 'danger' : 'primary'">
-                        {{ row.role === 'admin' ? '管理员' : '用户' }}
-                    </el-tag>
-                </template>
-            </el-table-column>
-            <el-table-column prop="isActive" label="状态" width="80">
-                <template #default="{ row }">
-                    <el-tag :type="row.isActive ? 'success' : 'info'">
-                        {{ row.isActive ? '启用' : '禁用' }}
-                    </el-tag>
-                </template>
-            </el-table-column>
-            <el-table-column prop="lastLogin" label="最后登录" width="180">
-                <template #default="{ row }">
-                    {{ formatDate(row.lastLogin) }}
-                </template>
-            </el-table-column>
-            <el-table-column prop="createdAt" label="创建时间" width="180">
-                <template #default="{ row }">
-                    {{ formatDate(row.createdAt) }}
-                </template>
-            </el-table-column>
-            <el-table-column label="操作" width="200" fixed="right">
-                <template #default="{ row }">
-                    <el-button size="small" type="primary" :icon="Edit" @click="handleEditUser(row)">
-                        编辑
-                    </el-button>
-                    <el-button size="small" type="danger" :icon="Delete" @click="handleDeleteUser(row)"
-                        :disabled="row.id === currentUser?.id">
-                        删除
-                    </el-button>
-                </template>
-            </el-table-column>
-        </el-table>
+        <div class="modern-card" style="margin-bottom: 20px;">
+            <el-table v-loading="loading" :data="userList" border stripe class="modern-table" style="width: 100%">
+                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="username" label="用户名" min-width="120" />
+                <el-table-column prop="email" label="邮箱" min-width="180" />
+                <el-table-column prop="displayName" label="显示名称" min-width="120" />
+                <el-table-column prop="role" label="角色" width="100">
+                    <template #default="{ row }">
+                        <el-tag :type="row.role === 'admin' ? 'danger' : 'primary'">
+                            {{ row.role === 'admin' ? '管理员' : '用户' }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="isActive" label="状态" width="80">
+                    <template #default="{ row }">
+                        <el-tag :type="row.isActive ? 'success' : 'info'">
+                            {{ row.isActive ? '启用' : '禁用' }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="lastLogin" label="最后登录" width="180">
+                    <template #default="{ row }">
+                        {{ formatDate(row.lastLogin) }}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="createdAt" label="创建时间" width="180">
+                    <template #default="{ row }">
+                        {{ formatDate(row.createdAt) }}
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" width="200" fixed="right">
+                    <template #default="{ row }">
+                        <el-button size="small" type="primary" :icon="Edit" @click="handleEditUser(row)">
+                            编辑
+                        </el-button>
+                        <el-button size="small" type="danger" :icon="Delete" @click="handleDeleteUser(row)"
+                            :disabled="row.id === currentUser?.id">
+                            删除
+                        </el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
 
-        <!-- 分页 -->
-        <div class="pagination">
-            <el-pagination v-model:current-page="pagination.currentPage" v-model:page-size="pagination.pageSize"
-                :page-sizes="[10, 20, 50, 100]" :total="pagination.total"
-                layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
-                @current-change="handleCurrentChange" />
+            <!-- 分页 -->
+            <div class="modern-pagination">
+                <el-pagination v-model:current-page="pagination.currentPage" v-model:page-size="pagination.pageSize"
+                    :page-sizes="[10, 20, 50, 100]" :total="pagination.total"
+                    layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
+                    @current-change="handleCurrentChange" />
+            </div>
+
+            <!-- 新增/编辑用户对话框 -->
+            <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" :close-on-click-modal="false"
+                class="modern-dialog" append-to-body>
+                <el-form ref="userFormRef" :model="userForm" :rules="userFormRules" label-width="100px">
+                    <el-form-item label="用户名" prop="username">
+                        <el-input v-model="userForm.username" placeholder="请输入用户名" :disabled="isEditMode" />
+                    </el-form-item>
+                    <el-form-item label="邮箱" prop="email">
+                        <el-input v-model="userForm.email" placeholder="请输入邮箱地址" />
+                    </el-form-item>
+                    <el-form-item label="显示名称" prop="displayName">
+                        <el-input v-model="userForm.displayName" placeholder="请输入显示名称" />
+                    </el-form-item>
+                    <el-form-item label="角色" prop="role">
+                        <el-select v-model="userForm.role" placeholder="请选择角色">
+                            <el-option label="用户" value="user" />
+                            <el-option label="管理员" value="admin" />
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="状态" prop="isActive">
+                        <el-switch v-model="userForm.isActive" active-text="启用" inactive-text="禁用" />
+                    </el-form-item>
+                    <el-form-item v-if="!isEditMode" label="密码" prop="password">
+                        <el-input v-model="userForm.password" type="password" placeholder="请输入密码" show-password />
+                    </el-form-item>
+                    <el-form-item v-if="!isEditMode" label="确认密码" prop="confirmPassword">
+                        <el-input v-model="userForm.confirmPassword" type="password" placeholder="请再次输入密码"
+                            show-password />
+                    </el-form-item>
+                </el-form>
+                <template #footer>
+                    <span class="dialog-footer">
+                        <el-button @click="dialogVisible = false">取消</el-button>
+                        <el-button type="primary" @click="handleSubmitUser" :loading="submitting">
+                            确定
+                        </el-button>
+                    </span>
+                </template>
+            </el-dialog>
         </div>
-
-        <!-- 新增/编辑用户对话框 -->
-        <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" :close-on-click-modal="false">
-            <el-form ref="userFormRef" :model="userForm" :rules="userFormRules" label-width="100px">
-                <el-form-item label="用户名" prop="username">
-                    <el-input v-model="userForm.username" placeholder="请输入用户名" :disabled="isEditMode" />
-                </el-form-item>
-                <el-form-item label="邮箱" prop="email">
-                    <el-input v-model="userForm.email" placeholder="请输入邮箱地址" />
-                </el-form-item>
-                <el-form-item label="显示名称" prop="displayName">
-                    <el-input v-model="userForm.displayName" placeholder="请输入显示名称" />
-                </el-form-item>
-                <el-form-item label="角色" prop="role">
-                    <el-select v-model="userForm.role" placeholder="请选择角色">
-                        <el-option label="用户" value="user" />
-                        <el-option label="管理员" value="admin" />
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="状态" prop="isActive">
-                    <el-switch v-model="userForm.isActive" active-text="启用" inactive-text="禁用" />
-                </el-form-item>
-                <el-form-item v-if="!isEditMode" label="密码" prop="password">
-                    <el-input v-model="userForm.password" type="password" placeholder="请输入密码" show-password />
-                </el-form-item>
-                <el-form-item v-if="!isEditMode" label="确认密码" prop="confirmPassword">
-                    <el-input v-model="userForm.confirmPassword" type="password" placeholder="请再次输入密码" show-password />
-                </el-form-item>
-            </el-form>
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button @click="dialogVisible = false">取消</el-button>
-                    <el-button type="primary" @click="handleSubmitUser" :loading="submitting">
-                        确定
-                    </el-button>
-                </span>
-            </template>
-        </el-dialog>
     </div>
 </template>
 
@@ -383,9 +382,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.user-management {
-    padding: 20px;
-}
+.user-management {}
 
 .page-header {
     margin-bottom: 20px;

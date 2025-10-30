@@ -1,35 +1,34 @@
 <template>
-    <div class="file-management">
-        <el-card>
-            <template #header>
-                <div class="card-header">
-                    <span>文件管理</span>
-                    <el-button type="primary" @click="showUploadDialog = true">
-                        <el-icon>
-                            <Upload />
-                        </el-icon>
-                        上传文件
-                    </el-button>
-                </div>
-            </template>
-
-            <div class="file-list">
-                <el-table :data="fileList" v-loading="loading">
-                    <el-table-column prop="originalFileName" label="文件名" min-width="200" />
-                    <el-table-column prop="tableName" label="表名" width="150" />
-                    <el-table-column prop="recordCount" label="记录数" width="100" />
-                    <el-table-column prop="columnCount" label="列数" width="80" />
-                    <el-table-column prop="createdAt" label="上传时间" width="180" />
-                    <el-table-column label="操作" width="200">
-                        <template #default="scope">
-                            <el-button type="primary" link @click="editData(scope.row)">编辑数据</el-button>
-                            <el-button type="primary" link @click="viewData(scope.row)">查看数据</el-button>
-                            <el-button type="danger" link @click="deleteFile(scope.row)">删除</el-button>
-                        </template>
-                    </el-table-column>
-                </el-table>
+    <div class="file-management fade-in-up">
+        <!-- 工具栏 -->
+        <div class="modern-toolbar">
+            <div class="toolbar-content">
+                <el-button type="primary" :icon="Upload" @click="showUploadDialog = true" class="modern-button">
+                    上传文件
+                </el-button>
+                <el-button :icon="Refresh" @click="initData" class="modern-button">
+                    刷新
+                </el-button>
             </div>
-        </el-card>
+        </div>
+
+        <!-- 文件表格 -->
+        <div class="modern-card">
+            <el-table :data="fileList" v-loading="loading" border stripe class="modern-table">
+                <el-table-column prop="originalFileName" label="文件名" min-width="200" />
+                <el-table-column prop="tableName" label="表名" width="150" />
+                <el-table-column prop="recordCount" label="记录数" width="100" />
+                <el-table-column prop="columnCount" label="列数" width="80" />
+                <el-table-column prop="createdAt" label="上传时间" width="180" />
+                <el-table-column label="操作" width="200">
+                    <template #default="scope">
+                        <el-button type="primary" link @click="editData(scope.row)">编辑数据</el-button>
+                        <el-button type="primary" link @click="viewData(scope.row)">查看数据</el-button>
+                        <el-button type="danger" link @click="deleteFile(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </div>
 
         <!-- 文件上传对话框 -->
         <el-dialog v-model="showUploadDialog" title="上传Excel文件" width="500px">
@@ -68,7 +67,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFilesStore } from '@/stores/files'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload, UploadFilled } from '@element-plus/icons-vue'
+import { Upload, UploadFilled, Refresh } from '@element-plus/icons-vue'
 import ExcelPreview from '@/components/ExcelPreview.vue'
 
 const router = useRouter()

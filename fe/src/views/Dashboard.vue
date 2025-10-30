@@ -1,82 +1,103 @@
 <template>
-    <div class="dashboard">
-        <el-row :gutter="20">
-            <!-- 统计卡片 -->
+    <div class="dashboard fade-in-up">
+        <!-- 统计卡片 - 精炼紧凑设计 -->
+        <el-row :gutter="16">
             <el-col :span="6">
-                <el-card class="stat-card">
-                    <div class="stat-content">
-                        <div class="stat-icon">
-                            <el-icon>
-                                <Folder />
-                            </el-icon>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-value">{{ fileCount }}</div>
-                            <div class="stat-label">已上传文件</div>
+                <div class="compact-stat-card file-stat">
+                    <div class="compact-stat-background">
+                        <div class="icon-matrix">
+                            <div class="icon-row" v-for="row in 4" :key="row">
+                                <div class="icon-item" v-for="col in 4" :key="col">
+                                    <el-icon>
+                                        <Folder />
+                                    </el-icon>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </el-card>
+                    <div class="compact-stat-content">
+                        <div class="compact-stat-info">
+                            <div class="compact-stat-value">{{ fileCount }}</div>
+                            <div class="compact-stat-label">文件数</div>
+                        </div>
+                    </div>
+                </div>
             </el-col>
 
             <el-col :span="6">
-                <el-card class="stat-card">
-                    <div class="stat-content">
-                        <div class="stat-icon">
-                            <el-icon>
-                                <DataBoard />
-                            </el-icon>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-value">{{ totalRecords }}</div>
-                            <div class="stat-label">总数据记录</div>
+                <div class="compact-stat-card record-stat">
+                    <div class="compact-stat-background">
+                        <div class="icon-matrix">
+                            <div class="icon-row" v-for="row in 4" :key="row">
+                                <div class="icon-item" v-for="col in 4" :key="col">
+                                    <el-icon>
+                                        <DataBoard />
+                                    </el-icon>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </el-card>
+                    <div class="compact-stat-content">
+                        <div class="compact-stat-info">
+                            <div class="compact-stat-value">{{ totalRecords }}</div>
+                            <div class="compact-stat-label">记录数</div>
+                        </div>
+                    </div>
+                </div>
             </el-col>
 
             <el-col :span="6">
-                <el-card class="stat-card">
-                    <div class="stat-content">
-                        <div class="stat-icon">
-                            <el-icon>
-                                <Check />
-                            </el-icon>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-value">{{ systemStatus }}</div>
-                            <div class="stat-label">系统状态</div>
+                <div class="compact-stat-card status-stat">
+                    <div class="compact-stat-background">
+                        <div class="icon-matrix">
+                            <div class="icon-row" v-for="row in 4" :key="row">
+                                <div class="icon-item" v-for="col in 4" :key="col">
+                                    <el-icon>
+                                        <Check />
+                                    </el-icon>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </el-card>
+                    <div class="compact-stat-content">
+                        <div class="compact-stat-info">
+                            <div class="compact-stat-value">{{ systemStatus }}</div>
+                            <div class="compact-stat-label">系统状态</div>
+                        </div>
+                    </div>
+                </div>
             </el-col>
 
             <el-col :span="6">
-                <el-card class="stat-card">
-                    <div class="stat-content">
-                        <div class="stat-icon">
-                            <el-icon>
-                                <Clock />
-                            </el-icon>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-value">{{ lastUpdate }}</div>
-                            <div class="stat-label">最后更新</div>
+                <div class="compact-stat-card update-stat">
+                    <div class="compact-stat-background">
+                        <div class="icon-matrix">
+                            <div class="icon-row" v-for="row in 4" :key="row">
+                                <div class="icon-item" v-for="col in 4" :key="col">
+                                    <el-icon>
+                                        <Clock />
+                                    </el-icon>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </el-card>
+                    <div class="compact-stat-content">
+                        <div class="compact-stat-info">
+                            <div class="compact-stat-value">{{ lastUpdate }}</div>
+                            <div class="compact-stat-label">最后更新</div>
+                        </div>
+                    </div>
+                </div>
             </el-col>
         </el-row>
 
         <!-- 最近上传文件 -->
-        <el-card class="recent-files" style="margin-top: 20px;">
-            <template #header>
-                <div class="card-header">
-                    <span>最近上传的文件</span>
-                    <el-button type="primary" text @click="goToFileManagement">查看全部</el-button>
-                </div>
-            </template>
-
-            <el-table :data="recentFiles" v-loading="loading">
+        <div class="modern-card" style="margin-top: 20px;">
+            <div class="modern-card-header">
+                <span>最近上传的文件</span>
+                <el-button type="primary" text @click="goToFileManagement" class="modern-button">查看全部</el-button>
+            </div>
+            <el-table :data="recentFiles" v-loading="loading" border stripe class="modern-table">
                 <el-table-column prop="originalFileName" label="文件名" min-width="200" />
                 <el-table-column prop="recordCount" label="记录数" width="100" />
                 <el-table-column prop="columnCount" label="列数" width="80" />
@@ -87,165 +108,147 @@
                     </template>
                 </el-table-column>
             </el-table>
-        </el-card>
+        </div>
 
-        <!-- 快速操作 -->
-        <el-row :gutter="20" style="margin-top: 20px;">
+        <!-- 快速操作和系统状态 -->
+        <el-row :gutter="16" style="margin-top: 20px;">
             <el-col :span="8">
-                <el-card class="quick-action">
-                    <template #header>
-                        <div class="card-header">
-                            <span>快速操作</span>
-                        </div>
-                    </template>
-                    <div class="action-buttons">
-                        <el-button type="primary" @click="goToFileManagement" style="width: 100%; margin-bottom: 10px;">
-                            <el-icon>
-                                <Upload />
-                            </el-icon>
+                <div class="compact-card">
+                    <div class="compact-card-header">
+                        <span>快速操作</span>
+                    </div>
+                    <div class="compact-action-buttons">
+                        <el-button type="primary" @click="goToFileManagement" class="compact-button"
+                            style="width: 100%; margin-bottom: 8px;" :icon="Upload">
                             上传文件
                         </el-button>
-                        <el-button @click="goToDataBrowser" style="width: 100%; margin-bottom: 10px;">
-                            <el-icon>
-                                <DataBoard />
-                            </el-icon>
+                        <el-button @click="goToDataBrowser" class="compact-button"
+                            style="width: 100%; margin-bottom: 8px;" :icon="DataBoard">
                             浏览数据
                         </el-button>
-                        <el-button @click="goToMappingRelations" style="width: 100%;">
-                            <el-icon>
-                                <Connection />
-                            </el-icon>
+                        <el-button @click="goToMappingRelations" class="compact-button" style="width: 100%;"
+                            :icon="Connection">
                             查看映射
                         </el-button>
                     </div>
-                </el-card>
+                </div>
             </el-col>
 
             <el-col :span="16">
-                <el-card class="system-info">
-                    <template #header>
-                        <div class="card-header">
-                            <span>系统信息</span>
-                            <el-button type="primary" text @click="refreshSystemInfo">刷新</el-button>
-                        </div>
-                    </template>
-                    <div class="info-list">
-                        <div class="info-item">
-                            <span class="info-label">后端服务:</span>
-                            <span class="info-value">{{ backendStatus }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">API版本:</span>
-                            <span class="info-value">v1.0.0</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">前端版本:</span>
-                            <span class="info-value">v1.0.0</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">最后检查:</span>
-                            <span class="info-value">{{ lastCheckTime }}</span>
-                        </div>
+                <div class="compact-card">
+                    <div class="compact-card-header">
+                        <span>系统状态概览</span>
+                        <el-button type="primary" text @click="refreshSystemInfo" class="compact-button">刷新</el-button>
                     </div>
-                </el-card>
-            </el-col>
-        </el-row>
-
-        <!-- 部署信息 -->
-        <el-row :gutter="20" style="margin-top: 20px;">
-            <el-col :span="12">
-                <el-card class="deployment-info">
-                    <template #header>
-                        <div class="card-header">
-                            <span>部署信息</span>
-                            <el-button type="primary" text @click="refreshSystemInfo">刷新</el-button>
-                        </div>
-                    </template>
-                    <div class="info-list">
-                        <div class="info-item">
-                            <span class="info-label">部署模式:</span>
-                            <span class="info-value">{{ systemInfo?.deployment?.mode || '-' }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">数据库类型:</span>
-                            <span class="info-value">{{ systemInfo?.database?.type || '-' }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">数据库状态:</span>
-                            <el-tag :type="getStatusTagType(systemInfo?.database?.status)">
-                                {{ systemInfo?.database?.status || '未知' }}
-                            </el-tag>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">数据表数量:</span>
-                            <span class="info-value">{{ systemInfo?.database?.tableCount || 0 }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">总记录数:</span>
-                            <span class="info-value">{{ systemInfo?.database?.totalRecords || 0 }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">环境:</span>
-                            <el-tag :type="getEnvironmentTagType(systemInfo?.system?.environment)">
-                                {{ systemInfo?.system?.environment || '-' }}
-                            </el-tag>
-                        </div>
-                    </div>
-                </el-card>
-            </el-col>
-
-            <el-col :span="12">
-                <el-card class="services-info">
-                    <template #header>
-                        <div class="card-header">
-                            <span>服务状态</span>
-                            <el-button type="primary" text @click="refreshSystemInfo">刷新</el-button>
-                        </div>
-                    </template>
-                    <div class="info-list">
-                        <div class="info-item">
-                            <span class="info-label">后端服务:</span>
-                            <div class="service-status">
-                                <el-tag :type="getStatusTagType(systemInfo?.services?.backend?.status)">
+                    <div class="compact-info-grid">
+                        <div class="compact-info-item">
+                            <span class="compact-info-label">后端服务</span>
+                            <div class="compact-info-value">
+                                <el-tag :type="getStatusTagType(systemInfo?.services?.backend?.status)" size="small">
                                     {{ systemInfo?.services?.backend?.status || '未知' }}
                                 </el-tag>
-                                <span class="service-port">端口: {{ systemInfo?.services?.backend?.port || '-' }}</span>
+                                <span class="compact-info-desc">端口: {{ systemInfo?.services?.backend?.port || '-'
+                                    }}</span>
                             </div>
                         </div>
-                        <div class="info-item">
-                            <span class="info-label">前端服务:</span>
-                            <div class="service-status">
-                                <el-tag :type="getStatusTagType(systemInfo?.services?.frontend?.status)">
+                        <div class="compact-info-item">
+                            <span class="compact-info-label">前端服务</span>
+                            <div class="compact-info-value">
+                                <el-tag :type="getStatusTagType(systemInfo?.services?.frontend?.status)" size="small">
                                     {{ systemInfo?.services?.frontend?.status || '未知' }}
                                 </el-tag>
-                                <span class="service-port">端口: {{ systemInfo?.services?.frontend?.port || '-' }}</span>
+                                <span class="compact-info-desc">端口: {{ systemInfo?.services?.frontend?.port || '-'
+                                    }}</span>
                             </div>
                         </div>
-                        <div class="info-item">
-                            <span class="info-label">MCP服务器:</span>
-                            <div class="service-status">
-                                <el-tag :type="getStatusTagType(systemInfo?.services?.mcpServer?.status)">
+                        <div class="compact-info-item">
+                            <span class="compact-info-label">数据库</span>
+                            <div class="compact-info-value">
+                                <el-tag :type="getStatusTagType(systemInfo?.database?.status)" size="small">
+                                    {{ systemInfo?.database?.status || '未知' }}
+                                </el-tag>
+                                <span class="compact-info-desc">{{ systemInfo?.database?.type || '-' }}</span>
+                            </div>
+                        </div>
+                        <div class="compact-info-item">
+                            <span class="compact-info-label">MCP服务</span>
+                            <div class="compact-info-value">
+                                <el-tag :type="getStatusTagType(systemInfo?.services?.mcpServer?.status)" size="small">
                                     {{ systemInfo?.services?.mcpServer?.status || '未知' }}
                                 </el-tag>
-                                <span class="service-port">端口: {{ systemInfo?.services?.mcpServer?.port || '-' }}</span>
+                                <span class="compact-info-desc">端口: {{ systemInfo?.services?.mcpServer?.port || '-'
+                                    }}</span>
                             </div>
                         </div>
-                        <div class="info-item">
-                            <span class="info-label">系统运行时间:</span>
-                            <span class="info-value">{{ formatUptime(systemInfo?.system?.uptime) }}</span>
+                        <div class="compact-info-item">
+                            <span class="compact-info-label">运行时间</span>
+                            <div class="compact-info-value">
+                                <span class="compact-info-main">{{ formatUptime(systemInfo?.system?.uptime) }}</span>
+                            </div>
                         </div>
-                        <div class="info-item">
-                            <span class="info-label">Node.js版本:</span>
-                            <span class="info-value">{{ systemInfo?.system?.nodeVersion || '-' }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">平台:</span>
-                            <span class="info-value">{{ systemInfo?.system?.platform || '-' }}</span>
+                        <div class="compact-info-item">
+                            <span class="compact-info-label">环境</span>
+                            <div class="compact-info-value">
+                                <el-tag :type="getEnvironmentTagType(systemInfo?.system?.environment)" size="small">
+                                    {{ systemInfo?.system?.environment || '-' }}
+                                </el-tag>
+                            </div>
                         </div>
                     </div>
-                </el-card>
+                </div>
             </el-col>
         </el-row>
+
+        <!-- 最近操作记录 -->
+        <div class="compact-card" style="margin-top: 20px;">
+            <div class="compact-card-header">
+                <span>最近操作记录</span>
+                <div class="operation-controls">
+                    <el-select v-model="selectedTable" placeholder="选择表" size="small"
+                        style="width: 150px; margin-right: 12px;" @change="loadRecentOperations">
+                        <el-option v-for="table in availableTables" :key="table" :label="table" :value="table" />
+                    </el-select>
+                    <el-button type="primary" text @click="goToLogManagement" class="compact-button">查看全部</el-button>
+                </div>
+            </div>
+            <div class="recent-operations">
+                <div v-if="recentOperations.length === 0" class="no-operations">
+                    <el-empty description="暂无操作记录" :image-size="60" />
+                </div>
+                <div v-else class="operations-list">
+                    <div v-for="operation in recentOperations" :key="operation.id" class="operation-item">
+                        <div class="operation-icon" :data-type="operation.operationType">
+                            <el-icon v-if="operation.operationType === 'INSERT'">
+                                <Plus />
+                            </el-icon>
+                            <el-icon v-else-if="operation.operationType === 'UPDATE'">
+                                <Edit />
+                            </el-icon>
+                            <el-icon v-else-if="operation.operationType === 'DELETE'">
+                                <Delete />
+                            </el-icon>
+                            <el-icon v-else>
+                                <Document />
+                            </el-icon>
+                        </div>
+                        <div class="operation-content">
+                            <div class="operation-title">
+                                {{ getOperationTypeText(operation.operationType) }}
+                                <span class="operation-table">{{ operation.tableName }}</span>
+                            </div>
+                            <div class="operation-meta">
+                                <span class="operation-user">{{ operation.username || '系统' }}</span>
+                                <span class="operation-time">{{ formatOperationTime(operation.createdAt) }}</span>
+                            </div>
+                        </div>
+                        <div class="operation-status">
+                            <el-tag v-if="operation.isRolledBack" type="info" size="small">已回退</el-tag>
+                            <el-tag v-else type="success" size="small">正常</el-tag>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -261,9 +264,10 @@ import {
     Clock,
     Upload,
     Connection,
-    Monitor,
-    DataAnalysis,
-    Setting
+    Plus,
+    Edit,
+    Delete,
+    Document
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -279,6 +283,9 @@ const recentFiles = ref<any[]>([])
 const backendStatus = ref('检查中...')
 const lastCheckTime = ref('-')
 const systemInfo = ref<SystemInfo | null>(null)
+const recentOperations = ref<any[]>([])
+const selectedTable = ref('')
+const availableTables = ref<string[]>([])
 
 // 初始化数据
 const initData = async () => {
@@ -403,9 +410,96 @@ const formatUptime = (uptime: number | undefined): string => {
     }
 }
 
+// 导航到日志管理
+const goToLogManagement = () => {
+    router.push('/logs')
+}
+
+// 获取操作类型文本
+const getOperationTypeText = (operationType: string): string => {
+    switch (operationType) {
+        case 'INSERT':
+            return '新增数据'
+        case 'UPDATE':
+            return '更新数据'
+        case 'DELETE':
+            return '删除数据'
+        default:
+            return '其他操作'
+    }
+}
+
+// 格式化操作时间
+const formatOperationTime = (time: string): string => {
+    if (!time) return '-'
+    const date = new Date(time)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+
+    // 如果是今天，显示时间
+    if (date.toDateString() === now.toDateString()) {
+        return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    }
+
+    // 如果是昨天，显示"昨天"
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+    if (date.toDateString() === yesterday.toDateString()) {
+        return '昨天'
+    }
+
+    // 其他情况显示日期
+    return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+}
+
+// 获取可用表列表
+const loadAvailableTables = async () => {
+    try {
+        const mappings = await apiService.getMappings()
+        availableTables.value = mappings.map(mapping => mapping.tableName).filter(Boolean)
+    } catch (error) {
+        console.error('加载表列表失败:', error)
+        availableTables.value = []
+    }
+}
+
+// 加载最近操作记录
+const loadRecentOperations = async () => {
+    try {
+        const params: any = {
+            page: 1,
+            limit: 5
+        }
+
+        // 如果选择了特定表，添加表名筛选
+        if (selectedTable.value) {
+            params.tableName = selectedTable.value
+        }
+
+        const response = await apiService.getLogs(params)
+        if (response.success && response.data) {
+            // 根据用户提供的curl响应，数据在response.data.logs中
+            recentOperations.value = response.data.logs || []
+        }
+    } catch (error) {
+        console.error('加载操作记录失败:', error)
+        recentOperations.value = []
+    }
+}
+
+// 初始化时设置默认表
+const initDefaultTable = async () => {
+    await loadAvailableTables()
+    if (availableTables.value.length > 0) {
+        selectedTable.value = availableTables.value[0]
+        await loadRecentOperations()
+    }
+}
+
 onMounted(() => {
     initData()
     refreshSystemInfo()
+    initDefaultTable()
 })
 </script>
 
@@ -414,58 +508,270 @@ onMounted(() => {
     padding: 0;
 }
 
-.stat-card {
-    margin-bottom: 0;
+/* 紧凑统计卡片样式 */
+.compact-stat-card {
+    border-radius: 12px;
+    padding: 12px;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    height: 100%;
+    min-height: 120px;
+    position: relative;
+    overflow: hidden;
 }
 
-.stat-content {
+.compact-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 背景图标矩阵 */
+.compact-stat-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1;
+    opacity: 0.15;
+    pointer-events: none;
+}
+
+.icon-matrix {
+    display: grid;
+    grid-template-rows: repeat(4, 1fr);
+    gap: 8px;
+    height: 100%;
+    transform: rotate(-5deg);
+    transform-origin: center;
+}
+
+.icon-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.icon-item {
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
-.stat-icon {
-    font-size: 48px;
-    color: #409EFF;
-    margin-right: 20px;
+.icon-item .el-icon {
+    font-size: 40px;
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.3s ease;
 }
 
-.stat-info {
+.compact-stat-card:hover .icon-item .el-icon {
+    transform: scale(1.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.compact-stat-content {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    position: relative;
+    z-index: 2;
+}
+
+.compact-stat-icon {
+    font-size: 24px;
+    margin-right: 12px;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.compact-stat-info {
     flex: 1;
 }
 
-.stat-value {
-    font-size: 24px;
+.compact-stat-value {
+    font-size: 44px;
     font-weight: bold;
-    color: #303133;
+    margin-bottom: 2px;
+    line-height: 1.2;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.stat-label {
-    font-size: 14px;
-    color: #909399;
-    margin-top: 5px;
+.compact-stat-label {
+    font-size: 12px;
+    opacity: 0.9;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.card-header {
+/* 不同统计卡片的配色 */
+.file-stat {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.record-stat {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.status-stat {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.update-stat {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+/* 状态指示器 */
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 8px;
+    display: inline-block;
+}
+
+.status-normal {
+    background-color: #52c41a;
+}
+
+.status-warning {
+    background-color: #faad14;
+}
+
+.status-error {
+    background-color: #ff4d4f;
+}
+
+/* 紧凑卡片样式 */
+.compact-card {
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #f5f5f5;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.compact-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+.compact-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 12px;
+    min-height: 24px;
 }
 
-.recent-files {
-    min-height: 300px;
+.compact-card-header span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #303133;
+    line-height: 1.2;
 }
 
-.quick-action {
-    min-height: 200px;
+.operation-controls {
+    display: flex;
+    align-items: center;
+}
+
+.compact-action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.compact-button {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    font-size: 13px;
+    padding: 6px 12px;
+}
+
+.compact-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* 紧凑信息网格 */
+.compact-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.compact-info-item {
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    border-radius: 6px;
+    background: #fafafa;
+    transition: all 0.2s ease;
+}
+
+.compact-info-item:hover {
+    background: #f5f5f5;
+    transform: translateY(-1px);
+}
+
+.compact-info-label {
+    font-size: 11px;
+    color: #909399;
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.compact-info-value {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.compact-info-main {
+    font-size: 13px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.compact-info-desc {
+    font-size: 10px;
+    color: #8c8c8c;
+}
+
+/* 现代化卡片样式 */
+.modern-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f0f0f0;
+}
+
+.modern-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.modern-card-header span {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
 }
 
 .action-buttons {
     display: flex;
     flex-direction: column;
-}
-
-.system-info {
-    min-height: 200px;
 }
 
 .info-list {
@@ -491,11 +797,6 @@ onMounted(() => {
     color: #303133;
 }
 
-.deployment-info,
-.services-info {
-    min-height: 300px;
-}
-
 .service-status {
     display: flex;
     align-items: center;
@@ -505,5 +806,199 @@ onMounted(() => {
 .service-port {
     font-size: 12px;
     color: #909399;
+}
+
+/* 最近操作记录样式 */
+.recent-operations {
+    min-height: 160px;
+}
+
+.no-operations {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 160px;
+}
+
+.operations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.operation-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-radius: 6px;
+    background: #fafafa;
+    transition: all 0.2s ease;
+    border: 1px solid #f0f0f0;
+}
+
+.operation-item:hover {
+    background: #f5f5f5;
+    transform: translateY(-1px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.operation-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.operation-icon .el-icon {
+    font-size: 14px;
+    color: white;
+}
+
+.operation-icon[data-type="INSERT"] {
+    background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+}
+
+.operation-icon[data-type="UPDATE"] {
+    background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+}
+
+.operation-icon[data-type="DELETE"] {
+    background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+}
+
+.operation-icon[data-type="OTHER"] {
+    background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);
+}
+
+.operation-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.operation-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.operation-table {
+    font-size: 11px;
+    color: #8c8c8c;
+    background: #f0f0f0;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.operation-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #8c8c8c;
+}
+
+.operation-user {
+    font-weight: 500;
+}
+
+.operation-time {
+    color: #bfbfbf;
+}
+
+.operation-status {
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .compact-stat-card {
+        padding: 12px;
+        min-height: 80px;
+    }
+
+    .compact-stat-icon {
+        font-size: 24px;
+        margin-right: 12px;
+    }
+
+    .compact-stat-value {
+        font-size: 18px;
+    }
+
+    .compact-stat-label {
+        font-size: 12px;
+    }
+
+    /* 移动端优化图标矩阵 */
+    .icon-matrix {
+        gap: 4px;
+        transform: rotate(-3deg);
+    }
+
+    .icon-row {
+        gap: 4px;
+    }
+
+    .icon-item .el-icon {
+        font-size: 24px;
+    }
+
+    .compact-info-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .operation-item {
+        padding: 8px;
+    }
+
+    .operation-title {
+        font-size: 13px;
+    }
+
+    .operation-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}
+
+/* 超小屏幕优化 */
+@media (max-width: 480px) {
+    .compact-stat-card {
+        min-height: 70px;
+        padding: 8px;
+    }
+
+    .compact-stat-value {
+        font-size: 16px;
+    }
+
+    .compact-stat-label {
+        font-size: 11px;
+    }
+
+    .icon-matrix {
+        gap: 2px;
+        transform: rotate(-2deg);
+    }
+
+    .icon-row {
+        gap: 2px;
+    }
+
+    .icon-item .el-icon {
+        font-size: 16px;
+    }
 }
 </style>

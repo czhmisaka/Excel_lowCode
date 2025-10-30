@@ -1,178 +1,171 @@
 <template>
-    <div class="data-editor">
-        <el-card>
-            <template #header>
-                <div class="card-header">
-                    <span>数据编辑</span>
-                    <div class="header-actions">
-                        <el-select v-model="selectedHash" placeholder="选择文件" style="width: 200px; margin-right: 10px;">
-                            <el-option v-for="file in fileList" :key="file.hash" :label="file.originalFileName"
-                                :value="file.hash" />
+    <div class="data-editor fade-in-up">
+        <!-- 工具栏 -->
+        <div class="modern-toolbar">
+            <div class="toolbar-content">
+                <el-select v-model="selectedHash" placeholder="选择文件" class="modern-input"
+                    style="width: 200px; margin-right: 10px;">
+                    <el-option v-for="file in fileList" :key="file.hash" :label="file.originalFileName"
+                        :value="file.hash" />
+                </el-select>
+                <el-button type="primary" @click="loadData" :disabled="!selectedHash" class="modern-button"
+                    :icon="Refresh">
+                    加载数据
+                </el-button>
+            </div>
+        </div>
+
+        <div class="editor-content">
+            <div class="info-tip" v-if="!selectedHash">
+                <el-alert title="请先选择要编辑的文件" type="info" show-icon :closable="false" />
+            </div>
+
+            <div v-else>
+                <!-- 搜索工具栏 -->
+                <div class="modern-toolbar">
+                    <!-- 搜索区域 -->
+                    <div class="search-section">
+                        <el-select v-model="searchColumn" placeholder="选择列" style="width: 150px; margin-right: 10px;">
+                            <el-option label="全部列" value="all" />
+                            <el-option v-for="column in availableSearchColumns" :key="column" :label="column"
+                                :value="column" />
                         </el-select>
-                        <el-button type="primary" @click="loadData" :disabled="!selectedHash">
+                        <el-input v-model="searchKeyword" placeholder="输入搜索关键词"
+                            style="width: 200px; margin-right: 10px;" @keyup.enter="handleSearch" clearable
+                            @clear="clearSearch">
+                            <template #append>
+                                <el-button @click="handleSearch">
+                                    <el-icon>
+                                        <Search />
+                                    </el-icon>
+                                </el-button>
+                            </template>
+                        </el-input>
+                        <el-button @click="clearSearch" :disabled="!hasSearchCondition">
                             <el-icon>
-                                <Refresh />
+                                <Close />
                             </el-icon>
-                            加载数据
+                            清除
+                        </el-button>
+                        <el-button type="primary" @click="showAdvancedSearch = !showAdvancedSearch">
+                            <el-icon>
+                                <Setting />
+                            </el-icon>
+                            高级搜索
+                        </el-button>
+                    </div>
+
+                    <!-- 高级搜索面板 -->
+                    <div v-if="showAdvancedSearch" class="advanced-search-panel">
+                        <div class="advanced-search-form">
+                            <div v-for="(condition, index) in advancedConditions" :key="index" class="condition-row">
+                                <el-select v-model="condition.column" placeholder="选择列"
+                                    style="width: 150px; margin-right: 10px;">
+                                    <el-option v-for="column in availableSearchColumns" :key="column" :label="column"
+                                        :value="column" />
+                                </el-select>
+                                <el-select v-model="condition.operator" placeholder="操作符"
+                                    style="width: 120px; margin-right: 10px;">
+                                    <el-option v-for="option in getOperatorOptions(condition.column)"
+                                        :key="option.value" :label="option.label" :value="option.value" />
+                                </el-select>
+                                <el-input v-model="condition.value" placeholder="输入值"
+                                    style="width: 200px; margin-right: 10px;" />
+                                <el-button @click="removeCondition(index)" type="danger" link>
+                                    <el-icon>
+                                        <Remove />
+                                    </el-icon>
+                                </el-button>
+                            </div>
+                            <div class="condition-actions">
+                                <el-button @click="addCondition" type="primary" link>
+                                    <el-icon>
+                                        <Plus />
+                                    </el-icon>
+                                    添加条件
+                                </el-button>
+                                <el-button @click="applyAdvancedSearch" type="primary">
+                                    应用搜索
+                                </el-button>
+                                <el-button @click="clearAdvancedSearch">
+                                    清除
+                                </el-button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮区域 -->
+                    <div class="action-buttons">
+                        <el-button type="primary" @click="showAddDialog">
+                            <el-icon>
+                                <Plus />
+                            </el-icon>
+                            新增记录
+                        </el-button>
+                        <el-button type="success" @click="handleImportExcel">
+                            <el-icon>
+                                <Upload />
+                            </el-icon>
+                            导入Excel
+                        </el-button>
+                        <el-button type="info" @click="generateQRCode" :disabled="!selectedHash">
+                            <el-icon>
+                                <svg viewBox="0 0 1024 1024" width="1em" height="1em">
+                                    <path d="M128 128h768v768H128z" fill="currentColor"></path>
+                                    <path d="M384 384h256v256H384z" fill="currentColor"></path>
+                                </svg>
+                            </el-icon>
+                            生成填写二维码
+                        </el-button>
+                        <el-button type="info" @click="goToTableStructureEditor" :disabled="!selectedHash">
+                            <el-icon>
+                                <Edit />
+                            </el-icon>
+                            表结构编辑
+                        </el-button>
+                        <el-button type="danger" @click="deleteSelectedRows" :disabled="selectedRows.length === 0">
+                            <el-icon>
+                                <Delete />
+                            </el-icon>
+                            删除选中
                         </el-button>
                     </div>
                 </div>
-            </template>
 
-            <div class="editor-content">
-                <div class="info-tip" v-if="!selectedHash">
-                    <el-alert title="请先选择要编辑的文件" type="info" show-icon :closable="false" />
-                </div>
+                <el-table :data="tableData" v-loading="loading" border style="width: 100%"
+                    @selection-change="handleSelectionChange">
+                    <el-table-column type="selection" width="55" />
+                    <el-table-column v-for="column in tableColumns" :key="column" :prop="column" :label="column"
+                        min-width="120">
+                        <template #default="scope">
+                            <el-input v-if="editingRow === scope.$index && column.toLowerCase() !== 'id'"
+                                v-model="scope.row[column]" @blur="saveRowEdit(scope.row)" />
+                            <span v-else @dblclick="column.toLowerCase() !== 'id' ? startEdit(scope.$index) : null"
+                                :class="{ 'non-editable': column.toLowerCase() === 'id' }">
+                                {{ scope.row[column] }}
+                            </span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="150" fixed="right">
+                        <template #default="scope">
+                            <el-button type="primary" link @click="showEditDialog(scope.row)" :disabled="!scope.row.id">
+                                编辑
+                            </el-button>
+                            <el-button type="danger" link @click="deleteSingleRow(scope.row, scope.$index)">
+                                删除
+                            </el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
 
-                <div v-else>
-                    <div class="editor-toolbar">
-                        <!-- 搜索区域 -->
-                        <div class="search-section">
-                            <el-select v-model="searchColumn" placeholder="选择列"
-                                style="width: 150px; margin-right: 10px;">
-                                <el-option label="全部列" value="all" />
-                                <el-option v-for="column in availableSearchColumns" :key="column" :label="column"
-                                    :value="column" />
-                            </el-select>
-                            <el-input v-model="searchKeyword" placeholder="输入搜索关键词"
-                                style="width: 200px; margin-right: 10px;" @keyup.enter="handleSearch" clearable
-                                @clear="clearSearch">
-                                <template #append>
-                                    <el-button @click="handleSearch">
-                                        <el-icon>
-                                            <Search />
-                                        </el-icon>
-                                    </el-button>
-                                </template>
-                            </el-input>
-                            <el-button @click="clearSearch" :disabled="!hasSearchCondition">
-                                <el-icon>
-                                    <Close />
-                                </el-icon>
-                                清除
-                            </el-button>
-                            <el-button type="primary" @click="showAdvancedSearch = !showAdvancedSearch">
-                                <el-icon>
-                                    <Setting />
-                                </el-icon>
-                                高级搜索
-                            </el-button>
-                        </div>
-
-                        <!-- 高级搜索面板 -->
-                        <div v-if="showAdvancedSearch" class="advanced-search-panel">
-                            <div class="advanced-search-form">
-                                <div v-for="(condition, index) in advancedConditions" :key="index"
-                                    class="condition-row">
-                                    <el-select v-model="condition.column" placeholder="选择列"
-                                        style="width: 150px; margin-right: 10px;">
-                                        <el-option v-for="column in availableSearchColumns" :key="column"
-                                            :label="column" :value="column" />
-                                    </el-select>
-                                    <el-select v-model="condition.operator" placeholder="操作符"
-                                        style="width: 120px; margin-right: 10px;">
-                                        <el-option v-for="option in getOperatorOptions(condition.column)"
-                                            :key="option.value" :label="option.label" :value="option.value" />
-                                    </el-select>
-                                    <el-input v-model="condition.value" placeholder="输入值"
-                                        style="width: 200px; margin-right: 10px;" />
-                                    <el-button @click="removeCondition(index)" type="danger" link>
-                                        <el-icon>
-                                            <Remove />
-                                        </el-icon>
-                                    </el-button>
-                                </div>
-                                <div class="condition-actions">
-                                    <el-button @click="addCondition" type="primary" link>
-                                        <el-icon>
-                                            <Plus />
-                                        </el-icon>
-                                        添加条件
-                                    </el-button>
-                                    <el-button @click="applyAdvancedSearch" type="primary">
-                                        应用搜索
-                                    </el-button>
-                                    <el-button @click="clearAdvancedSearch">
-                                        清除
-                                    </el-button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 操作按钮区域 -->
-                        <div class="action-buttons">
-                            <el-button type="primary" @click="showAddDialog">
-                                <el-icon>
-                                    <Plus />
-                                </el-icon>
-                                新增记录
-                            </el-button>
-                            <el-button type="success" @click="handleImportExcel">
-                                <el-icon>
-                                    <Upload />
-                                </el-icon>
-                                导入Excel
-                            </el-button>
-                            <el-button type="info" @click="generateQRCode" :disabled="!selectedHash">
-                                <el-icon>
-                                    <svg viewBox="0 0 1024 1024" width="1em" height="1em">
-                                        <path d="M128 128h768v768H128z" fill="currentColor"></path>
-                                        <path d="M384 384h256v256H384z" fill="currentColor"></path>
-                                    </svg>
-                                </el-icon>
-                                生成填写二维码
-                            </el-button>
-                            <el-button type="info" @click="goToTableStructureEditor" :disabled="!selectedHash">
-                                <el-icon>
-                                    <Edit />
-                                </el-icon>
-                                表结构编辑
-                            </el-button>
-                            <el-button type="danger" @click="deleteSelectedRows" :disabled="selectedRows.length === 0">
-                                <el-icon>
-                                    <Delete />
-                                </el-icon>
-                                删除选中
-                            </el-button>
-                        </div>
-                    </div>
-
-                    <el-table :data="tableData" v-loading="loading" border style="width: 100%"
-                        @selection-change="handleSelectionChange">
-                        <el-table-column type="selection" width="55" />
-                        <el-table-column v-for="column in tableColumns" :key="column" :prop="column" :label="column"
-                            min-width="120">
-                            <template #default="scope">
-                                <el-input v-if="editingRow === scope.$index && column.toLowerCase() !== 'id'"
-                                    v-model="scope.row[column]" @blur="saveRowEdit(scope.row)" />
-                                <span v-else @dblclick="column.toLowerCase() !== 'id' ? startEdit(scope.$index) : null"
-                                    :class="{ 'non-editable': column.toLowerCase() === 'id' }">
-                                    {{ scope.row[column] }}
-                                </span>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="操作" width="150" fixed="right">
-                            <template #default="scope">
-                                <el-button type="primary" link @click="showEditDialog(scope.row)"
-                                    :disabled="!scope.row.id">
-                                    编辑
-                                </el-button>
-                                <el-button type="danger" link @click="deleteSingleRow(scope.row, scope.$index)">
-                                    删除
-                                </el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-
-                    <div class="pagination" v-if="tableData.length > 0">
-                        <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
-                            :page-sizes="[10, 20, 50, 100, 1000]" :total="totalRecords"
-                            layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
-                            @current-change="handleCurrentChange" />
-                    </div>
+                <div class="pagination" v-if="tableData.length > 0">
+                    <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
+                        :page-sizes="[10, 20, 50, 100, 1000]" :total="totalRecords"
+                        layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
+                        @current-change="handleCurrentChange" />
                 </div>
             </div>
-        </el-card>
+        </div>
 
         <!-- 新增记录弹窗 -->
         <el-dialog v-model="addDialogVisible" title="新增记录" width="600px" :before-close="handleAddDialogClose">

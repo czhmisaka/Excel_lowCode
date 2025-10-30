@@ -1,0 +1,320 @@
+/* 现代化UI样式系统 */
+
+:root {
+    /* 颜色系统 */
+    --primary-color: #1890ff;
+    --primary-hover: #40a9ff;
+    --primary-active: #096dd9;
+    --success-color: #52c41a;
+    --warning-color: #faad14;
+    --error-color: #ff4d4f;
+    --info-color: #1890ff;
+
+    /* 中性色 */
+    --text-primary: #262626;
+    --text-secondary: #595959;
+    --text-tertiary: #8c8c8c;
+    --text-disabled: #bfbfbf;
+
+    /* 背景色 */
+    --bg-primary: #ffffff;
+    --bg-secondary: #fafafa;
+    --bg-tertiary: #f5f5f5;
+    --bg-overlay: rgba(0, 0, 0, 0.45);
+
+    /* 边框色 */
+    --border-light: #f0f0f0;
+    --border-base: #d9d9d9;
+    --border-dark: #bfbfbf;
+
+    /* 阴影系统 */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+    --shadow-base: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08),
+        0 9px 28px 8px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 8px 16px -4px rgba(0, 0, 0, 0.12), 0 16px 32px 0 rgba(0, 0, 0, 0.08),
+        0 32px 64px 12px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 12px 24px -6px rgba(0, 0, 0, 0.16), 0 24px 48px 0 rgba(0, 0, 0, 0.12),
+        0 48px 96px 12px rgba(0, 0, 0, 0.08);
+
+    /* 渐变阴影 */
+    --gradient-shadow: 0 8px 32px rgba(24, 144, 255, 0.12);
+    --gradient-shadow-hover: 0 12px 48px rgba(24, 144, 255, 0.18);
+
+    /* 圆角系统 */
+    --radius-sm: 4px;
+    --radius-base: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-full: 50%;
+
+    /* 间距系统 */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 12px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+    --space-3xl: 64px;
+
+    /* 过渡动画 */
+    --transition-fast: 0.15s ease-in-out;
+    --transition-base: 0.2s ease-in-out;
+    --transition-slow: 0.3s ease-in-out;
+}
+
+/* 现代化卡片样式 */
+.modern-card {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-base);
+    border: 1px solid var(--border-light);
+    transition: all var(--transition-base);
+    padding: 8px;
+}
+
+.modern-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.modern-card--elevated {
+    box-shadow: var(--shadow-lg);
+    border: none;
+}
+
+.modern-card--gradient {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    box-shadow: var(--gradient-shadow);
+}
+
+.modern-card--gradient:hover {
+    box-shadow: var(--gradient-shadow-hover);
+}
+
+/* 现代化按钮样式 */
+.modern-button {
+    border-radius: var(--radius-base);
+    font-weight: 500;
+    transition: all var(--transition-base);
+    border: none;
+    box-shadow: var(--shadow-sm);
+}
+
+.modern-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-base);
+}
+
+.modern-button:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* 现代化表格样式 */
+.modern-table {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+}
+
+.modern-table .el-table__header {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+}
+
+.modern-table .el-table__body tr:hover > td {
+    background-color: rgba(24, 144, 255, 0.04) !important;
+}
+
+/* 现代化输入框样式 */
+.modern-input .el-input__wrapper {
+    border-radius: var(--radius-base);
+    transition: all var(--transition-base);
+    box-shadow: var(--shadow-sm);
+}
+
+.modern-input .el-input__wrapper:hover {
+    box-shadow: var(--shadow-base);
+}
+
+.modern-input .el-input__wrapper.is-focus {
+    box-shadow: var(--gradient-shadow);
+}
+
+/* 现代化标签样式 */
+.modern-tag {
+    border-radius: var(--radius-base);
+    font-weight: 500;
+    border: none;
+    box-shadow: var(--shadow-sm);
+}
+
+/* 现代化对话框样式 */
+.modern-dialog .el-dialog {
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    border: none;
+}
+
+.modern-dialog .el-dialog__header {
+    border-bottom: 1px solid var(--border-light);
+    padding: var(--space-lg);
+    margin: 0;
+}
+
+.modern-dialog .el-dialog__body {
+    padding: var(--space-lg);
+}
+
+.modern-dialog .el-dialog__footer {
+    border-top: 1px solid var(--border-light);
+    padding: var(--space-lg);
+    margin: 0;
+}
+
+/* 现代化分页样式 */
+.modern-pagination .el-pagination {
+    justify-content: flex-end;
+}
+
+.modern-pagination .el-pager li {
+    border-radius: var(--radius-base);
+    margin: 0 var(--space-xs);
+}
+
+.modern-pagination .el-pager li.is-active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+/* 现代化工具栏样式 */
+.modern-toolbar {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+    margin-bottom: var(--space-lg);
+}
+
+/* 现代化页面头部样式 */
+.modern-page-header {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-lg);
+    box-shadow: var(--shadow-base);
+    border: 1px solid var(--border-light);
+}
+
+.modern-page-header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 var(--space-sm) 0;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.modern-page-header p {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin: 0;
+    font-weight: 400;
+}
+
+/* 现代化表单样式 */
+.modern-form .el-form-item__label {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.modern-form .el-form-item {
+    margin-bottom: var(--space-lg);
+}
+
+/* 现代化描述列表样式 */
+.modern-descriptions {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .modern-page-header {
+        padding: var(--space-lg);
+        margin-bottom: var(--space-md);
+    }
+
+    .modern-page-header h1 {
+        font-size: 24px;
+    }
+
+    .modern-toolbar {
+        padding: var(--space-md);
+    }
+
+    .modern-card {
+        border-radius: var(--radius-base);
+    }
+
+    .user-management,
+    .log-management,
+    .data-browser,
+    .data-editor,
+    .file-management,
+    .mapping-relations,
+    .dashboard,
+    .table-structure-editor-view {
+        padding: 8px;
+    }
+}
+
+/* 修复侧边栏折叠状态下tooltip中的图标显示 */
+.el-menu-tooltip__trigger .el-icon {
+    font-size: 20px !important;
+    color: #bfcbd9 !important;
+    margin-right: 0 !important;
+}
+
+.el-menu-tooltip__trigger {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* 动画效果 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp var(--transition-slow) ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.slide-in-right {
+    animation: slideInRight var(--transition-base) ease-out;
+}

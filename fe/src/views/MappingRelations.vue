@@ -1,54 +1,49 @@
 <template>
-    <div class="mapping-relations">
-        <el-card>
-            <template #header>
-                <div class="card-header">
-                    <span>映射关系</span>
-                    <el-button type="primary" @click="refreshMappings">
-                        <el-icon>
-                            <Refresh />
-                        </el-icon>
-                        刷新
-                    </el-button>
-                </div>
-            </template>
-
-            <div class="mapping-list">
-                <el-table :data="mappingList" v-loading="loading">
-                    <el-table-column prop="tableName" label="表名" width="200" />
-                    <el-table-column prop="hashValue" label="文件哈希" width="320">
-                        <template #default="scope">
-                            <div class="hash-cell">
-                                <el-tooltip :content="scope.row.hashValue" placement="top">
-                                    <span class="hash-value">{{ formatHash(scope.row.hashValue) }}</span>
-                                </el-tooltip>
-                                <el-button type="text" size="small" @click="copyHash(scope.row.hashValue)"
-                                    class="copy-btn">
-                                    <el-icon>
-                                        <CopyDocument />
-                                    </el-icon>
-                                </el-button>
-                            </div>
-                        </template>
-                    </el-table-column>
-                    <el-table-column prop="originalFileName" label="原始文件名" min-width="200" />
-                    <el-table-column prop="rowCount" label="记录数" width="100" />
-                    <el-table-column prop="columnCount" label="列数" width="80" />
-                    <el-table-column prop="createdAt" label="创建时间" width="180" />
-                    <el-table-column prop="updatedAt" label="更新时间" width="180" />
-                    <el-table-column label="操作" width="180">
-                        <template #default="scope">
-                            <el-button type="primary" link @click="viewColumnDefinitions(scope.row)">
-                                查看结构
-                            </el-button>
-                            <el-button type="primary" link @click="openEditTableNameDialog(scope.row)">
-                                编辑表名
-                            </el-button>
-                        </template>
-                    </el-table-column>
-                </el-table>
+    <div class="mapping-relations fade-in-up">
+        <!-- 工具栏 -->
+        <div class="modern-toolbar">
+            <div class="toolbar-content">
+                <el-button type="primary" @click="refreshMappings" class="modern-button" :icon="Refresh">
+                    刷新
+                </el-button>
             </div>
-        </el-card>
+        </div>
+
+        <!-- 映射关系表格 -->
+        <div class="modern-card">
+            <el-table :data="mappingList" v-loading="loading" border stripe class="modern-table">
+                <el-table-column prop="tableName" label="表名" width="200" />
+                <el-table-column prop="hashValue" label="文件哈希" width="320">
+                    <template #default="scope">
+                        <div class="hash-cell">
+                            <el-tooltip :content="scope.row.hashValue" placement="top">
+                                <span class="hash-value">{{ formatHash(scope.row.hashValue) }}</span>
+                            </el-tooltip>
+                            <el-button type="text" size="small" @click="copyHash(scope.row.hashValue)" class="copy-btn">
+                                <el-icon>
+                                    <CopyDocument />
+                                </el-icon>
+                            </el-button>
+                        </div>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="originalFileName" label="原始文件名" min-width="200" />
+                <el-table-column prop="rowCount" label="记录数" width="100" />
+                <el-table-column prop="columnCount" label="列数" width="80" />
+                <el-table-column prop="createdAt" label="创建时间" width="180" />
+                <el-table-column prop="updatedAt" label="更新时间" width="180" />
+                <el-table-column label="操作" width="180">
+                    <template #default="scope">
+                        <el-button type="primary" link @click="viewColumnDefinitions(scope.row)">
+                            查看结构
+                        </el-button>
+                        <el-button type="primary" link @click="openEditTableNameDialog(scope.row)">
+                            编辑表名
+                        </el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </div>
 
         <!-- 列定义对话框 -->
         <el-dialog v-model="showColumnDialog" title="表结构信息" width="600px">

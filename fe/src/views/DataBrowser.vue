@@ -1,38 +1,34 @@
 <template>
-    <div class="data-browser">
-        <el-card>
-            <template #header>
-                <div class="card-header">
-                    <span>数据浏览</span>
-                    <div class="header-actions">
-                        <el-select v-model="selectedHash" placeholder="选择文件" style="width: 200px; margin-right: 10px;">
-                            <el-option v-for="file in fileList" :key="file.hash" :label="file.originalFileName"
-                                :value="file.hash" />
-                        </el-select>
-                        <el-button type="primary" @click="loadData" :disabled="!selectedHash">
-                            <el-icon>
-                                <Refresh />
-                            </el-icon>
-                            加载数据
-                        </el-button>
-                    </div>
-                </div>
-            </template>
-
-            <div class="data-table">
-                <el-table :data="tableData" v-loading="loading" border style="width: 100%">
-                    <el-table-column v-for="column in tableColumns" :key="column" :prop="column" :label="column"
-                        min-width="120" />
-                </el-table>
-
-                <div class="pagination" v-if="tableData.length > 0">
-                    <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
-                        :page-sizes="[10, 20, 50, 100]" :total="totalRecords"
-                        layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
-                        @current-change="handleCurrentChange" />
-                </div>
+    <div class="data-browser fade-in-up">
+        <!-- 工具栏 -->
+        <div class="modern-toolbar">
+            <div class="toolbar-content">
+                <el-select v-model="selectedHash" placeholder="选择文件" class="modern-input"
+                    style="width: 200px; margin-right: 10px;">
+                    <el-option v-for="file in fileList" :key="file.hash" :label="file.originalFileName"
+                        :value="file.hash" />
+                </el-select>
+                <el-button type="primary" @click="loadData" :disabled="!selectedHash" class="modern-button"
+                    :icon="Refresh">
+                    加载数据
+                </el-button>
             </div>
-        </el-card>
+        </div>
+
+        <!-- 数据表格 -->
+        <div class="modern-card">
+            <el-table :data="tableData" v-loading="loading" border stripe class="modern-table" style="width: 100%">
+                <el-table-column v-for="column in tableColumns" :key="column" :prop="column" :label="column"
+                    min-width="120" />
+            </el-table>
+
+            <div class="modern-pagination" v-if="tableData.length > 0">
+                <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50, 100]" :total="totalRecords"
+                    layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
+                    @current-change="handleCurrentChange" />
+            </div>
+        </div>
     </div>
 </template>
 

@@ -1,12 +1,7 @@
 <template>
-    <div class="log-management">
-        <div class="page-header">
-            <h1>操作日志管理</h1>
-            <p>查看和管理所有数据操作记录</p>
-        </div>
-
+    <div class="log-management fade-in-up">
         <!-- 搜索和筛选栏 -->
-        <div class="toolbar">
+        <div class="modern-toolbar">
             <el-form :model="filterForm" :inline="true">
                 <el-form-item label="操作类型">
                     <el-select v-model="filterForm.operationType" placeholder="全部类型" clearable>
@@ -46,138 +41,144 @@
         </div>
 
         <!-- 日志表格 -->
-        <el-table v-loading="loading" :data="logList" border stripe style="width: 100%">
-            <el-table-column prop="id" label="ID" width="80" />
-            <el-table-column prop="operationType" label="操作类型" width="100">
-                <template #default="{ row }">
-                    <el-tag :type="getOperationTypeTag(row.operationType)">
-                        {{ getOperationTypeText(row.operationType) }}
-                    </el-tag>
-                </template>
-            </el-table-column>
-            <el-table-column prop="tableName" label="表名" min-width="150" />
-            <el-table-column prop="tableHash" label="表哈希" min-width="120">
-                <template #default="{ row }">
-                    <el-tooltip :content="row.tableHash" placement="top">
-                        <span>{{ row.tableHash.substring(0, 8) }}...</span>
-                    </el-tooltip>
-                </template>
-            </el-table-column>
-            <el-table-column prop="recordId" label="记录ID" width="100" />
-            <el-table-column prop="username" label="操作用户" width="120" />
-            <el-table-column prop="operationTime" label="操作时间" width="180">
-                <template #default="{ row }">
-                    {{ formatDate(row.operationTime) }}
-                </template>
-            </el-table-column>
-            <el-table-column prop="isRolledBack" label="回退状态" width="100">
-                <template #default="{ row }">
-                    <el-tag :type="row.isRolledBack ? 'info' : 'success'">
-                        {{ row.isRolledBack ? '已回退' : '未回退' }}
-                    </el-tag>
-                </template>
-            </el-table-column>
-            <el-table-column prop="description" label="操作描述" min-width="200" show-overflow-tooltip />
-            <el-table-column label="操作" width="150" fixed="right">
-                <template #default="{ row }">
-                    <el-button size="small" type="primary" :icon="View" @click="handleViewDetail(row)">
-                        详情
-                    </el-button>
-                    <el-button v-if="!row.isRolledBack" size="small" type="warning" :icon="RefreshLeft"
-                        @click="handleRollback(row)">
-                        回退
-                    </el-button>
-                </template>
-            </el-table-column>
-        </el-table>
-
-        <!-- 分页 -->
-        <div class="pagination">
-            <el-pagination v-model:current-page="pagination.currentPage" v-model:page-size="pagination.pageSize"
-                :page-sizes="[10, 20, 50, 100]" :total="pagination.total"
-                layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
-                @current-change="handleCurrentChange" />
-        </div>
-
-        <!-- 日志详情对话框 -->
-        <el-dialog v-model="detailDialogVisible" title="操作日志详情" width="800px" :close-on-click-modal="false">
-            <div v-if="currentLog" class="log-detail">
-                <el-descriptions :column="2" border>
-                    <el-descriptions-item label="操作ID">{{ currentLog.id }}</el-descriptions-item>
-                    <el-descriptions-item label="操作类型">
-                        <el-tag :type="getOperationTypeTag(currentLog.operationType)">
-                            {{ getOperationTypeText(currentLog.operationType) }}
+        <div class="modern-card" style="margin-bottom: 20px;">
+            <el-table v-loading="loading" :data="logList" border stripe class="modern-table" style="width: 100%">
+                <el-table-column prop="id" label="ID" width="80" />
+                <el-table-column prop="operationType" label="操作类型" width="100">
+                    <template #default="{ row }">
+                        <el-tag :type="getOperationTypeTag(row.operationType)">
+                            {{ getOperationTypeText(row.operationType) }}
                         </el-tag>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="表名">{{ currentLog.tableName }}</el-descriptions-item>
-                    <el-descriptions-item label="表哈希">{{ currentLog.tableHash }}</el-descriptions-item>
-                    <el-descriptions-item label="记录ID">{{ currentLog.recordId || '-' }}</el-descriptions-item>
-                    <el-descriptions-item label="操作用户">{{ currentLog.username }}</el-descriptions-item>
-                    <el-descriptions-item label="操作时间">{{ formatDate(currentLog.operationTime) }}</el-descriptions-item>
-                    <el-descriptions-item label="回退状态">
-                        <el-tag :type="currentLog.isRolledBack ? 'info' : 'success'">
-                            {{ currentLog.isRolledBack ? '已回退' : '未回退' }}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="tableName" label="表名" min-width="150" />
+                <el-table-column prop="tableHash" label="表哈希" min-width="120">
+                    <template #default="{ row }">
+                        <el-tooltip :content="row.tableHash" placement="top">
+                            <span>{{ row.tableHash.substring(0, 8) }}...</span>
+                        </el-tooltip>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="recordId" label="记录ID" width="100" />
+                <el-table-column prop="username" label="操作用户" width="120" />
+                <el-table-column prop="operationTime" label="操作时间" width="180">
+                    <template #default="{ row }">
+                        {{ formatDate(row.operationTime) }}
+                    </template>
+                </el-table-column>
+                <el-table-column prop="isRolledBack" label="回退状态" width="100">
+                    <template #default="{ row }">
+                        <el-tag :type="row.isRolledBack ? 'info' : 'success'">
+                            {{ row.isRolledBack ? '已回退' : '未回退' }}
                         </el-tag>
-                    </el-descriptions-item>
-                    <el-descriptions-item label="操作描述" :span="2">
-                        {{ currentLog.description || '-' }}
-                    </el-descriptions-item>
-                </el-descriptions>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="description" label="操作描述" min-width="200" show-overflow-tooltip />
+                <el-table-column label="操作" width="150" fixed="right">
+                    <template #default="{ row }">
+                        <el-button size="small" type="primary" :icon="View" @click="handleViewDetail(row)">
+                            详情
+                        </el-button>
+                        <el-button v-if="!row.isRolledBack" size="small" type="warning" :icon="RefreshLeft"
+                            @click="handleRollback(row)">
+                            回退
+                        </el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
 
-                <!-- 数据对比 -->
-                <div class="data-comparison">
-                    <h3>数据对比</h3>
-                    <DataComparison :old-data="currentLog.oldData" :new-data="currentLog.newData"
-                        :table-structure="tableStructure" :operation-type="currentLog.operationType" />
-                </div>
+            <!-- 分页 -->
+            <div class="modern-pagination">
+                <el-pagination v-model:current-page="pagination.currentPage" v-model:page-size="pagination.pageSize"
+                    :page-sizes="[10, 20, 50, 100]" :total="pagination.total"
+                    layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
+                    @current-change="handleCurrentChange" />
+            </div>
 
-                <!-- 回退信息 -->
-                <div v-if="currentLog.isRolledBack" class="rollback-info">
-                    <h3>回退信息</h3>
+            <!-- 日志详情对话框 -->
+            <el-dialog v-model="detailDialogVisible" title="操作日志详情" width="800px" :close-on-click-modal="false"
+                class="modern-dialog" append-to-body>
+                <div v-if="currentLog" class="log-detail">
                     <el-descriptions :column="2" border>
-                        <el-descriptions-item label="回退时间">{{ formatDate(currentLog.rollbackTime)
-                            }}</el-descriptions-item>
-                        <el-descriptions-item label="回退用户">{{ currentLog.rollbackUsername }}</el-descriptions-item>
-                        <el-descriptions-item label="回退描述" :span="2">
-                            {{ currentLog.rollbackDescription || '-' }}
+                        <el-descriptions-item label="操作ID">{{ currentLog.id }}</el-descriptions-item>
+                        <el-descriptions-item label="操作类型">
+                            <el-tag :type="getOperationTypeTag(currentLog.operationType)">
+                                {{ getOperationTypeText(currentLog.operationType) }}
+                            </el-tag>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="表名">{{ currentLog.tableName }}</el-descriptions-item>
+                        <el-descriptions-item label="表哈希">{{ currentLog.tableHash }}</el-descriptions-item>
+                        <el-descriptions-item label="记录ID">{{ currentLog.recordId || '-' }}</el-descriptions-item>
+                        <el-descriptions-item label="操作用户">{{ currentLog.username }}</el-descriptions-item>
+                        <el-descriptions-item label="操作时间">{{ formatDate(currentLog.operationTime)
+                        }}</el-descriptions-item>
+                        <el-descriptions-item label="回退状态">
+                            <el-tag :type="currentLog.isRolledBack ? 'info' : 'success'">
+                                {{ currentLog.isRolledBack ? '已回退' : '未回退' }}
+                            </el-tag>
+                        </el-descriptions-item>
+                        <el-descriptions-item label="操作描述" :span="2">
+                            {{ currentLog.description || '-' }}
                         </el-descriptions-item>
                     </el-descriptions>
-                </div>
-            </div>
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button @click="detailDialogVisible = false">关闭</el-button>
-                </span>
-            </template>
-        </el-dialog>
 
-        <!-- 回退确认对话框 -->
-        <el-dialog v-model="rollbackDialogVisible" title="确认回退操作" width="500px" :close-on-click-modal="false">
-            <div v-if="currentLog" class="rollback-confirm">
-                <p>确定要回退以下操作吗？</p>
-                <el-descriptions :column="1" border>
-                    <el-descriptions-item label="操作类型">{{ getOperationTypeText(currentLog.operationType)
+                    <!-- 数据对比 -->
+                    <div class="data-comparison">
+                        <h3>数据对比</h3>
+                        <DataComparison :old-data="currentLog.oldData" :new-data="currentLog.newData"
+                            :table-structure="tableStructure" :operation-type="currentLog.operationType" />
+                    </div>
+
+                    <!-- 回退信息 -->
+                    <div v-if="currentLog.isRolledBack" class="rollback-info">
+                        <h3>回退信息</h3>
+                        <el-descriptions :column="2" border>
+                            <el-descriptions-item label="回退时间">{{ formatDate(currentLog.rollbackTime)
+                            }}</el-descriptions-item>
+                            <el-descriptions-item label="回退用户">{{ currentLog.rollbackUsername }}</el-descriptions-item>
+                            <el-descriptions-item label="回退描述" :span="2">
+                                {{ currentLog.rollbackDescription || '-' }}
+                            </el-descriptions-item>
+                        </el-descriptions>
+                    </div>
+                </div>
+                <template #footer>
+                    <span class="dialog-footer">
+                        <el-button @click="detailDialogVisible = false">关闭</el-button>
+                    </span>
+                </template>
+            </el-dialog>
+
+            <!-- 回退确认对话框 -->
+            <el-dialog v-model="rollbackDialogVisible" title="确认回退操作" width="500px" :close-on-click-modal="false"
+                class="modern-dialog" append-to-body>
+                <div v-if="currentLog" class="rollback-confirm">
+                    <p>确定要回退以下操作吗？</p>
+                    <el-descriptions :column="1" border>
+                        <el-descriptions-item label="操作类型">{{ getOperationTypeText(currentLog.operationType)
                         }}</el-descriptions-item>
-                    <el-descriptions-item label="表名">{{ currentLog.tableName }}</el-descriptions-item>
-                    <el-descriptions-item label="记录ID">{{ currentLog.recordId || '-' }}</el-descriptions-item>
-                    <el-descriptions-item label="操作时间">{{ formatDate(currentLog.operationTime) }}</el-descriptions-item>
-                </el-descriptions>
-                <el-form :model="rollbackForm" label-width="100px" style="margin-top: 20px;">
-                    <el-form-item label="回退描述">
-                        <el-input v-model="rollbackForm.description" type="textarea" :rows="3"
-                            placeholder="请输入回退操作的描述（可选）" />
-                    </el-form-item>
-                </el-form>
-            </div>
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button @click="rollbackDialogVisible = false">取消</el-button>
-                    <el-button type="warning" @click="handleConfirmRollback" :loading="submitting">
-                        确认回退
-                    </el-button>
-                </span>
-            </template>
-        </el-dialog>
+                        <el-descriptions-item label="表名">{{ currentLog.tableName }}</el-descriptions-item>
+                        <el-descriptions-item label="记录ID">{{ currentLog.recordId || '-' }}</el-descriptions-item>
+                        <el-descriptions-item label="操作时间">{{ formatDate(currentLog.operationTime)
+                        }}</el-descriptions-item>
+                    </el-descriptions>
+                    <el-form :model="rollbackForm" label-width="100px" style="margin-top: 20px;">
+                        <el-form-item label="回退描述">
+                            <el-input v-model="rollbackForm.description" type="textarea" :rows="3"
+                                placeholder="请输入回退操作的描述（可选）" />
+                        </el-form-item>
+                    </el-form>
+                </div>
+                <template #footer>
+                    <span class="dialog-footer">
+                        <el-button @click="rollbackDialogVisible = false">取消</el-button>
+                        <el-button type="warning" @click="handleConfirmRollback" :loading="submitting">
+                            确认回退
+                        </el-button>
+                    </span>
+                </template>
+            </el-dialog>
+        </div>
     </div>
 </template>
 
@@ -426,9 +427,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.log-management {
-    padding: 20px;
-}
+.log-management {}
 
 .page-header {
     margin-bottom: 20px;
