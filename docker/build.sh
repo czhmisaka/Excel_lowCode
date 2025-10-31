@@ -41,6 +41,29 @@ check_docker() {
     fi
 }
 
+# 生成MCP API密钥
+generate_mcp_api_key() {
+    local key_file=".mcp_api_key"
+    
+    # 如果已有密钥文件，使用现有密钥（确保备份恢复时密钥一致）
+    if [ -f "$key_file" ]; then
+        MCP_API_KEY=$(cat "$key_file")
+        log_info "使用现有的MCP API密钥: ${MCP_API_KEY:0:8}..."
+    else
+        # 生成新的UUID作为API密钥
+        if command -v uuidgen &> /dev/null; then
+            MCP_API_KEY=$(uuidgen | tr -d '-')
+        else
+            # 如果没有uuidgen，使用其他方法生成唯一ID
+            MCP_API_KEY=$(date +%s | sha256sum | base64 | head -c 32 ; echo)
+        fi
+        echo "$MCP_API_KEY" > "$key_file"
+        log_info "生成新的MCP API密钥: ${MCP_API_KEY:0:8}..."
+    fi
+    
+    export MCP_API_KEY
+}
+
 # 加载环境变量
 load_env() {
     if [ -f docker/.env ]; then
@@ -49,6 +72,9 @@ load_env() {
     else
         log_warning "未找到.env文件，使用默认配置"
     fi
+    
+    # 生成MCP API密钥
+    generate_mcp_api_key
 }
 
 # 构建镜像

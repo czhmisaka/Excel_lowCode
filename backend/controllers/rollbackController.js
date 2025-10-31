@@ -116,13 +116,13 @@ class RollbackController {
 
             // 检查操作类型是否支持回退
             if (log.operationType === 'create') {
-                const result = await this.rollbackCreateOperation(log, req, description);
+                const result = await RollbackController.rollbackCreateOperation(log, req, description);
                 return res.json(result);
             } else if (log.operationType === 'update') {
-                const result = await this.rollbackUpdateOperation(log, req, description);
+                const result = await RollbackController.rollbackUpdateOperation(log, req, description);
                 return res.json(result);
             } else if (log.operationType === 'delete') {
-                const result = await this.rollbackDeleteOperation(log, req, description);
+                const result = await RollbackController.rollbackDeleteOperation(log, req, description);
                 return res.json(result);
             } else {
                 return res.status(400).json({
@@ -231,8 +231,13 @@ class RollbackController {
             throw new Error('要回退的记录不存在');
         }
 
-        // 解析旧数据
-        const oldData = JSON.parse(log.oldData);
+        // 解析旧数据 - 添加错误处理
+        let oldData;
+        try {
+            oldData = JSON.parse(log.oldData);
+        } catch (error) {
+            throw new Error(`解析旧数据失败: ${error.message}`);
+        }
 
         // 执行更新操作，恢复旧数据
         await DynamicModel.update(oldData, {
@@ -294,11 +299,41 @@ class RollbackController {
         // 获取动态表模型
         const DynamicModel = getDynamicModel(log.tableHash, mapping.columnDefinitions);
 
-        // 解析旧数据
-        const oldData = JSON.parse(log.oldData);
+        // 解析旧数据 - 添加错误处理
+        let oldData;
+        try {
+            oldData = JSON.parse(log.oldData);
+        } catch (error) {
+            throw new Error(`解析旧数据失败: ${error.message}`);
+        }
+
+        // 验证旧数据的完整性
+        if (!oldData || typeof oldData !== 'object') {
+            throw new Error('旧数据格式不正确，无法恢复记录');
+        }
+
+        // 检查记录是否已存在（避免主键冲突）
+        if (oldData.id) {
+            const existingRecord = await DynamicModel.findByPk(oldData.id);
+            if (existingRecord) {
+                throw new Error(`记录ID ${oldData.id} 已存在，无法恢复重复记录`);
+            }
+        }
 
         // 执行创建操作，恢复记录
-        const restoredRecord = await DynamicModel.create(oldData);
+        let restoredRecord;
+        try {
+            restoredRecord = await DynamicModel.create(oldData);
+        } catch (error) {
+            // 处理创建失败的情况
+            if (error.name === 'SequelizeUniqueConstraintError') {
+                throw new Error('记录已存在，无法恢复重复记录');
+            } else if (error.name === 'SequelizeValidationError') {
+                throw new Error(`数据验证失败: ${error.message}`);
+            } else {
+                throw new Error(`恢复记录失败: ${error.message}`);
+            }
+        }
 
         // 更新日志记录状态
         const userInfo = OperationLogger.extractUserInfo(req);
@@ -356,7 +391,7 @@ class RollbackController {
             // 逐个回退操作
             for (const logId of logIds) {
                 try {
-                    const result = await this.rollbackOperationById(logId, req, description);
+                    const result = await RollbackController.rollbackOperationById(logId, req, description);
                     results.push({
                         logId,
                         success: true,
@@ -400,11 +435,11 @@ class RollbackController {
         }
 
         if (log.operationType === 'create') {
-            return await this.rollbackCreateOperation(log, req, description);
+            return await RollbackController.rollbackCreateOperation(log, req, description);
         } else if (log.operationType === 'update') {
-            return await this.rollbackUpdateOperation(log, req, description);
+            return await RollbackController.rollbackUpdateOperation(log, req, description);
         } else if (log.operationType === 'delete') {
-            return await this.rollbackDeleteOperation(log, req, description);
+            return await RollbackController.rollbackDeleteOperation(log, req, description);
         } else {
             throw new Error('不支持的操作类型');
         }

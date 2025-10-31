@@ -9,6 +9,7 @@ import { dataTools, DataToolsHandler } from './tools/dataTools.js';
 import { mappingTools, MappingToolsHandler } from './tools/mappingTools.js';
 import { apiResources, ResourceHandler } from './resources/apiResources.js';
 import httpClient from './utils/httpClient.js';
+import initMCPServer from './init.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -404,6 +405,17 @@ class SimpleMCPServer {
      */
     async run() {
         try {
+            // 初始化 MCP Server（包括令牌管理）
+            console.log('[MCP Server] 正在初始化...');
+            const initialized = await initMCPServer();
+
+            if (!initialized) {
+                console.error('[MCP Server] 初始化失败，服务器无法启动');
+                process.exit(1);
+            }
+
+            console.log('[MCP Server] 初始化完成，正在启动服务器...');
+
             // 启动HTTP服务器
             this.httpServer.listen(this.port, () => {
                 console.log(`[MCP Server] HTTP服务器已启动，端口: ${this.port}`);

@@ -1,7 +1,17 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+// 获取当前文件的目录路径
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 根据环境加载对应的 .env 文件
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+const envPath = path.resolve(__dirname, '..', envFile);
+
+dotenv.config({ path: envPath });
 
 /**
  * HTTP客户端，用于与Excel数据管理系统API通信
@@ -10,6 +20,7 @@ class HttpClient {
     constructor() {
         this.baseURL = process.env.API_BASE_URL || 'http://localhost:3000';
         this.timeout = parseInt(process.env.API_TIMEOUT) || 30000;
+        this.apiKey = process.env.MCP_API_KEY;
 
         this.client = axios.create({
             baseURL: this.baseURL,
@@ -19,10 +30,20 @@ class HttpClient {
             }
         });
 
-        // 请求拦截器
+        // 请求拦截器 - 添加API密钥认证头
         this.client.interceptors.request.use(
-            (config) => {
+            async (config) => {
                 console.log(`[HTTP Request] ${config.method?.toUpperCase()} ${config.url}`);
+
+                // 跳过不需要认证的端点
+                const noAuthEndpoints = ['/health', '/api/auth/login', '/api/public/form'];
+                const needsAuth = !noAuthEndpoints.some(endpoint => config.url?.startsWith(endpoint));
+
+                if (needsAuth && this.apiKey) {
+                    // 使用API密钥进行认证
+                    config.headers['X-API-Key'] = this.apiKey;
+                }
+
                 return config;
             },
             (error) => {
@@ -104,6 +125,24 @@ class HttpClient {
             return response.data;
         } catch (error) {
             throw this.handleError(error, 'DELETE', url);
+        }
+    }
+
+    /**
+     * 发送GET请求获取二进制数据
+     * @param {string} url - 请求URL
+     * @param {object} params - 查询参数
+     * @returns {Promise<Buffer>} 二进制数据
+     */
+    async getBinary(url, params = {}) {
+        try {
+            const response = await this.client.get(url, {
+                params,
+                responseType: 'arraybuffer'
+            });
+            return Buffer.from(response.data);
+        } catch (error) {
+            throw this.handleError(error, 'GET', url);
         }
     }
 

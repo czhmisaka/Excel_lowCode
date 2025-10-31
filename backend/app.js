@@ -194,6 +194,7 @@ app.use('/api/import', require('./routes/import'));
 app.use('/api/rollback', require('./routes/rollback'));
 app.use('/api/public/form', require('./routes/publicForm'));
 app.use('/api/field-config', require('./routes/fieldConfig'));
+app.use('/api/service-accounts', require('./routes/serviceAccounts'));
 
 // 404处理
 app.use('*', (req, res) => {
@@ -241,6 +242,14 @@ const startServer = async () => {
 
         // 初始化数据模型
         await initModels();
+
+        // 初始化服务账户
+        const { initAllServiceUsers } = require('./scripts/initServiceUsers');
+        const serviceUsersResult = await initAllServiceUsers();
+
+        if (!serviceUsersResult.mcpService.success) {
+            console.warn('MCP服务账户初始化失败，但服务器继续启动');
+        }
 
         const PORT = process.env.PORT || 3000;
         app.listen(PORT, () => {

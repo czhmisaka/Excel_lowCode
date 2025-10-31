@@ -129,19 +129,30 @@ RUN mkdir -p uploads && mkdir -p data && mkdir -p /var/log/supervisor && mkdir -
 # 复制Nginx配置
 COPY docker/unified/nginx.conf /etc/nginx/nginx.conf
 
-# 复制Supervisor配置
-COPY docker/unified/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# 复制Supervisor配置模板
+COPY docker/unified/supervisord.conf /etc/supervisor/conf.d/supervisord.conf.template
+
+# 复制启动脚本
+COPY docker/unified/startup-simple.sh /app/startup.sh
+
+# 设置启动脚本执行权限
+RUN chmod +x /app/startup.sh
+
+# 安装curl用于健康检查和API调用
+RUN apk add --no-cache curl
 
 # 设置环境变量
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV MCP_SERVER_PORT=3001
+ENV API_BASE_URL=http://localhost:3000
 
 # 暴露端口
-EXPOSE 80 3000
+EXPOSE 80 3000 3001
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-# 启动应用（使用supervisor管理多个进程）
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# 启动应用（使用自定义启动脚本）
+CMD ["/app/startup.sh"]

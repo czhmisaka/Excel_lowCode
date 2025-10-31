@@ -122,6 +122,22 @@ get_server_ip() {
     echo "$ip"
 }
 
+# 加载MCP API密钥
+load_mcp_api_key() {
+    local key_file=".mcp_api_key"
+    
+    if [ -f "$key_file" ]; then
+        MCP_API_KEY=$(cat "$key_file")
+        log_info "加载MCP API密钥: ${MCP_API_KEY:0:8}..."
+        export MCP_API_KEY
+    else
+        log_warning "MCP API密钥文件不存在: $key_file，将使用默认值"
+        # 生成一个临时的默认密钥
+        MCP_API_KEY="default_mcp_api_key_$(date +%s)"
+        export MCP_API_KEY
+    fi
+}
+
 # 检查环境文件
 check_env() {
     # 保存命令行传入的端口配置（如果存在）
@@ -162,6 +178,9 @@ check_env() {
         set +a
         log_info "加载项目根目录环境变量文件: .env"
     fi
+    
+    # 加载MCP API密钥
+    load_mcp_api_key
     
     # 恢复命令行传入的端口配置（优先级最高）
     if [ -n "$saved_backend_port" ]; then

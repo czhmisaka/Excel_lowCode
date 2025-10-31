@@ -5,6 +5,7 @@ const queryController = require('../controllers/queryController');
 const editController = require('../controllers/editController');
 const exportController = require('../controllers/exportController');
 const { authenticateToken } = require('../middleware/auth');
+const { optionalApiKeyAuth } = require('../middleware/apiKeyAuth');
 
 /**
  * @swagger
@@ -77,7 +78,7 @@ const { authenticateToken } = require('../middleware/auth');
  *       500:
  *         description: 服务器内部错误
  */
-router.get('/:hash', authenticateToken, queryController.queryData);
+router.get('/:hash', optionalApiKeyAuth, authenticateToken, queryController.queryData);
 
 /**
  * @swagger

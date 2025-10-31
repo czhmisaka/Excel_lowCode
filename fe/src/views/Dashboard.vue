@@ -164,7 +164,7 @@
                                     {{ systemInfo?.services?.backend?.status || '未知' }}
                                 </el-tag>
                                 <span class="compact-info-desc">端口: {{ systemInfo?.services?.backend?.port || '-'
-                                    }}</span>
+                                }}</span>
                             </div>
                         </div>
                         <div class="compact-info-item">
@@ -174,7 +174,7 @@
                                     {{ systemInfo?.services?.frontend?.status || '未知' }}
                                 </el-tag>
                                 <span class="compact-info-desc">端口: {{ systemInfo?.services?.frontend?.port || '-'
-                                    }}</span>
+                                }}</span>
                             </div>
                         </div>
                         <div class="compact-info-item">
@@ -193,7 +193,7 @@
                                     {{ systemInfo?.services?.mcpServer?.status || '未知' }}
                                 </el-tag>
                                 <span class="compact-info-desc">端口: {{ systemInfo?.services?.mcpServer?.port || '-'
-                                    }}</span>
+                                }}</span>
                             </div>
                         </div>
                         <div class="compact-info-item">
@@ -232,34 +232,108 @@
                     <el-empty description="暂无操作记录" :image-size="60" />
                 </div>
                 <div v-else class="operations-list">
-                    <div v-for="operation in recentOperations" :key="operation.id" class="operation-item">
-                        <div class="operation-icon" :data-type="operation.operationType">
-                            <el-icon v-if="operation.operationType === 'INSERT'">
-                                <Plus />
-                            </el-icon>
-                            <el-icon v-else-if="operation.operationType === 'UPDATE'">
-                                <Edit />
-                            </el-icon>
-                            <el-icon v-else-if="operation.operationType === 'DELETE'">
-                                <Delete />
-                            </el-icon>
-                            <el-icon v-else>
-                                <Document />
-                            </el-icon>
-                        </div>
-                        <div class="operation-content">
-                            <div class="operation-title">
-                                {{ getOperationTypeText(operation.operationType) }}
-                                <span class="operation-table">{{ operation.tableName }}</span>
+                    <div v-for="operation in recentOperations" :key="operation.id" class="operation-item-wrapper">
+                        <div class="operation-item" :class="{ 'expanded': expandedOperations.includes(operation.id) }"
+                            @click="toggleOperationDetails(operation.id)">
+                            <div class="operation-icon" :data-type="operation.operationType">
+                                <el-icon
+                                    v-if="operation.operationType === 'INSERT' || operation.operationType === 'create'">
+                                    <Plus />
+                                </el-icon>
+                                <el-icon
+                                    v-else-if="operation.operationType === 'UPDATE' || operation.operationType === 'update'">
+                                    <Edit />
+                                </el-icon>
+                                <el-icon
+                                    v-else-if="operation.operationType === 'DELETE' || operation.operationType === 'delete'">
+                                    <Delete />
+                                </el-icon>
+                                <el-icon v-else>
+                                    <Document />
+                                </el-icon>
                             </div>
-                            <div class="operation-meta">
-                                <span class="operation-user">{{ operation.username || '系统' }}</span>
-                                <span class="operation-time">{{ formatOperationTime(operation.createdAt) }}</span>
+                            <div class="operation-content">
+                                <div class="operation-title">
+                                    {{ getOperationTypeText(operation.operationType) }}
+                                    <span class="operation-table">{{ operation.tableName }}</span>
+                                    <span class="operation-record-id">#{{ operation.recordId }}</span>
+                                </div>
+                                <div class="operation-meta">
+                                    <span class="operation-user">{{ operation.username || '系统' }}</span>
+                                    <span class="operation-time">{{ formatOperationTime(operation.operationTime ||
+                                        operation.createdAt) }}</span>
+                                </div>
+                                <div class="operation-description" v-if="operation.description">
+                                    {{ operation.description }}
+                                </div>
+                                <div class="operation-data-summary" v-if="showDataSummary(operation)">
+                                    {{ getDataSummary(operation) }}
+                                </div>
+
+                                <!-- 展开的详细信息 - 内嵌在操作项内 -->
+                                <div v-if="expandedOperations.includes(operation.id)" class="operation-details">
+                                    <div class="details-section">
+                                        <h4>操作详情</h4>
+                                        <div class="details-grid">
+                                            <div class="detail-item">
+                                                <span class="detail-label">操作ID:</span>
+                                                <span class="detail-value">{{ operation.id }}</span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <span class="detail-label">记录ID:</span>
+                                                <span class="detail-value">{{ operation.recordId }}</span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <span class="detail-label">表哈希:</span>
+                                                <span class="detail-value">{{ operation.tableHash }}</span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <span class="detail-label">IP地址:</span>
+                                                <span class="detail-value">{{ operation.ipAddress || '未知' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="details-section" v-if="operation.isRolledBack">
+                                        <h4>回退信息</h4>
+                                        <div class="details-grid">
+                                            <div class="detail-item">
+                                                <span class="detail-label">回退时间:</span>
+                                                <span class="detail-value">{{
+                                                    formatOperationTime(operation.rollbackTime)
+                                                }}</span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <span class="detail-label">回退用户:</span>
+                                                <span class="detail-value">{{ operation.rollbackUsername || '系统'
+                                                }}</span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <span class="detail-label">回退描述:</span>
+                                                <span class="detail-value">{{ operation.rollbackDescription || '无'
+                                                }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="details-section" v-if="operation.userAgent">
+                                        <h4>客户端信息</h4>
+                                        <div class="detail-item">
+                                            <span class="detail-label">用户代理:</span>
+                                            <span class="detail-value">{{ operation.userAgent }}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="operation-status">
-                            <el-tag v-if="operation.isRolledBack" type="info" size="small">已回退</el-tag>
-                            <el-tag v-else type="success" size="small">正常</el-tag>
+                            <div class="operation-status">
+                                <el-tag v-if="operation.isRolledBack" type="info" size="small">已回退</el-tag>
+                                <el-tag v-else type="success" size="small">正常</el-tag>
+                            </div>
+                            <div class="operation-expand">
+                                <el-icon :class="{ 'expanded': expandedOperations.includes(operation.id) }">
+                                    <ArrowDown />
+                                </el-icon>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -284,7 +358,8 @@ import {
     Edit,
     Delete,
     Document,
-    ArrowUp
+    ArrowUp,
+    ArrowDown
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -303,6 +378,7 @@ const systemInfo = ref<SystemInfo | null>(null)
 const recentOperations = ref<any[]>([])
 const selectedTable = ref('')
 const availableTables = ref<string[]>([])
+const expandedOperations = ref<number[]>([])
 
 // 初始化数据
 const initData = async () => {
@@ -511,6 +587,66 @@ const initDefaultTable = async () => {
         selectedTable.value = availableTables.value[0]
         await loadRecentOperations()
     }
+}
+
+// 切换操作详情展开/收起
+const toggleOperationDetails = (operationId: number) => {
+    const index = expandedOperations.value.indexOf(operationId)
+    if (index > -1) {
+        expandedOperations.value.splice(index, 1)
+    } else {
+        expandedOperations.value.push(operationId)
+    }
+}
+
+// 判断是否显示数据摘要
+const showDataSummary = (operation: any): boolean => {
+    return operation.oldData || operation.newData
+}
+
+// 获取数据变更摘要
+const getDataSummary = (operation: any): string => {
+    const operationType = operation.operationType?.toLowerCase()
+
+    if (operationType === 'create' || operationType === 'insert') {
+        if (operation.newData) {
+            try {
+                const data = JSON.parse(operation.newData)
+                const fieldCount = Object.keys(data).length
+                return `新增了 ${fieldCount} 个字段的数据`
+            } catch {
+                return '新增数据'
+            }
+        }
+        return '新增数据'
+    } else if (operationType === 'update') {
+        if (operation.oldData && operation.newData) {
+            try {
+                const oldData = JSON.parse(operation.oldData)
+                const newData = JSON.parse(operation.newData)
+                const changedFields = Object.keys(newData).filter(key =>
+                    JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])
+                )
+                return `更新了 ${changedFields.length} 个字段`
+            } catch {
+                return '更新数据'
+            }
+        }
+        return '更新数据'
+    } else if (operationType === 'delete') {
+        if (operation.oldData) {
+            try {
+                const data = JSON.parse(operation.oldData)
+                const fieldCount = Object.keys(data).length
+                return `删除了 ${fieldCount} 个字段的数据`
+            } catch {
+                return '删除数据'
+            }
+        }
+        return '删除数据'
+    }
+
+    return '数据操作'
 }
 
 onMounted(() => {
@@ -862,6 +998,11 @@ onMounted(() => {
     gap: 8px;
 }
 
+.operation-item-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
 .operation-item {
     display: flex;
     align-items: center;
@@ -870,12 +1011,28 @@ onMounted(() => {
     background: #fafafa;
     transition: all 0.2s ease;
     border: 1px solid #f0f0f0;
+    cursor: pointer;
+}
+
+.operation-item.expanded {
+    align-items: flex-start;
+    padding-bottom: 0;
 }
 
 .operation-item:hover {
     background: #f5f5f5;
     transform: translateY(-1px);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.operation-item.expanded:hover {
+    transform: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.operation-item:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .operation-icon {
@@ -953,6 +1110,97 @@ onMounted(() => {
 .operation-status {
     flex-shrink: 0;
     margin-left: 8px;
+}
+
+.operation-record-id {
+    font-size: 11px;
+    color: #8c8c8c;
+    background: #f0f0f0;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.operation-description {
+    font-size: 11px;
+    color: #606266;
+    margin-top: 2px;
+    line-height: 1.3;
+}
+
+.operation-data-summary {
+    font-size: 10px;
+    color: #8c8c8c;
+    margin-top: 1px;
+    font-style: italic;
+}
+
+.operation-expand {
+    flex-shrink: 0;
+    margin-left: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #8c8c8c;
+}
+
+.operation-expand:hover {
+    color: #409eff;
+}
+
+.operation-expand .el-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.operation-details {
+    margin-top: 8px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.details-section {
+    margin-bottom: 12px;
+}
+
+.details-section:last-child {
+    margin-bottom: 0;
+}
+
+.details-section h4 {
+    font-size: 12px;
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.detail-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.detail-label {
+    font-size: 11px;
+    color: #8c8c8c;
+    font-weight: 500;
+    min-width: 60px;
+    flex-shrink: 0;
+}
+
+.detail-value {
+    font-size: 11px;
+    color: #303133;
+    word-break: break-all;
+    flex: 1;
 }
 
 /* 趋势指示器样式 */

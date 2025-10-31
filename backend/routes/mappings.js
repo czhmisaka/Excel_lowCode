@@ -3,6 +3,7 @@ const router = express.Router();
 const { TableMapping } = require('../models');
 const { deleteMapping } = require('../controllers/deleteController');
 const { updateTableName } = require('../controllers/updateMappingController');
+const { optionalApiKeyAuth } = require('../middleware/apiKeyAuth');
 
 /**
  * @swagger
