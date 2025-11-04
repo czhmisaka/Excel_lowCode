@@ -69,6 +69,10 @@ const updateData = async (req, res) => {
         const userInfo = OperationLogger.extractUserInfo(req);
         const clientInfo = OperationLogger.extractClientInfo(req);
 
+        // 为 MCP 操作添加专门的描述
+        const isMCP = userInfo.isMCP;
+        const operationSource = isMCP ? 'MCP Server' : '用户';
+
         for (const record of recordsToUpdate) {
             const updatedRecord = await DynamicModel.findOne({
                 where: { id: record.id }
@@ -80,7 +84,7 @@ const updateData = async (req, res) => {
                 recordId: record.id,
                 oldData: record.toJSON(),
                 newData: updatedRecord.toJSON(),
-                description: `更新记录 #${record.id}`,
+                description: `${operationSource} 更新记录 #${record.id}`,
                 user: userInfo,
                 ipAddress: clientInfo.ipAddress,
                 userAgent: clientInfo.userAgent
@@ -148,13 +152,17 @@ const addData = async (req, res) => {
         const userInfo = OperationLogger.extractUserInfo(req);
         const clientInfo = OperationLogger.extractClientInfo(req);
 
+        // 为 MCP 操作添加专门的描述
+        const isMCP = userInfo.isMCP;
+        const operationSource = isMCP ? 'MCP Server' : '用户';
+
         await OperationLogger.logCreate({
             tableName: mapping.tableName,
             tableHash: hash,
             recordId: newRecord.id,
             oldData: null,
             newData: newRecord.toJSON(),
-            description: `新增记录 #${newRecord.id}`,
+            description: `${operationSource} 新增记录 #${newRecord.id}`,
             user: userInfo,
             ipAddress: clientInfo.ipAddress,
             userAgent: clientInfo.userAgent
@@ -235,6 +243,10 @@ const deleteData = async (req, res) => {
         const userInfo = OperationLogger.extractUserInfo(req);
         const clientInfo = OperationLogger.extractClientInfo(req);
 
+        // 为 MCP 操作添加专门的描述
+        const isMCP = userInfo.isMCP;
+        const operationSource = isMCP ? 'MCP Server' : '用户';
+
         for (const record of recordsToDelete) {
             await OperationLogger.logDelete({
                 tableName: mapping.tableName,
@@ -242,7 +254,7 @@ const deleteData = async (req, res) => {
                 recordId: record.id,
                 oldData: record.toJSON(),
                 newData: null,
-                description: `删除记录 #${record.id}`,
+                description: `${operationSource} 删除记录 #${record.id}`,
                 user: userInfo,
                 ipAddress: clientInfo.ipAddress,
                 userAgent: clientInfo.userAgent

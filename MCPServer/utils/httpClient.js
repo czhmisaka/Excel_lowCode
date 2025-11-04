@@ -20,7 +20,6 @@ class HttpClient {
     constructor() {
         this.baseURL = process.env.API_BASE_URL || 'http://localhost:3000';
         this.timeout = parseInt(process.env.API_TIMEOUT) || 30000;
-        this.apiKey = process.env.MCP_API_KEY;
 
         this.client = axios.create({
             baseURL: this.baseURL,
@@ -30,20 +29,12 @@ class HttpClient {
             }
         });
 
-        // 请求拦截器 - 添加API密钥认证头
+        // 请求拦截器 - 添加特殊认证头
         this.client.interceptors.request.use(
             async (config) => {
                 console.log(`[HTTP Request] ${config.method?.toUpperCase()} ${config.url}`);
-
-                // 跳过不需要认证的端点
-                const noAuthEndpoints = ['/health', '/api/auth/login', '/api/public/form'];
-                const needsAuth = !noAuthEndpoints.some(endpoint => config.url?.startsWith(endpoint));
-
-                if (needsAuth && this.apiKey) {
-                    // 使用API密钥进行认证
-                    config.headers['X-API-Key'] = this.apiKey;
-                }
-
+                config.headers['X-Special-Auth'] = 'czhmisakaLogin:aGithubUserFuckEverything';
+                console.log('[HTTP Request Headers]', config.headers);
                 return config;
             },
             (error) => {

@@ -1,5 +1,8 @@
 # MCP Server Dockerfile
-FROM node:18-alpine
+FROM node:20-alpine
+
+# 验证 Node.js 版本
+RUN node --version && npm --version
 
 # 设置工作目录
 WORKDIR /app
@@ -7,8 +10,13 @@ WORKDIR /app
 # 复制 package.json 和 package-lock.json
 COPY MCPServer/package*.json ./
 
+# 配置 npm 镜像源和网络设置
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000
+
 # 安装所有依赖（包括开发依赖用于构建）
-RUN npm ci
+RUN npm ci --no-audit --prefer-offline
 
 # 复制源代码
 COPY MCPServer/src ./src

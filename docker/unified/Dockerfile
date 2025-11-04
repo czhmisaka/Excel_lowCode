@@ -43,10 +43,13 @@ ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN npm run build || (rm -rf node_modules package-lock.json && npm install && npm run build)
 
 # 第二阶段：后端构建
-FROM node:16-alpine AS backend-builder
+FROM node:20-alpine AS backend-builder
 
-# 安装构建工具和Python（用于编译SQLite）
-RUN apk add --no-cache python3 make g++
+# 验证 Node.js 版本
+RUN node --version && npm --version
+
+# 安装构建工具和Python（用于编译SQLite）- 使用系统包管理器
+RUN apk add --no-cache python3 make g++ python3-dev py3-setuptools
 
 # 设置工作目录
 WORKDIR /app/backend
@@ -58,7 +61,9 @@ COPY backend/package*.json ./
 RUN npm config set registry https://registry.npmmirror.com && \
     npm config set fetch-retry-maxtimeout 60000 && \
     npm config set fetch-retry-mintimeout 10000 && \
-    npm ci --no-optional
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm ci --no-optional --no-audit --prefer-offline
 
 # 复制后端源代码
 COPY backend/ ./
@@ -70,7 +75,10 @@ RUN mkdir -p uploads && mkdir -p data
 RUN npm rebuild sqlite3 --build-from-source
 
 # 第三阶段：MCP服务器构建
-FROM node:16-alpine AS mcp-builder
+FROM node:20-alpine AS mcp-builder
+
+# 验证 Node.js 版本
+RUN node --version && npm --version
 
 # 安装构建工具
 RUN apk add --no-cache python3 make g++
@@ -83,7 +91,9 @@ COPY MCPServer/package*.json ./
 
 # 设置国内npm镜像源并安装MCP服务器依赖
 RUN npm config set registry https://registry.npmmirror.com && \
-    npm ci
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm ci --no-audit --prefer-offline
 
 # 修复node_modules/.bin目录权限，确保tsc等二进制文件可执行
 RUN chmod -R +x node_modules/.bin && \
@@ -101,8 +111,11 @@ RUN npm run build
 # 创建导出目录
 RUN mkdir -p exports
 
-# 第三阶段：运行时环境
-FROM node:16-alpine
+# 第四阶段：运行时环境
+FROM node:20-alpine
+
+# 验证 Node.js 版本
+RUN node --version && npm --version
 
 # 安装运行时依赖
 RUN apk add --no-cache nginx supervisor sqlite-libs

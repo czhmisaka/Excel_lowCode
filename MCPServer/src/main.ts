@@ -1,7 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import * as express from "express";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -287,132 +285,100 @@ function httpStreamTransportFactory(mcpServer: McpServer) {
     };
 }
 
-/**
- * SSE 传输工厂函数（暂时禁用）
- */
-function sseTransportFactory(mcpServer: McpServer) {
-    const router = express.Router();
-
-    router.get("/sse", async (req, res) => {
-        res.status(501).json({ error: "SSE transport is not yet implemented" });
-    });
-
-    router.post("/messages", async (req, res) => {
-        res.status(501).json({ error: "SSE transport is not yet implemented" });
-    });
-
-    return {
-        sseRouter: router,
-    };
-}
 
 /**
  * 主函数
  */
 async function main() {
     const modeResult = z
-        .enum(["stdio", "sse", "http-streams"])
-        .safeParse(process.env.MODE || "stdio");
+        .enum(["http-streams"])
+        .safeParse(process.env.MODE || "http-streams");
 
     if (!modeResult.success) {
         console.error(
-            "Invalid MODE environment variable. Expected 'stdio', 'sse', or 'http-streams'."
+            "Invalid MODE environment variable. Expected 'http-streams'."
         );
         process.exit(1);
     }
 
     const mode = modeResult.data;
 
-    if (mode === "stdio") {
-        const transport = new StdioServerTransport();
-        await mcpServer.connect(transport);
-        console.log("MCP Server running in stdio mode");
-    } else {
-        const app = express.default();
-        const port = process.env.MCP_SERVER_PORT
-            ? Number.parseInt(process.env.MCP_SERVER_PORT)
-            : 3001;
+    const app = express.default();
+    const port = process.env.MCP_SERVER_PORT
+        ? Number.parseInt(process.env.MCP_SERVER_PORT)
+        : 3001;
 
-        // 健康检查端点
-        app.get("/health", (_req, res) => {
-            res.status(200).json({
-                status: "ok",
-                server: "excel-data-mcp-server",
-                mode: mode,
-                port: port,
-                timestamp: new Date().toISOString()
-            });
+    // 健康检查端点
+    app.get("/health", (_req, res) => {
+        res.status(200).json({
+            status: "ok",
+            server: "excel-data-mcp-server",
+            mode: mode,
+            port: port,
+            timestamp: new Date().toISOString()
         });
+    });
 
-        // 服务器信息端点
-        app.get("/info", (_req, res) => {
-            res.status(200).json({
-                name: "Excel Data MCP Server",
-                version: "1.0.0",
-                protocol: "MCP",
-                mode: mode,
-                endpoints: {
-                    health: "/health",
-                    info: "/info",
-                    ...(mode === "sse" && { sse: "/sse" }),
-                    ...(mode === "http-streams" && { mcp: "/mcp" })
-                }
-            });
+    // 服务器信息端点
+    app.get("/info", (_req, res) => {
+        res.status(200).json({
+            name: "Excel Data MCP Server",
+            version: "1.0.0",
+            protocol: "MCP",
+            mode: mode,
+            endpoints: {
+                health: "/health",
+                info: "/info",
+                mcp: "/mcp"
+            }
         });
+    });
 
-        app.use(express.json());
-        app.use(express.urlencoded({ extended: true }));
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
 
-        // API 密钥验证（可选）
-        if (process.env.API_KEYS) {
-            const allowed_api_keys = process.env.API_KEYS.split(",");
-            app.use((req: any, res: any, next: any) => {
-                const apiKey = (req.headers["x-api-key"] as string) || (req.query.apiKey as string);
-                if (!apiKey || !allowed_api_keys.includes(apiKey)) {
-                    return res
-                        .status(403)
-                        .json({ error: "Forbidden: Invalid or missing API key" });
-                }
-                next();
-            });
-        }
-
-        // 请求日志
-        app.use((req: any, _res: any, next: any) => {
-            console.info(
-                `[${new Date().toISOString()}] ${req.method} ${req.url}`
-            );
+    // API 密钥验证（可选）
+    if (process.env.API_KEYS) {
+        const allowed_api_keys = process.env.API_KEYS.split(",");
+        app.use((req: any, res: any, next: any) => {
+            const apiKey = (req.headers["x-api-key"] as string) || (req.query.apiKey as string);
+            if (!apiKey || !allowed_api_keys.includes(apiKey)) {
+                return res
+                    .status(403)
+                    .json({ error: "Forbidden: Invalid or missing API key" });
+            }
             next();
         });
-
-        // 静态文件服务 - 提供导出文件下载
-        const exportsDir = path.join(process.cwd(), 'exports');
-        app.use('/export', express.static(exportsDir));
-        console.log(`Export files available at: http://localhost:${port}/export/`);
-
-        if (mode === "sse") {
-            const { sseRouter } = sseTransportFactory(mcpServer);
-            app.use(sseRouter);
-            console.log(`SSE Endpoint: http://localhost:${port}/sse`);
-        }
-
-        if (mode === "http-streams") {
-            const { httpStreamRouter } = httpStreamTransportFactory(mcpServer);
-            app.use(httpStreamRouter);
-            console.log(`HTTP Stream Endpoint: http://localhost:${port}/mcp`);
-        }
-
-        app.use((_req, res) => {
-            res.status(404).json({ error: "Not Found" });
-        });
-
-        app.listen(port, () => {
-            console.log(`Excel Data MCP Server running on port ${port}`);
-            console.log(`Mode: ${mode}`);
-            console.log(`Health check: http://localhost:${port}/health`);
-            console.log(`Server info: http://localhost:${port}/info`);
-        });
     }
+
+    // 请求日志
+    app.use((req: any, _res: any, next: any) => {
+        console.info(
+            `[${new Date().toISOString()}] ${req.method} ${req.url}`
+        );
+        next();
+    });
+
+    // 静态文件服务 - 提供导出文件下载
+    const exportsDir = path.join(process.cwd(), 'exports');
+    app.use('/export', express.static(exportsDir));
+    console.log(`Export files available at: http://localhost:${port}/export/`);
+
+    // 设置 HTTP streams 传输
+    const { httpStreamRouter } = httpStreamTransportFactory(mcpServer);
+    app.use(httpStreamRouter);
+    console.log(`HTTP Stream Endpoint: http://localhost:${port}/mcp`);
+
+    app.use((_req, res) => {
+        res.status(404).json({ error: "Not Found" });
+    });
+
+    app.listen(port, () => {
+        console.log(`Excel Data MCP Server running on port ${port}`);
+        console.log(`Mode: ${mode}`);
+        console.log(`Health check: http://localhost:${port}/health`);
+        console.log(`Server info: http://localhost:${port}/info`);
+    });
 }
 
 // 启动服务器

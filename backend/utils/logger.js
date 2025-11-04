@@ -205,10 +205,22 @@ class OperationLogger {
      * @returns {Object} 用户信息
      */
     static extractUserInfo(req) {
+        // 检查是否为 API 密钥认证的 MCP 服务账户
+        if (req.user?.isApiKeyAuth) {
+            return {
+                id: req.user.id,
+                username: req.user.username,
+                displayName: req.user.displayName,
+                isMCP: true
+            };
+        }
+
+        // 普通用户认证
         return {
             id: req.user?.id,
             username: req.user?.username,
-            displayName: req.user?.displayName
+            displayName: req.user?.displayName,
+            isMCP: false
         };
     }
 

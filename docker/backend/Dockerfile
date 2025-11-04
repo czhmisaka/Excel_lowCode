@@ -1,8 +1,11 @@
 # 后端Dockerfile - 多阶段构建（修复SQLite架构问题）
-FROM node:16-alpine AS builder
+FROM node:20-alpine AS builder
 
-# 安装构建工具和Python（用于编译SQLite）
-RUN apk add --no-cache python3 make g++
+# 验证 Node.js 版本
+RUN node --version && npm --version
+
+# 安装构建工具和Python（用于编译SQLite）- 使用系统包管理器
+RUN apk add --no-cache python3 make g++ python3-dev py3-setuptools
 
 # 设置工作目录
 WORKDIR /app
@@ -10,8 +13,13 @@ WORKDIR /app
 # 复制package.json和package-lock.json
 COPY ../backend/package*.json ./
 
+# 配置 npm 镜像源和网络设置
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000
+
 # 安装所有依赖（包括dev依赖用于编译）
-RUN npm ci
+RUN npm ci --no-audit --prefer-offline
 
 # 复制源代码
 COPY ../backend/ ./
@@ -20,10 +28,13 @@ COPY ../backend/ ./
 RUN mkdir -p uploads && mkdir -p data
 
 # 生产阶段
-FROM node:16-alpine
+FROM node:20-alpine
 
-# 安装运行时依赖和构建工具（用于重新编译SQLite）
-RUN apk add --no-cache sqlite-libs python3 make g++
+# 验证 Node.js 版本
+RUN node --version && npm --version
+
+# 安装运行时依赖和构建工具（用于重新编译SQLite）- 使用系统包管理器
+RUN apk add --no-cache sqlite-libs python3 make g++ python3-dev py3-setuptools
 
 # 设置工作目录
 WORKDIR /app

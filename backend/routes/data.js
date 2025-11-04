@@ -137,7 +137,7 @@ router.get('/:hash', optionalApiKeyAuth, authenticateToken, queryController.quer
  *       500:
  *         description: 服务器内部错误
  */
-router.put('/:hash', authenticateToken, editController.updateData);
+router.put('/:hash', optionalApiKeyAuth, authenticateToken, editController.updateData);
 
 /**
  * @swagger
@@ -191,7 +191,7 @@ router.put('/:hash', authenticateToken, editController.updateData);
  *       500:
  *         description: 服务器内部错误
  */
-router.post('/:hash/add', authenticateToken, editController.addData);
+router.post('/:hash/add', optionalApiKeyAuth, authenticateToken, editController.addData);
 
 /**
  * @swagger
@@ -245,7 +245,7 @@ router.post('/:hash/add', authenticateToken, editController.addData);
  *       500:
  *         description: 服务器内部错误
  */
-router.delete('/:hash', authenticateToken, editController.deleteData);
+router.delete('/:hash', optionalApiKeyAuth, authenticateToken, editController.deleteData);
 
 /**
  * @swagger
