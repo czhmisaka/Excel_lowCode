@@ -52,6 +52,14 @@
                         <span>映射关系</span>
                     </template>
                 </el-menu-item>
+                <el-menu-item index="/forms" class="modern-menu-item">
+                    <template #title>
+                        <el-icon>
+                            <Document />
+                        </el-icon>
+                        <span>表单管理</span>
+                    </template>
+                </el-menu-item>
                 <el-menu-item index="/api-guide" class="modern-menu-item">
                     <template #title>
                         <el-icon>
@@ -195,6 +203,7 @@ const currentRouteName = computed(() => {
         '/data': '数据浏览',
         '/editor': '数据编辑',
         '/mappings': '映射关系',
+        '/forms': '表单管理',
         '/api-guide': 'API指南',
         '/users': '用户管理',
         '/logs': '操作日志'

@@ -195,6 +195,8 @@ app.use('/api/rollback', require('./routes/rollback'));
 app.use('/api/public/form', require('./routes/publicForm'));
 app.use('/api/field-config', require('./routes/fieldConfig'));
 app.use('/api/service-accounts', require('./routes/serviceAccounts'));
+app.use('/api/forms', require('./routes/forms'));
+app.use('/api/health', require('./routes/health'));
 
 // 404处理
 app.use('*', (req, res) => {

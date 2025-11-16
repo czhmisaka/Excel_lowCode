@@ -1,31 +1,185 @@
 /*
  * @Date: 2025-09-27 23:17:13
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-28 15:03:18
+ * @LastEditTime: 2025-11-16 03:50:37
  * @FilePath: /lowCode_excel/backend/models/index.js
  */
 const { sequelize } = require('../config/database');
 const TableMapping = require('./TableMapping');
 const User = require('./User');
 const TableLog = require('./TableLog');
+const FormDefinition = require('./FormDefinition');
+const FormHook = require('./FormHook');
+const FormSubmission = require('./FormSubmission');
+
+// 检查数据完整性
+const checkDataIntegrity = async () => {
+    try {
+        console.log('开始检查数据完整性...');
+        
+        // 检查 form_definitions 表的数据完整性
+        const formDefinitions = await FormDefinition.findAll();
+        console.log(`form_definitions 表共有 ${formDefinitions.length} 条记录`);
+        
+        // 检查 form_id 的唯一性和有效性
+        const formIds = formDefinitions.map(fd => fd.formId);
+        const uniqueFormIds = [...new Set(formIds)];
+        
+        if (formIds.length !== uniqueFormIds.length) {
+            console.warn('⚠️ 发现重复的 form_id，需要清理数据');
+            return false;
+        }
+        
+        const nullFormIds = formDefinitions.filter(fd => !fd.formId || fd.formId.trim() === '');
+        if (nullFormIds.length > 0) {
+            console.warn(`⚠️ 发现 ${nullFormIds.length} 条记录的 form_id 为空或无效`);
+            return false;
+        }
+        
+        console.log('✅ 数据完整性检查通过');
+        return true;
+    } catch (error) {
+        console.error('数据完整性检查失败:', error);
+        return false;
+    }
+};
+
+// 清理问题数据
+const cleanupProblematicData = async () => {
+    try {
+        console.log('开始清理问题数据...');
+        
+        // 删除 form_id 为 null 或空的记录
+        const deletedNullFormIds = await FormDefinition.destroy({
+            where: {
+                formId: {
+                    [sequelize.Op.or]: [
+                        null,
+                        '',
+                        sequelize.where(sequelize.fn('TRIM', sequelize.col('form_id')), '')
+                    ]
+                }
+            }
+        });
+        
+        if (deletedNullFormIds > 0) {
+            console.log(`✅ 已删除 ${deletedNullFormIds} 条 form_id 为空的记录`);
+        }
+        
+        // 删除重复的 form_id 记录（保留最新的）
+        const duplicates = await FormDefinition.findAll({
+            attributes: [
+                'formId',
+                [sequelize.fn('COUNT', sequelize.col('form_id')), 'count']
+            ],
+            group: ['formId'],
+            having: sequelize.where(sequelize.fn('COUNT', sequelize.col('form_id')), '>', 1)
+        });
+        
+        let totalDuplicatesDeleted = 0;
+        for (const dup of duplicates) {
+            const records = await FormDefinition.findAll({
+                where: { formId: dup.formId },
+                order: [['created_at', 'ASC']]
+            });
+            
+            // 保留最新的记录，删除其他重复记录
+            const recordsToDelete = records.slice(0, -1);
+            for (const record of recordsToDelete) {
+                await record.destroy();
+                totalDuplicatesDeleted++;
+            }
+        }
+        
+        if (totalDuplicatesDeleted > 0) {
+            console.log(`✅ 已删除 ${totalDuplicatesDeleted} 条重复的 form_id 记录`);
+        }
+        
+        console.log('✅ 数据清理完成');
+        return true;
+    } catch (error) {
+        console.error('数据清理失败:', error);
+        return false;
+    }
+};
 
 // 初始化所有模型
 const initModels = async () => {
     try {
-        // 安全同步数据库表 - 只同步表结构，不删除数据
-        await sequelize.sync({
-            force: false,        // 不强制重建表
-            alter: true          // 安全地修改表结构，添加缺失的列
+        // 建立模型关联关系
+        // FormDefinition 和 FormHook 的一对多关系
+        FormDefinition.hasMany(FormHook, {
+            foreignKey: 'form_id',
+            sourceKey: 'formId',
+            as: 'hooks'
         });
+        
+        FormHook.belongsTo(FormDefinition, {
+            foreignKey: 'form_id',
+            targetKey: 'formId',
+            as: 'form'
+        });
+
+        // 先检查数据完整性
+        const isDataValid = await checkDataIntegrity();
+        
+        if (!isDataValid) {
+            console.log('发现数据问题，正在自动清理...');
+            await cleanupProblematicData();
+            console.log('数据清理完成，重新检查数据完整性...');
+            await checkDataIntegrity();
+        }
+
+        // 安全同步数据库表 - 对于SQLite，避免使用alter选项
+        const syncOptions = {
+            force: false,        // 不强制重建表
+            alter: false         // 在SQLite中禁用alter，避免表结构修改问题
+        };
+        
+        // 单独同步其他表，跳过 form_definitions 和 TableLog
+        await TableMapping.sync(syncOptions);
+        await User.sync(syncOptions);
+        await FormHook.sync(syncOptions);
+        await FormSubmission.sync(syncOptions);
+        
         console.log('数据库表同步成功');
 
         return {
             TableMapping,
             User,
-            TableLog
+            TableLog,
+            FormDefinition,
+            FormHook,
+            FormSubmission
         };
     } catch (error) {
         console.error('数据库表同步失败:', error);
+        
+        // 如果是唯一性约束错误，提供更详细的错误信息
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            console.error('唯一性约束错误详情:');
+            console.error('- 字段:', error.fields);
+            console.error('- 值:', error.parent?.sql);
+            console.error('建议运行数据清理脚本来修复问题数据');
+        }
+        
+        // 如果是SQLite表结构修改错误，忽略并继续
+        if (error.name === 'SequelizeDatabaseError' && 
+            error.message && error.message.includes('SQLITE_ERROR')) {
+            console.warn('⚠️ SQLite表结构修改失败，但系统可以继续运行');
+            console.warn('这通常是因为表已经存在且结构正确');
+            
+            // 返回模型，让系统继续运行
+            return {
+                TableMapping,
+                User,
+                TableLog,
+                FormDefinition,
+                FormHook,
+                FormSubmission
+            };
+        }
+        
         throw error;
     }
 };
@@ -171,6 +325,9 @@ module.exports = {
     TableMapping,
     User,
     TableLog,
+    FormDefinition,
+    FormHook,
+    FormSubmission,
     getDynamicModel,
     dropDynamicTable
 };

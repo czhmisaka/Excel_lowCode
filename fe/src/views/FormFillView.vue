@@ -88,7 +88,7 @@
 
         <!-- 提交成功提示 -->
         <el-dialog v-model="successDialogVisible" title="提交成功" width="400px" :show-close="false"
-            :close-on-click-modal="false" :close-on-press-escape="false">
+            :close-on-click-modal="false" :close-on-press-escape="false" append-to-body>
             <div class="success-content">
                 <el-result icon="success" title="数据提交成功" :sub-title="`成功添加了1条记录到 ${tableInfo.tableName}`">
                     <template #extra>

@@ -591,6 +591,123 @@ class ApiService {
         const response = await apiClient.get(`/api/field-config/${hash}/structure`)
         return response.data.data
     }
+
+    // === 表单系统API ===
+
+    // 获取表单列表
+    async getForms(params: {
+        page?: number
+        limit?: number
+        search?: string
+    } = {}): Promise<any> {
+        const queryParams = new URLSearchParams()
+        if (params.page) queryParams.append('page', params.page.toString())
+        if (params.limit) queryParams.append('limit', params.limit.toString())
+        if (params.search) queryParams.append('search', params.search)
+
+        const response = await apiClient.get(`/api/forms?${queryParams.toString()}`)
+        return response.data
+    }
+
+    // 获取表单详情
+    async getForm(formId: string): Promise<any> {
+        const response = await apiClient.get(`/api/forms/${formId}`)
+        return response.data
+    }
+
+    // 创建表单
+    async createForm(formData: {
+        formId: string
+        name: string
+        description?: string
+        tableMapping?: string
+        definition: any
+    }): Promise<any> {
+        const response = await apiClient.post('/api/forms', formData)
+        return response.data
+    }
+
+    // 更新表单
+    async updateForm(formId: string, formData: {
+        name?: string
+        description?: string
+        tableMapping?: string
+        definition?: any
+    }): Promise<any> {
+        const response = await apiClient.put(`/api/forms/${formId}`, formData)
+        return response.data
+    }
+
+    // 删除表单
+    async deleteForm(formId: string): Promise<any> {
+        const response = await apiClient.delete(`/api/forms/${formId}`)
+        return response.data
+    }
+
+    // 获取表单的Hook列表
+    async getFormHooks(formId: string): Promise<any> {
+        const response = await apiClient.get(`/api/forms/${formId}/hooks`)
+        return response.data
+    }
+
+    // 创建Hook
+    async createHook(formId: string, hookData: {
+        type: string
+        triggerType: string
+        config: any
+        enabled?: boolean
+    }): Promise<any> {
+        const response = await apiClient.post(`/api/forms/${formId}/hooks`, hookData)
+        return response.data
+    }
+
+    // === Hook管理API ===
+
+    // 获取所有表单定义（用于Hook管理）
+    async getFormDefinitions(): Promise<any> {
+        const response = await apiClient.get('/api/forms')
+        return response.data
+    }
+
+    // 创建表单Hook
+    async createFormHook(formId: string, hookData: any): Promise<any> {
+        const response = await apiClient.post(`/api/forms/${formId}/hooks`, hookData)
+        return response.data
+    }
+
+    // 更新表单Hook
+    async updateFormHook(formId: string, hookId: string, hookData: any): Promise<any> {
+        const response = await apiClient.put(`/api/forms/${formId}/hooks/${hookId}`, hookData)
+        return response.data
+    }
+
+    // 删除表单Hook
+    async deleteFormHook(formId: string, hookId: string): Promise<any> {
+        const response = await apiClient.delete(`/api/forms/${formId}/hooks/${hookId}`)
+        return response.data
+    }
+
+    // 测试Hook
+    async testFormHook(formId: string, hookId: string, testData: any): Promise<any> {
+        const response = await apiClient.post(`/api/forms/${formId}/hooks/${hookId}/test`, testData)
+        return response.data
+    }
+
+    // === 公开表单系统API（免认证）===
+
+    // 获取表单定义（免认证）
+    async getPublicFormDefinition(formId: string): Promise<any> {
+        const response = await publicApiClient.get(`/api/public/form/forms/${formId}`)
+        return response.data
+    }
+
+    // 提交表单数据（免认证，带Hook处理）
+    async submitPublicFormData(formId: string, data: any): Promise<any> {
+        const response = await publicApiClient.post(`/api/public/form/forms/${formId}/submit`, {
+            data
+        })
+        return response.data
+    }
 }
 
 export const apiService = new ApiService()

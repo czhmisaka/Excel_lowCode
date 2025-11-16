@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-08-28 07:54:03
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-30 10:26:12
+ * @LastEditTime: 2025-11-11 09:57:32
  * @FilePath: /lowCode_excel/fe/src/router/index.ts
  */
 import { createRouter, createWebHistory } from 'vue-router'
@@ -67,6 +67,16 @@ const router = createRouter({
           path: '/table-structure',
           name: 'TableStructureEditor',
           component: () => import('@/views/TableStructureEditorView.vue')
+        },
+        {
+          path: '/forms',
+          name: 'FormManagement',
+          component: () => import('@/views/FormManagement.vue')
+        },
+        {
+          path: '/forms/:id',
+          name: 'FormDetail',
+          component: () => import('@/views/FormDetail.vue')
         }
       ]
     },
@@ -78,6 +88,11 @@ const router = createRouter({
           path: '',
           name: 'FormFill',
           component: () => import('@/views/FormFillView.vue')
+        },
+        {
+          path: ':formId',
+          name: 'PublicForm',
+          component: () => import('@/views/PublicFormView.vue')
         }
       ]
     },

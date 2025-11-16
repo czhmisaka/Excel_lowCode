@@ -114,4 +114,93 @@ router.get('/:hash/structure', publicFormController.getTableStructure);
  */
 router.post('/:hash/submit', publicFormController.addData);
 
+/**
+ * @swagger
+ * /api/public/form/forms/{formId}:
+ *   get:
+ *     summary: 获取表单定义
+ *     description: 根据表单ID获取表单定义信息，无需认证
+ *     tags:
+ *       - 表单系统
+ *     parameters:
+ *       - in: path
+ *         name: formId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 表单ID
+ *     responses:
+ *       200:
+ *         description: 成功获取表单定义
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/FormDefinition'
+ *       404:
+ *         description: 表单不存在
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.get('/forms/:formId', publicFormController.getFormDefinition);
+
+/**
+ * @swagger
+ * /api/public/form/forms/{formId}/submit:
+ *   post:
+ *     summary: 提交表单数据（带Hook处理）
+ *     description: 提交表单数据并执行Hook处理，无需认证
+ *     tags:
+ *       - 表单系统
+ *     parameters:
+ *       - in: path
+ *         name: formId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 表单ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - data
+ *             properties:
+ *               data:
+ *                 type: object
+ *                 description: 表单数据
+ *                 example: { "name": "张三", "phone": "13800138000", "company": "汇博劳务公司" }
+ *     responses:
+ *       200:
+ *         description: 表单提交成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "表单提交成功"
+ *                 data:
+ *                   type: object
+ *                   description: 处理后的数据
+ *       400:
+ *         description: 请求参数错误
+ *       404:
+ *         description: 表单不存在
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.post('/forms/:formId/submit', publicFormController.submitFormData);
+
 module.exports = router;
