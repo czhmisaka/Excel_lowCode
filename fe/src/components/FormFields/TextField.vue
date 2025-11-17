@@ -82,12 +82,17 @@ const rules = computed(() => {
     })
   }
   
-  if (props.field.validation?.pattern) {
-    rules.push({
-      pattern: new RegExp(props.field.validation.pattern),
-      message: `${props.field.label}格式不正确`,
-      trigger: 'blur'
-    })
+  if (props.field.validation?.pattern && props.field.validation.pattern.trim() !== '') {
+    try {
+      rules.push({
+        pattern: new RegExp(props.field.validation.pattern),
+        message: `${props.field.label}格式不正确`,
+        trigger: 'blur'
+      })
+    } catch (error) {
+      console.error(`正则表达式格式错误: ${props.field.validation.pattern}`, error)
+      // 如果正则表达式格式错误，不添加验证规则
+    }
   }
   
   if (props.field.validation?.minLength) {

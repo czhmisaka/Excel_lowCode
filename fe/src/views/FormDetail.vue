@@ -8,14 +8,37 @@
           <p>{{ formData.description || '表单详情配置' }}</p>
           <div class="form-stats">
             <el-tag type="info" class="modern-tag">
-              <el-icon><Document /></el-icon>
+              <el-icon>
+                <Document />
+              </el-icon>
               字段: {{ formData.fieldCount || 0 }}
             </el-tag>
             <el-tag type="info" class="modern-tag">
+              <el-icon>
+                <Connection />
+              </el-icon>
+              Hook: {{ formData.hookCount || 0 }}
+            </el-tag>
+            <el-tag type="info" class="modern-tag">
+              <el-icon>
+                <Calendar />
+              </el-icon>
+              更新: {{ formatDate(formData.updatedAt) }}
+            </el-tag>
+          </div>
+        </div>
+        <div class="header-right">
+          <el-button-group>
+            <el-button @click="handleBack" :icon="ArrowLeft" class="modern-button">
+              返回列表
+            </el-button>
             <el-button type="primary" @click="handleSave" :loading="saving" :icon="Check" class="modern-button">
               保存配置
             </el-button>
-          </div>
+            <el-button type="success" @click="generateQRCode" :icon="DataBoard" class="modern-button">
+              生成二维码
+            </el-button>
+          </el-button-group>
         </div>
       </div>
     </div>
@@ -43,12 +66,13 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { ArrowLeft, Check } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowLeft, Check, Document, Connection, Calendar, DataBoard } from '@element-plus/icons-vue'
 import { apiService } from '@/services/api'
 import FormFieldsConfig from '@/components/FormFieldsConfig.vue'
 import FormHooksConfig from '@/components/FormHooksConfig.vue'
 import FormPreview from '@/components/FormPreview.vue'
+import QRCode from 'qrcode'
 
 interface FormDefinition {
   id?: string
@@ -96,11 +120,15 @@ const initData = async () => {
     console.log('正在请求表单详情，formId:', formIdFromRoute)
     let response = await apiService.getForm(formIdFromRoute)
     let definition = {} as any
-    Object.keys(JSON.parse(response.data.definition)).map(key => {
-      if (key.length > 2) {
-        definition[key] = JSON.parse(response.data.definition)[key]
-      }
-    })
+    if (typeof response.data.definition == 'string') {
+      Object.keys(JSON.parse(response.data.definition)).map(key => {
+        if (key.length > 2) {
+          definition[key] = JSON.parse(response.data.definition)[key]
+        }
+      })
+    } else {
+      definition = response.data.definition
+    }
     response.data.definition = definition
     console.log('表单详情响应:', response.data)
     formData.value = response.data
@@ -116,9 +144,16 @@ const initData = async () => {
 const handleSave = async () => {
   saving.value = true
   console.log('正在保存表单配置，formId:', formId.value, formData.value)
+  let definition = {} as any
+  Object.keys(formData.value.definition).map(key => {
+    console.log('处理定义键:', key, typeof key)
+    if (['fields'].indexOf(key) > -1) {
+      definition[key] = formData.value.definition[key]
+    }
+  })
   try {
     await apiService.updateForm(formId.value, {
-      definition: formData.value.definition
+      definition
     })
     ElMessage.success('表单配置保存成功')
   } catch (error) {
@@ -132,6 +167,84 @@ const handleSave = async () => {
 // 处理表单更新
 const handleFormUpdate = (updatedData: any) => {
   formData.value = { ...formData.value, ...updatedData }
+}
+
+// 格式化日期
+const formatDate = (dateString?: string) => {
+  if (!dateString) return '未知'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
+
+// 生成二维码
+const generateQRCode = async () => {
+  if (!formId.value) {
+    ElMessage.warning('请先加载表单数据')
+    return
+  }
+
+  try {
+    // 构建表单填写页面的URL
+    const formUrl = `${window.location.origin}/form/${formId.value}`
+
+    // 生成二维码
+    const qrCodeDataUrl = await QRCode.toDataURL(formUrl, {
+      width: 300,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    })
+
+    // 创建弹窗显示二维码
+    ElMessageBox.alert(
+      `
+      <div style="text-align: center;">
+        <img src="${qrCodeDataUrl}" alt="表单填写二维码" style="width: 100%; max-width: 300px; height: auto;" />
+        <p style="margin-top: 16px; color: #666;">
+          <strong>表单链接：</strong><br>
+          <span style="word-break: break-all; font-size: 12px;">${formUrl}</span>
+        </p>
+        <p style="margin-top: 8px; color: #999; font-size: 12px;">
+          使用手机扫描二维码即可访问表单填写页面
+        </p>
+      </div>
+      `,
+      '表单填写二维码',
+      {
+        dangerouslyUseHTMLString: true,
+        customClass: 'modern-dialog',
+        showConfirmButton: true,
+        confirmButtonText: '复制链接',
+        callback: async (action: string) => {
+          if (action === 'confirm') {
+            try {
+              await navigator.clipboard.writeText(formUrl)
+              ElMessage.success('表单链接已复制到剪贴板')
+            } catch (error) {
+              console.error('复制失败:', error)
+              // 备用复制方法
+              const textArea = document.createElement('textarea')
+              textArea.value = formUrl
+              document.body.appendChild(textArea)
+              textArea.select()
+              document.execCommand('copy')
+              document.body.removeChild(textArea)
+              ElMessage.success('表单链接已复制到剪贴板')
+            }
+          }
+        }
+      }
+    )
+  } catch (error) {
+    console.error('生成二维码失败:', error)
+    ElMessage.error('生成二维码失败')
+  }
 }
 
 // 返回列表
@@ -160,40 +273,133 @@ onMounted(() => {
   flex: 1;
 }
 
+.header-left h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-left p {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.form-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.form-stats .modern-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-base);
+  font-weight: 500;
+  border: none;
+  box-shadow: var(--shadow-sm);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
 .header-right {
   display: flex;
   gap: 12px;
   align-items: center;
 }
 
-.page-title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.page-description {
-  margin: 8px 0 0 0;
-  font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
 .modern-tabs {
   margin-top: 0;
+}
+
+.modern-tabs :deep(.el-tabs__header) {
+  margin: 0;
+}
+
+.modern-tabs :deep(.el-tabs__nav-wrap) {
+  padding: 0 16px;
+}
+
+.modern-tabs :deep(.el-tabs__item) {
+  font-weight: 500;
+  padding: 12px 20px;
+  transition: all var(--transition-base);
+}
+
+.modern-tabs :deep(.el-tabs__item.is-active) {
+  color: var(--primary-color);
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.08) 0%, rgba(64, 169, 255, 0.04) 100%);
+}
+
+.modern-tabs :deep(.el-tabs__item:hover) {
+  color: var(--primary-hover);
+}
+
+.loading-state {
+  padding: 40px 0;
+  text-align: center;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
+  }
+
+  .header-left h1 {
+    font-size: 24px;
+  }
+
+  .header-left p {
+    font-size: 14px;
+  }
+
+  .form-stats {
+    gap: 8px;
+  }
+
+  .form-stats .modern-tag {
+    padding: 4px 8px;
+    font-size: 12px;
   }
 
   .header-right {
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .header-right .el-button-group {
+    width: 100%;
+    display: flex;
+  }
+
+  .header-right .el-button-group .el-button {
+    flex: 1;
+  }
+
+  .modern-tabs :deep(.el-tabs__item) {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-stats {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-right .el-button-group {
+    flex-direction: column;
   }
 }
 </style>

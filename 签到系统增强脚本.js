@@ -5,7 +5,7 @@
     'use strict';
     
     // 签到表哈希值
-    const SIGN_IN_TABLE_HASH = '408ffc21063a32cf0a14a3babc986f6f';
+    const SIGN_IN_TABLE_HASH = '65c97fd2268d95c3d222c8596dd893b1';
     
     // 检查当前页面是否为签到表单
     function isSignInForm() {

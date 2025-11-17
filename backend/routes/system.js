@@ -196,4 +196,135 @@ router.get('/info', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/system/database-health:
+ *   get:
+ *     summary: 数据库健康检查
+ *     description: 详细的数据库健康状态检查，包括表结构完整性检查
+ *     tags: [系统状态]
+ *     responses:
+ *       200:
+ *         description: 数据库健康状态获取成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                       enum: [healthy, degraded, unhealthy]
+ *                       example: "healthy"
+ *                     database:
+ *                       type: string
+ *                       enum: [connected, disconnected]
+ *                       example: "connected"
+ *                     tables:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: number
+ *                           example: 6
+ *                         missing:
+ *                           type: number
+ *                           example: 0
+ *                         corrupted:
+ *                           type: number
+ *                           example: 0
+ *                         healthy:
+ *                           type: number
+ *                           example: 6
+ *                     timestamp:
+ *                       type: string
+ *                       format: date-time
+ *       500:
+ *         description: 数据库健康检查失败
+ */
+router.get('/database-health', async (req, res) => {
+    try {
+        const { getDatabaseHealth } = require('../config/database');
+        const healthStatus = await getDatabaseHealth();
+        
+        res.json({
+            success: true,
+            data: healthStatus
+        });
+    } catch (error) {
+        console.error('数据库健康检查失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '数据库健康检查失败',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /api/system/init-database:
+ *   post:
+ *     summary: 手动初始化数据库
+ *     description: 手动触发数据库表结构初始化，用于修复缺失或损坏的表
+ *     tags: [系统状态]
+ *     responses:
+ *       200:
+ *         description: 数据库初始化成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "数据库初始化成功"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     initialReport:
+ *                       type: object
+ *                     fixReport:
+ *                       type: object
+ *                     finalReport:
+ *                       type: object
+ *       500:
+ *         description: 数据库初始化失败
+ */
+router.post('/init-database', async (req, res) => {
+    try {
+        const { initializeDatabase } = require('../config/database');
+        const initResult = await initializeDatabase();
+        
+        if (initResult.success) {
+            res.json({
+                success: true,
+                message: '数据库初始化成功',
+                data: initResult
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: '数据库初始化失败',
+                error: initResult.message,
+                data: initResult
+            });
+        }
+    } catch (error) {
+        console.error('手动初始化数据库失败:', error);
+        res.status(500).json({
+            success: false,
+            message: '手动初始化数据库失败',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
 module.exports = router;

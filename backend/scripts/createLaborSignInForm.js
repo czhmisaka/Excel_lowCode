@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'http://118.196.16.32:3000/api';
 
 async function createLaborSignInForm() {
   try {

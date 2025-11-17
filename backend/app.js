@@ -238,9 +238,57 @@ const startServer = async () => {
         // 测试数据库连接
         const dbConnected = await testConnection();
         if (!dbConnected) {
-            console.error('无法连接到数据库，服务器启动失败');
+            console.error('无法连接到数据库，尝试自动初始化数据库...');
+            
+            // 尝试自动初始化数据库
+            try {
+                const { execSync } = require('child_process');
+                const fs = require('fs');
+                const path = require('path');
+                
+                // 检查数据库目录是否存在
+                const dbDir = path.dirname(process.env.SQLITE_DB_PATH || './data/annual_leave.db');
+                if (!fs.existsSync(dbDir)) {
+                    fs.mkdirSync(dbDir, { recursive: true });
+                    console.log(`✅ 创建数据库目录: ${dbDir}`);
+                }
+                
+                // 尝试执行数据库初始化脚本
+                const initScriptPath = path.join(__dirname, 'scripts', 'initDatabase.js');
+                if (fs.existsSync(initScriptPath)) {
+                    console.log('执行数据库初始化脚本...');
+                    execSync(`node ${initScriptPath}`, { stdio: 'inherit' });
+                    console.log('✅ 数据库初始化完成');
+                    
+                    // 重新测试数据库连接
+                    const dbConnectedAfterInit = await testConnection();
+                    if (!dbConnectedAfterInit) {
+                        console.error('数据库初始化后仍然无法连接，服务器启动失败');
+                        process.exit(1);
+                    }
+                } else {
+                    console.error('数据库初始化脚本不存在，服务器启动失败');
+                    process.exit(1);
+                }
+            } catch (initError) {
+                console.error('数据库自动初始化失败:', initError);
+                console.error('服务器启动失败');
+                process.exit(1);
+            }
+        }
+
+        // 使用自动建表模块初始化数据库表结构
+        console.log('开始自动建表流程...');
+        const { initializeDatabase } = require('./config/database');
+        const dbInitResult = await initializeDatabase();
+        
+        if (!dbInitResult.success) {
+            console.error('❌ 数据库表结构初始化失败，服务器启动中止');
+            console.error('错误详情:', dbInitResult.message);
             process.exit(1);
         }
+        
+        console.log('✅ 数据库表结构初始化成功');
 
         // 初始化数据模型
         await initModels();
@@ -258,10 +306,13 @@ const startServer = async () => {
             console.log(`服务器启动成功，端口: ${PORT}`);
             console.log(`环境: ${process.env.NODE_ENV || 'development'}`);
             console.log(`健康检查: http://localhost:${PORT}/health`);
+            console.log(`API文档: http://localhost:${PORT}/api-docs`);
         });
 
     } catch (error) {
         console.error('服务器启动失败:', error);
+        console.error('错误详情:', error.message);
+        console.error('错误堆栈:', error.stack);
         process.exit(1);
     }
 };

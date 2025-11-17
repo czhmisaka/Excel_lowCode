@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-27 23:16:15
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-09 01:13:26
+ * @LastEditTime: 2025-11-17 09:27:49
  * @FilePath: /lowCode_excel/backend/config/database.js
  */
 const { Sequelize } = require('sequelize');
@@ -72,7 +72,55 @@ const testConnection = async () => {
     }
 };
 
+/**
+ * 初始化数据库表结构
+ * 使用自动建表模块确保所有必需表都存在
+ */
+const initializeDatabase = async () => {
+    try {
+        const autoTableCreator = require('../utils/autoTableCreator');
+        console.log('开始自动初始化数据库表结构...');
+        
+        const result = await autoTableCreator.initializeDatabase();
+        
+        if (result.success) {
+            console.log('✅ 数据库表结构初始化成功');
+        } else {
+            console.error('❌ 数据库表结构初始化失败');
+            console.error('初始化报告:', JSON.stringify(result, null, 2));
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('数据库初始化失败:', error);
+        return {
+            success: false,
+            message: '数据库初始化失败',
+            error: error.message
+        };
+    }
+};
+
+/**
+ * 获取数据库健康状态
+ */
+const getDatabaseHealth = async () => {
+    try {
+        const autoTableCreator = require('../utils/autoTableCreator');
+        return await autoTableCreator.getHealthStatus();
+    } catch (error) {
+        return {
+            status: 'unhealthy',
+            database: 'disconnected',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        };
+    }
+};
+
 module.exports = {
     sequelize,
-    testConnection
+    testConnection,
+    initializeDatabase,
+    getDatabaseHealth
 };

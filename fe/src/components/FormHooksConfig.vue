@@ -1,30 +1,27 @@
 <template>
   <div class="form-hooks-config">
-    <!-- 工具栏 -->
-    <div class="modern-toolbar">
-      <div class="toolbar-content">
-        <el-button type="primary" @click="handleAddHook" class="modern-button" :icon="Plus">
-          添加Hook
+    <!-- 简化工具栏 -->
+    <div class="hooks-toolbar">
+      <el-button type="primary" @click="handleAddHook" :icon="Plus">
+        添加Hook
+      </el-button>
+      <div class="toolbar-actions">
+        <el-button type="text" @click="handleTestHooks" :icon="VideoPlay">
+          测试Hook
         </el-button>
-        <div class="toolbar-actions">
-          <el-button type="text" @click="handleTestHooks" :icon="VideoPlay">
-            测试Hook
-          </el-button>
-          <el-button type="text" @click="handleExportHooks" :icon="Download">
-            导出配置
-          </el-button>
-        </div>
+        <el-button type="text" @click="handleExportHooks" :icon="Download">
+          导出配置
+        </el-button>
       </div>
     </div>
 
-    <!-- Hook列表 -->
-    <div class="modern-card">
-      <el-table
-        :data="hooks"
-        stripe
-        class="modern-table"
-        style="width: 100%"
-      >
+    <!-- Hook列表 - 移除外层卡片 -->
+    <el-table
+      :data="hooks"
+      stripe
+      style="width: 100%"
+      class="hooks-table"
+    >
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="name" label="Hook名称" min-width="120">
           <template #default="scope">
@@ -127,7 +124,6 @@
           </el-button>
         </el-empty>
       </div>
-    </div>
 
     <!-- Hook编辑对话框 -->
     <el-dialog
@@ -716,11 +712,13 @@ initHooks()
   padding: 0;
 }
 
-.toolbar-content {
+/* 简化工具栏样式 */
+.hooks-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
+  margin-bottom: 16px;
+  padding: 0;
 }
 
 .toolbar-actions {
@@ -729,8 +727,28 @@ initHooks()
   gap: 8px;
 }
 
+/* 简化表格样式 */
+.hooks-table {
+  border-radius: var(--radius-base);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+}
+
+.hooks-table :deep(.el-table__header) {
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+}
+
+.hooks-table :deep(.el-table__body tr:hover > td) {
+  background-color: rgba(24, 144, 255, 0.04) !important;
+}
+
 .empty-state {
   padding: 40px 0;
+  text-align: center;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-base);
+  margin-top: 16px;
 }
 
 .form-tip {
@@ -787,7 +805,7 @@ initHooks()
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .toolbar-content {
+  .hooks-toolbar {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
