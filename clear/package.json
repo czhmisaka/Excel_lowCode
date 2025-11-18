@@ -1,0 +1,45 @@
+{
+  "name": "lowcode-excel-cleanup",
+  "version": "1.0.0",
+  "description": "低代码Excel系统数据清理工具 - 清理端口3000上的所有数据表、表单和hook",
+  "main": "cleanup.js",
+  "bin": {
+    "lowcode-cleanup": "./cleanup.js"
+  },
+  "scripts": {
+    "start": "node cleanup.js",
+    "cleanup": "node cleanup.js",
+    "test": "echo \"测试清理脚本功能\" && node cleanup.js --help"
+  },
+  "keywords": [
+    "lowcode",
+    "excel",
+    "cleanup",
+    "api",
+    "database",
+    "forms",
+    "hooks"
+  ],
+  "author": "低代码Excel系统",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/czhmisaka/Excel_lowCode.git"
+  },
+  "homepage": "https://github.com/czhmisaka/Excel_lowCode/tree/main/clear",
+  "bugs": {
+    "url": "https://github.com/czhmisaka/Excel_lowCode/issues"
+  },
+  "files": [
+    "cleanup.js",
+    "README.md",
+    "package.json"
+  ]
+}
