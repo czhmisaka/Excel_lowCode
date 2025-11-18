@@ -1,5 +1,6 @@
-# 统一Dockerfile - 单容器解决方案
+# 统一Dockerfile - 单容器解决方案（支持多架构）
 # 多阶段构建，包含前端构建、后端依赖安装和运行时环境
+# 支持 linux/amd64 和 linux/arm64 架构
 
 # 第一阶段：前端构建
 FROM node:20-alpine AS frontend-builder
@@ -27,7 +28,6 @@ RUN npm list npm-run-all2 || npm install npm-run-all2 && \
     # 验证权限设置
     ls -la node_modules/.bin/run-p && \
     ls -la node_modules/.bin/npm-run-all2
-
 
 # 复制前端源代码
 COPY fe/ ./
@@ -71,7 +71,7 @@ COPY backend/ ./
 # 创建上传目录和数据目录（用于SQLite）
 RUN mkdir -p uploads && mkdir -p data
 
-# 强制重新构建原生模块（确保在当前架构上编译）
+# 强制重新构建原生模块（确保在当前架构上编译）- 多架构关键步骤
 RUN npm rebuild sqlite3 --build-from-source
 
 # 第三阶段：MCP服务器构建
@@ -117,7 +117,7 @@ FROM node:20-alpine
 # 验证 Node.js 版本
 RUN node --version && npm --version
 
-# 安装运行时依赖
+# 安装运行时依赖（多架构兼容的包）
 RUN apk add --no-cache nginx supervisor sqlite-libs
 
 # 创建工作目录

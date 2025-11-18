@@ -8,7 +8,7 @@ const axios = require('axios');
 
 // 配置
 const CONFIG = {
-  API_BASE: 'http://localhost:3000/api',
+  API_BASE: 'http://118.196.16.32:13000/api',
   TIMEOUT: 30000,
   RETRY_COUNT: 3,
   RETRY_DELAY: 5000

@@ -7,7 +7,7 @@
 // 配置签到表字段选项的脚本
 // 使用表结构编辑器API来配置字段
 
-const tableHash = '65c97fd2268d95c3d222c8596dd893b1';
+const tableHash = '009297a8bd420455315d2b6529eb6f8d';
 
 // 字段配置数据
 const fieldConfig = {

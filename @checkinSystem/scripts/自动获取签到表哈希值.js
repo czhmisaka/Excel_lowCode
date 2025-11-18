@@ -7,7 +7,7 @@ const axios = require('axios');
 
 // 配置
 const CONFIG = {
-  API_BASE: 'http://localhost:3000/api',
+  API_BASE: 'http://118.196.16.32:13000/api',
   TARGET_TABLE: 'sign_in_sheet',
   TIMEOUT: 10000
 };

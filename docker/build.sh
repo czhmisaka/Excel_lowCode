@@ -81,8 +81,17 @@ load_env() {
 build_images() {
     log_info "开始构建Docker镜像..."
     
+    # 检查是否使用多架构模式
+    if [ "$1" = "--multi-arch" ]; then
+        log_info "使用多架构模式构建..."
+        if [ -f "docker/build-multi-arch.sh" ]; then
+            docker/build-multi-arch.sh unified
+        else
+            log_error "多架构构建脚本不存在: docker/build-multi-arch.sh"
+            exit 1
+        fi
     # 检查是否使用单容器模式
-    if [ "$1" = "--unified" ]; then
+    elif [ "$1" = "--unified" ]; then
         log_info "使用单容器模式构建..."
         log_info "统一镜像将通过docker-compose在部署时构建，确保所有构建在容器内完成"
         # 对于unified模式，不在这里构建，让docker-compose处理构建
