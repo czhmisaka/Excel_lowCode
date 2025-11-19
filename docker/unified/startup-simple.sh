@@ -2,12 +2,12 @@
 ###
  # @Date: 2025-10-31 11:17:36
  # @LastEditors: CZH
- # @LastEditTime: 2025-11-17 01:18:55
+ # @LastEditTime: 2025-11-19 00:21:33
  # @FilePath: /lowCode_excel/docker/unified/startup-simple.sh
 ### 
 
 # 简化的统一容器启动脚本
-# 使用环境变量替换和直接启动方式
+# 支持MySQL和SQLite两种数据库模式
 
 set -e
 
@@ -17,20 +17,26 @@ echo "=== 开始容器启动流程 ==="
 : ${MCP_SERVER_PORT:=3001}
 : ${BACKEND_PORT:=3000}
 : ${API_BASE_URL:=http://localhost:3000}
+: ${DB_TYPE:=sqlite}
 
 echo "环境变量配置:"
 echo "- MCP_SERVER_PORT: $MCP_SERVER_PORT"
 echo "- BACKEND_PORT: $BACKEND_PORT"
 echo "- API_BASE_URL: $API_BASE_URL"
+echo "- DB_TYPE: $DB_TYPE"
 
-# 检查并初始化数据库
+# 根据数据库类型执行不同的初始化逻辑
 echo "检查数据库状态..."
-if [ ! -f "/app/data/annual_leave.db" ]; then
-    echo "数据库文件不存在，开始初始化数据库..."
-    mkdir -p /app/data
+if [ "$DB_TYPE" = "sqlite" ]; then
+    echo "使用SQLite数据库模式"
     
-    # 创建简单的数据库初始化脚本
-    cat > /app/init-db.js << 'EOF'
+    # SQLite数据库初始化
+    if [ ! -f "/app/data/annual_leave.db" ]; then
+        echo "SQLite数据库文件不存在，开始初始化数据库..."
+        mkdir -p /app/data
+        
+        # 创建简单的数据库初始化脚本
+        cat > /app/init-db.js << 'EOF'
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
@@ -130,10 +136,61 @@ async function initDatabase() {
 initDatabase();
 EOF
 
-    # 执行数据库初始化
-    cd /app && node init-db.js
+        # 执行数据库初始化
+        cd /app && node init-db.js
+    else
+        echo "✅ SQLite数据库文件已存在: /app/data/annual_leave.db"
+    fi
 else
-    echo "✅ 数据库文件已存在: /app/data/annual_leave.db"
+    echo "使用MySQL数据库模式"
+    echo "MySQL数据库表结构将在后端应用启动时自动创建"
+    
+    # 检查MySQL连接
+    echo "测试MySQL数据库连接..."
+    cat > /app/test-mysql.js << 'EOF'
+const mysql = require('mysql2/promise');
+
+async function testMySQL() {
+    try {
+        const connection = await mysql.createConnection({
+            host: process.env.DB_HOST,
+            port: process.env.DB_PORT,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME
+        });
+        
+        console.log('✅ MySQL数据库连接成功');
+        
+        // 检查现有表
+        const [tables] = await connection.execute(
+            'SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?',
+            [process.env.DB_NAME]
+        );
+        
+        console.log(`📊 MySQL数据库中现有表数量: ${tables.length}`);
+        tables.forEach((table, index) => {
+            console.log(`  ${index + 1}. ${table.TABLE_NAME}`);
+        });
+        
+        await connection.end();
+        return true;
+    } catch (error) {
+        console.error('❌ MySQL数据库连接失败:', error.message);
+        console.error('请检查以下配置:');
+        console.error('- 主机:', process.env.DB_HOST);
+        console.error('- 端口:', process.env.DB_PORT);
+        console.error('- 数据库:', process.env.DB_NAME);
+        console.error('- 用户:', process.env.DB_USER);
+        return false;
+    }
+}
+
+testMySQL();
+EOF
+
+    # 测试MySQL连接
+    cd /app && node test-mysql.js
 fi
 
 # 生成最终的supervisord配置文件
@@ -185,7 +242,7 @@ echo "服务配置:"
 echo "- 后端服务端口: $BACKEND_PORT"
 echo "- MCP服务器端口: $MCP_SERVER_PORT"
 echo "- API基础URL: $API_BASE_URL"
-echo "- MCP服务令牌: 已配置（使用默认令牌）"
+echo "- 数据库类型: $DB_TYPE"
 
 # 启动supervisord
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

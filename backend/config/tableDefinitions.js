@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-11-17 09:23:33
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-17 09:25:23
+ * @LastEditTime: 2025-11-19 00:28:55
  * @FilePath: /lowCode_excel/backend/config/tableDefinitions.js
  * @Description: 数据库表结构定义配置
  */
@@ -164,7 +164,18 @@ const getTableCreateSQL = (tableName, dialect = 'sqlite') => {
   }
 
   const columns = definition.columns.map(col => {
-    let columnDef = `"${col.name}" ${col.type}`;
+    // 处理MySQL兼容性
+    let columnType = col.type;
+    if (dialect === 'mysql') {
+      // 为旧版本MySQL提供兼容性支持
+      if (col.type === 'JSON') {
+        columnType = 'JSON';
+      } else if (col.type === 'UUID') {
+        columnType = 'VARCHAR(36)'; // UUID标准长度
+      }
+    }
+    
+    let columnDef = dialect === 'sqlite' ? `"${col.name}" ${columnType}` : `\`${col.name}\` ${columnType}`;
     
     if (col.primaryKey) {
       columnDef += ' PRIMARY KEY';
@@ -183,7 +194,13 @@ const getTableCreateSQL = (tableName, dialect = 'sqlite') => {
     
     if (col.defaultValue) {
       if (col.defaultValue === 'UUID') {
-        columnDef += dialect === 'sqlite' ? ' DEFAULT (lower(hex(randomblob(4)) || \'-\' || hex(randomblob(2)) || \'-\' || hex(randomblob(2)) || \'-\' || hex(randomblob(2)) || \'-\' || hex(randomblob(6))))' : ' DEFAULT (UUID())';
+        if (dialect === 'sqlite') {
+          columnDef += ' DEFAULT (lower(hex(randomblob(4)) || \'-\' || hex(randomblob(2)) || \'-\' || hex(randomblob(2)) || \'-\' || hex(randomblob(2)) || \'-\' || hex(randomblob(6))))';
+        } else {
+          // MySQL: 对于UUID字段，不设置默认值，由应用层生成
+          // 避免 "Invalid default value for 'id'" 错误
+          columnDef += ''; // 不设置默认值
+        }
       } else if (typeof col.defaultValue === 'string' && col.defaultValue !== 'CURRENT_TIMESTAMP') {
         columnDef += ` DEFAULT '${col.defaultValue}'`;
       } else {
@@ -194,7 +211,9 @@ const getTableCreateSQL = (tableName, dialect = 'sqlite') => {
     return columnDef;
   }).join(',\n  ');
 
-  let sql = `CREATE TABLE IF NOT EXISTS "${definition.name}" (\n  ${columns}\n)`;
+  let sql = dialect === 'sqlite' 
+    ? `CREATE TABLE IF NOT EXISTS "${definition.name}" (\n  ${columns}\n)`
+    : `CREATE TABLE IF NOT EXISTS \`${definition.name}\` (\n  ${columns}\n)`;
 
   // 添加表注释（MySQL支持）
   if (dialect === 'mysql' && definition.description) {
@@ -217,11 +236,14 @@ const getTableIndexSQL = (tableName, dialect = 'sqlite') => {
   }
 
   return definition.indexes.map(index => {
-    const columns = index.columns.map(col => `"${col}"`).join(', ');
+    const columns = index.columns.map(col => 
+      dialect === 'sqlite' ? `"${col}"` : `\`${col}\``
+    ).join(', ');
+    
     if (dialect === 'sqlite') {
       return `CREATE INDEX IF NOT EXISTS "${index.name}" ON "${definition.name}" (${columns});`;
     } else {
-      return `CREATE INDEX "${index.name}" ON \`${definition.name}\` (${columns});`;
+      return `CREATE INDEX IF NOT EXISTS \`${index.name}\` ON \`${definition.name}\` (${columns});`;
     }
   });
 };

@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-27 23:16:15
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-17 09:27:49
+ * @LastEditTime: 2025-11-19 00:23:42
  * @FilePath: /lowCode_excel/backend/config/database.js
  */
 const { Sequelize } = require('sequelize');
@@ -68,6 +68,18 @@ const testConnection = async () => {
         return true;
     } catch (error) {
         console.error('数据库连接失败:', error.message);
+        
+        // 提供更详细的错误信息
+        if (process.env.DB_TYPE === 'mysql') {
+            console.error('MySQL连接配置:');
+            console.error('- 主机:', process.env.DB_HOST);
+            console.error('- 端口:', process.env.DB_PORT);
+            console.error('- 数据库:', process.env.DB_NAME);
+            console.error('- 用户:', process.env.DB_USER);
+        } else {
+            console.error('SQLite数据库路径:', process.env.SQLITE_DB_PATH || './data/annual_leave.db');
+        }
+        
         return false;
     }
 };
