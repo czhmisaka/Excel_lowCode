@@ -209,40 +209,40 @@ const submitFormData = async (req, res) => {
       // 执行beforeSubmit Hook
       processedData = await hookEngine.executeHooks(formId, processedData, 'beforeSubmit');
 
-      // 如果表单关联了数据表，则保存数据
-      if (form.tableMapping) {
-        const mapping = await TableMapping.findOne({
-          where: { hashValue: form.tableMapping }
-        });
-
-        if (mapping) {
-          // 获取动态表模型
-          const DynamicModel = getDynamicModel(form.tableMapping, mapping.columnDefinitions);
-
-          // 执行新增操作
-          const newRecord = await DynamicModel.create(processedData);
-
-          // 记录操作日志
-          const clientInfo = OperationLogger.extractClientInfo(req);
-          await OperationLogger.logCreate({
-            tableName: mapping.tableName,
-            tableHash: form.tableMapping,
-            recordId: newRecord.id,
-            oldData: null,
-            newData: newRecord.toJSON(),
-            description: `表单提交新增记录 #${newRecord.id}`,
-            user: {
-              id: 0,
-              username: 'form_user',
-              displayName: '表单填写'
-            },
-            ipAddress: clientInfo.ipAddress,
-            userAgent: clientInfo.userAgent
+        // 如果表单关联了数据表，则保存数据
+        if (form.tableMapping) {
+          const mapping = await TableMapping.findOne({
+            where: { hashValue: form.tableMapping }
           });
 
-          processedData = { ...processedData, recordId: newRecord.id };
+          if (mapping) {
+            // 获取动态表模型，传递实际表名
+            const DynamicModel = getDynamicModel(form.tableMapping, mapping.columnDefinitions, mapping.tableName);
+
+            // 执行新增操作
+            const newRecord = await DynamicModel.create(processedData);
+
+            // 记录操作日志
+            const clientInfo = OperationLogger.extractClientInfo(req);
+            await OperationLogger.logCreate({
+              tableName: mapping.tableName,
+              tableHash: form.tableMapping,
+              recordId: newRecord.id,
+              oldData: null,
+              newData: newRecord.toJSON(),
+              description: `表单提交新增记录 #${newRecord.id}`,
+              user: {
+                id: 0,
+                username: 'form_user',
+                displayName: '表单填写'
+              },
+              ipAddress: clientInfo.ipAddress,
+              userAgent: clientInfo.userAgent
+            });
+
+            processedData = { ...processedData, recordId: newRecord.id };
+          }
         }
-      }
 
       // 执行afterSubmit Hook
       await hookEngine.executeHooks(formId, processedData, 'afterSubmit');

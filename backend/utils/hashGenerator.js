@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-27 23:17:46
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-21 10:49:18
+ * @LastEditTime: 2025-11-20 14:04:02
  * @FilePath: /lowCode_excel/backend/utils/hashGenerator.js
  */
 const crypto = require('crypto');
@@ -44,7 +44,7 @@ const generateHash = (fileName, fileBuffer) => {
  */
 const validateHash = (hash) => {
     return typeof hash === 'string' &&
-        hash.length === 32 &&
+        (hash.length === 32 || hash.length === 64) &&
         /^[a-f0-9]+$/.test(hash);
 };
 

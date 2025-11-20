@@ -8,7 +8,7 @@ const axios = require('axios');
 
 // 配置
 const CONFIG = {
-  API_BASE: 'http://118.196.16.32:13000/api',
+  API_BASE: 'http://localhost:3000/api',
   TIMEOUT: 30000,
   RETRY_COUNT: 3,
   RETRY_DELAY: 5000
@@ -194,9 +194,9 @@ async function checkServerConnection() {
     console.log('服务器状态:', response.data);
     return true;
   } catch (error) {
-    console.error('❌ 无法连接到远程服务器:', error.message);
+    console.error('❌ 无法连接到服务器:', error.message);
     console.log('请检查:');
-    console.log('1. 服务器地址是否正确: http://118.196.16.32:3000');
+    console.log('1. 服务器地址是否正确: http://localhost:3000');
     console.log('2. 服务器是否正在运行');
     console.log('3. 网络连接是否正常');
     console.log('4. 防火墙设置');

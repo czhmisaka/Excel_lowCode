@@ -134,6 +134,7 @@ export interface QueryParams {
 export interface DataResponse {
     success: boolean
     data: any[]
+    total?: number
     pagination: {
         page: number
         limit: number
@@ -398,6 +399,18 @@ class ApiService {
             columns,
             searchCapabilities
         }
+    }
+
+    // 获取表数据（用于文件管理页面的展开预览）
+    async getTableData(hash: string, page: number = 1, limit: number = 10): Promise<DataResponse> {
+        const queryParams: Record<string, string> = {
+            page: page.toString(),
+            limit: limit.toString()
+        }
+
+        const queryString = new URLSearchParams(queryParams).toString()
+        const response = await apiClient.get(`/api/data/${hash}?${queryString}`)
+        return response.data
     }
 
     // 根据字段类型获取可用的搜索操作符

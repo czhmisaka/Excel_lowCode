@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-27 23:17:13
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-16 03:50:37
+ * @LastEditTime: 2025-11-20 15:10:34
  * @FilePath: /lowCode_excel/backend/models/index.js
  */
 const { sequelize } = require('../config/database');
@@ -185,10 +185,11 @@ const initModels = async () => {
 };
 
 // 获取动态表模型
-const getDynamicModel = (hashValue, columnDefinitions) => {
+const getDynamicModel = (hashValue, columnDefinitions, tableName) => {
     const { DataTypes } = require('sequelize');
 
     console.log('创建动态模型，哈希值:', hashValue);
+    console.log('表名:', tableName);
     console.log('列定义:', JSON.stringify(columnDefinitions, null, 2));
 
     // 确保columnDefinitions是数组格式
@@ -203,14 +204,13 @@ const getDynamicModel = (hashValue, columnDefinitions) => {
     }
 
     // 根据列定义创建模型属性
-    const attributes = {
-        id: {
-            type: DataTypes.INTEGER,
-            primaryKey: true,
-            autoIncrement: true
-        }
-    };
+    const attributes = {};
 
+    // 检查是否有 id 列，如果有则标记为主键
+    let hasIdColumn = false;
+    let idColumnName = null;
+
+    // 对于现有的表，不自动添加id列，使用表已有的结构
     // 添加动态列
     if (columnDefs && Array.isArray(columnDefs)) {
         columnDefs.forEach(column => {
@@ -228,9 +228,15 @@ const getDynamicModel = (hashValue, columnDefinitions) => {
             // 使用原始字段名，不进行任何转换
             const fieldName = column.name;
 
+            // 检查是否是 id 列
+            if (fieldName === 'id') {
+                hasIdColumn = true;
+                idColumnName = fieldName;
+            }
+
             attributes[fieldName] = {
                 type: dataType,
-                allowNull: true,
+                allowNull: column.nullable !== false,
                 comment: column.originalName || column.name,
                 field: fieldName // 明确指定数据库字段名
             };
@@ -238,14 +244,30 @@ const getDynamicModel = (hashValue, columnDefinitions) => {
     }
 
     console.log('模型属性:', JSON.stringify(Object.keys(attributes), null, 2));
+    console.log('是否有 id 列:', hasIdColumn, 'id 列名:', idColumnName);
 
-    // 创建动态模型
-    const DynamicModel = sequelize.define(`Data_${hashValue}`, attributes, {
-        tableName: `data_${hashValue}`,
+    // 始终使用基于哈希值的表名，确保表名一致性
+    const actualTableName = `data_${hashValue}`;
+
+    // 准备模型选项
+    const modelOptions = {
+        tableName: actualTableName,
         timestamps: false, // 禁用时间戳，因为现有表没有这些字段
         underscored: false, // 禁用下划线命名，直接使用原始字段名
-        freezeTableName: true // 防止Sequelize自动修改表名
-    });
+        freezeTableName: true, // 防止Sequelize自动修改表名
+        // 明确禁用 Sequelize 的自动主键检测，避免冲突
+        id: false
+    };
+
+    // 如果有 id 列，在属性中明确标记为主键
+    if (hasIdColumn && attributes[idColumnName]) {
+        console.log(`将 ${idColumnName} 列标记为主键`);
+        attributes[idColumnName].primaryKey = true;
+        attributes[idColumnName].autoIncrement = true;
+    }
+
+    // 创建动态模型
+    const DynamicModel = sequelize.define(`Data_${hashValue}`, attributes, modelOptions);
 
     return DynamicModel;
 };

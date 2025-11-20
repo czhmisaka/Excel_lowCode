@@ -38,14 +38,6 @@
                             <span>数据编辑</span>
                         </template>
                     </el-menu-item>
-                    <el-menu-item index="/mappings" class="modern-menu-item">
-                        <template #title>
-                            <el-icon>
-                                <Connection />
-                            </el-icon>
-                            <span>映射关系</span>
-                        </template>
-                    </el-menu-item>
                     <el-menu-item index="/forms" class="modern-menu-item">
                         <template #title>
                             <el-icon>
@@ -76,14 +68,6 @@
                                 <Notebook />
                             </el-icon>
                             <span>操作日志</span>
-                        </template>
-                    </el-menu-item>
-                    <el-menu-item index="/table-structure" class="modern-menu-item">
-                        <template #title>
-                            <el-icon>
-                                <Setting />
-                            </el-icon>
-                            <span>表结构编辑</span>
                         </template>
                     </el-menu-item>
                 </template>

@@ -70,8 +70,9 @@ const queryData = async (req, res) => {
             }
         }
 
-        // 获取动态表模型
-        const DynamicModel = getDynamicModel(hash, columnDefinitions);
+        // 获取动态表模型 - 使用统一的表名格式：data_${hash}
+        const actualTableName = `data_${hash}`;
+        const DynamicModel = getDynamicModel(hash, columnDefinitions, actualTableName);
 
         // 构建查询条件
         const whereClause = {};

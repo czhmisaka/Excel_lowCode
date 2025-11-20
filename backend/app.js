@@ -197,6 +197,7 @@ app.use('/api/field-config', require('./routes/fieldConfig'));
 app.use('/api/service-accounts', require('./routes/serviceAccounts'));
 app.use('/api/forms', require('./routes/forms'));
 app.use('/api/health', require('./routes/health'));
+app.use('/api/tables', require('./routes/tables'));
 
 // 404处理
 app.use('*', (req, res) => {
