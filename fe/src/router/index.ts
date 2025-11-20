@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-08-28 07:54:03
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-11 09:57:32
+ * @LastEditTime: 2025-11-19 18:05:07
  * @FilePath: /lowCode_excel/fe/src/router/index.ts
  */
 import { createRouter, createWebHistory } from 'vue-router'
@@ -26,12 +26,14 @@ const router = createRouter({
         {
           path: '',
           name: 'Dashboard',
-          component: () => import('@/views/Dashboard.vue')
+          component: () => import('@/views/Dashboard.vue'),
+          meta: { requiresAdmin: true }
         },
         {
           path: '/files',
           name: 'FileManagement',
-          component: () => import('@/views/FileManagement.vue')
+          component: () => import('@/views/FileManagement.vue'),
+          meta: { requiresAdmin: true }
         },
         {
           path: '/data',
@@ -41,42 +43,55 @@ const router = createRouter({
         {
           path: '/editor',
           name: 'DataEditor',
-          component: () => import('@/views/DataEditor.vue')
+          component: () => import('@/views/DataEditor.vue'),
+          meta: { requiresAdmin: true }
         },
         {
           path: '/mappings',
           name: 'MappingRelations',
-          component: () => import('@/views/MappingRelations.vue')
+          component: () => import('@/views/MappingRelations.vue'),
+          meta: { requiresAdmin: true }
         },
         {
           path: '/api-guide',
           name: 'ApiGuide',
-          component: () => import('@/views/ApiGuide.vue')
+          component: () => import('@/views/ApiGuide.vue'),
+          meta: { requiresAdmin: true }
         },
         {
           path: '/users',
           name: 'UserManagement',
-          component: () => import('@/views/UserManagement.vue')
+          component: () => import('@/views/UserManagement.vue'),
+          meta: { requiresAdmin: true }
         },
         {
           path: '/logs',
           name: 'LogManagement',
-          component: () => import('@/views/LogManagement.vue')
+          component: () => import('@/views/LogManagement.vue'),
+          meta: { requiresAdmin: true }
         },
         {
           path: '/table-structure',
           name: 'TableStructureEditor',
-          component: () => import('@/views/TableStructureEditorView.vue')
+          component: () => import('@/views/TableStructureEditorView.vue'),
+          meta: { requiresAdmin: true }
         },
         {
           path: '/forms',
           name: 'FormManagement',
-          component: () => import('@/views/FormManagement.vue')
+          component: () => import('@/views/FormManagement.vue'),
+          meta: { requiresAdmin: true }
         },
         {
           path: '/forms/:id',
           name: 'FormDetail',
-          component: () => import('@/views/FormDetail.vue')
+          component: () => import('@/views/FormDetail.vue'),
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: '/profile',
+          name: 'Profile',
+          component: () => import('@/views/ProfileView.vue')
         }
       ]
     },
@@ -121,6 +136,23 @@ router.beforeEach((to, from, next) => {
       path: '/login',
       query: { redirect: to.fullPath }
     })
+  } else if (to.meta.requiresAuth && authStore.isAuthenticated) {
+    // 检查用户角色权限
+    const userRole = authStore.userInfo?.role
+    const requiresAdmin = to.meta.requiresAdmin
+    
+    // 如果路由需要管理员权限，但用户不是管理员
+    if (requiresAdmin && userRole !== 'admin') {
+      // 普通用户只能访问数据浏览界面
+      if (to.path === '/data') {
+        next()
+      } else {
+        // 重定向到数据浏览界面
+        next('/data')
+      }
+    } else {
+      next()
+    }
   } else {
     next()
   }

@@ -15,6 +15,32 @@
             </div>
         </div>
 
+        <!-- 搜索工具栏 -->
+        <SearchToolbar 
+            v-model:show-advanced="showAdvancedSearch"
+            @quick-search="handleQuickSearch"
+            @clear-quick-search="handleClearQuickSearch"
+        />
+
+        <!-- 高级搜索面板 -->
+        <AdvancedSearchPanel
+            :show="showAdvancedSearch"
+            :table-columns="tableColumns"
+            :search-capabilities="searchCapabilities"
+            :loading="loading"
+            @search="handleAdvancedSearch"
+            @cancel="handleCancelAdvancedSearch"
+        />
+
+        <!-- 搜索状态指示器 -->
+        <div class="search-status" v-if="hasActiveSearch">
+            <el-tag type="info" closable @close="clearAllSearch">
+                <span v-if="quickSearchText">快速搜索: "{{ quickSearchText }}"</span>
+                <span v-else-if="advancedSearchConditions.length > 0">高级搜索: {{ advancedSearchConditions.length }} 个条件</span>
+                <span> (共 {{ totalRecords }} 条记录)</span>
+            </el-tag>
+        </div>
+
         <!-- 数据表格 -->
         <div class="modern-card">
             <el-table :data="tableData" v-loading="loading" border stripe class="modern-table" style="width: 100%">
@@ -38,6 +64,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useFilesStore } from '@/stores/files'
 import { useDataStore } from '@/stores/data'
 import { Refresh } from '@element-plus/icons-vue'
+import SearchToolbar from '@/components/Search/SearchToolbar.vue'
+import AdvancedSearchPanel from '@/components/Search/AdvancedSearchPanel.vue'
+import { apiService } from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -50,6 +79,10 @@ const selectedHash = ref('')
 const fileList = ref<any[]>([])
 const currentPage = ref(1)
 const pageSize = ref(10)
+const showAdvancedSearch = ref(false)
+const quickSearchText = ref('')
+const advancedSearchConditions = ref<any[]>([])
+const searchCapabilities = ref<{ [key: string]: string[] }>({})
 
 // 计算属性
 const tableData = computed(() => dataStore.currentData)
@@ -58,6 +91,9 @@ const tableColumns = computed(() => {
     return Object.keys(tableData.value[0])
 })
 const totalRecords = computed(() => dataStore.pagination.total)
+const hasActiveSearch = computed(() => {
+    return quickSearchText.value !== '' || advancedSearchConditions.value.length > 0
+})
 
 // 初始化数据
 const initData = async () => {
@@ -145,6 +181,126 @@ const handleCurrentChange = (page: number) => {
     loadData()
 }
 
+// 搜索相关方法
+const handleQuickSearch = async (text: string) => {
+    quickSearchText.value = text
+    advancedSearchConditions.value = []
+    
+    if (text) {
+        // 构建快速搜索条件 - 在所有文本字段中搜索
+        const searchConditions: any[] = []
+        const columns = tableColumns.value
+        
+        columns.forEach(column => {
+            searchConditions.push({
+                [column]: {
+                    '$like': `%${text}%`
+                }
+            })
+        })
+        
+        // 使用 OR 逻辑组合所有字段的搜索条件
+        advancedSearchConditions.value = [{
+            '$or': searchConditions
+        }]
+    } else {
+        advancedSearchConditions.value = []
+    }
+    
+    await performSearch()
+}
+
+const handleClearQuickSearch = () => {
+    quickSearchText.value = ''
+    advancedSearchConditions.value = []
+    performSearch()
+}
+
+const handleAdvancedSearch = async (conditions: any[], logicOperator: string) => {
+    quickSearchText.value = ''
+    showAdvancedSearch.value = false
+    
+    if (conditions.length > 0) {
+        if (conditions.length === 1) {
+            advancedSearchConditions.value = conditions
+        } else {
+            // 多个条件使用指定的逻辑操作符组合
+            advancedSearchConditions.value = [{
+                [`$${logicOperator}`]: conditions
+            }]
+        }
+    } else {
+        advancedSearchConditions.value = []
+    }
+    
+    await performSearch()
+}
+
+const handleCancelAdvancedSearch = () => {
+    showAdvancedSearch.value = false
+}
+
+const clearAllSearch = () => {
+    quickSearchText.value = ''
+    advancedSearchConditions.value = []
+    performSearch()
+}
+
+// 执行搜索
+const performSearch = async () => {
+    if (!selectedHash.value) return
+    
+    loading.value = true
+    try {
+        // 构建搜索参数
+        const searchParams: any = {
+            page: currentPage.value,
+            limit: pageSize.value
+        }
+        
+        // 如果有搜索条件，添加到参数中
+        if (advancedSearchConditions.value.length > 0) {
+            searchParams.search = JSON.stringify(advancedSearchConditions.value[0])
+        }
+        
+        await dataStore.fetchData(selectedHash.value, searchParams)
+        
+        // 获取搜索能力信息
+        if (selectedHash.value) {
+            try {
+                const structure = await apiService.getTableStructure(selectedHash.value)
+                searchCapabilities.value = structure.searchCapabilities
+            } catch (error) {
+                console.warn('获取搜索能力信息失败:', error)
+                // 如果获取失败，使用默认搜索能力
+                searchCapabilities.value = {}
+                tableColumns.value.forEach(column => {
+                    searchCapabilities.value[column] = ['eq', 'ne', 'like']
+                })
+            }
+        }
+    } catch (error) {
+        console.error('搜索数据失败:', error)
+    } finally {
+        loading.value = false
+    }
+}
+
+// 监听分页变化，重新执行搜索
+watch([currentPage, pageSize], () => {
+    if (hasActiveSearch.value) {
+        performSearch()
+    }
+})
+
+// 监听选中的hash变化，重置搜索状态
+watch(selectedHash, () => {
+    quickSearchText.value = ''
+    advancedSearchConditions.value = []
+    searchCapabilities.value = {}
+    currentPage.value = 1
+})
+
 onMounted(() => {
     initData()
 })
@@ -174,5 +330,17 @@ onMounted(() => {
     margin-top: 20px;
     display: flex;
     justify-content: flex-end;
+}
+
+.search-status {
+    margin-bottom: 16px;
+}
+
+.search-status .el-tag {
+    padding: 8px 12px;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 </style>

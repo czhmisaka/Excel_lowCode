@@ -472,6 +472,24 @@ class ApiService {
         return response.data
     }
 
+    // 更新当前用户信息
+    async updateCurrentUser(userData: {
+        displayName?: string
+        email?: string
+    }): Promise<any> {
+        const response = await apiClient.put('/api/auth/me', userData)
+        return response.data
+    }
+
+    // 修改密码
+    async changePassword(passwordData: {
+        currentPassword: string
+        newPassword: string
+    }): Promise<any> {
+        const response = await apiClient.post('/api/auth/change-password', passwordData)
+        return response.data
+    }
+
     // 用户注册
     async register(userData: {
         username: string

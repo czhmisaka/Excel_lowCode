@@ -12,76 +12,89 @@
             </div>
             <el-menu :default-active="activeMenu" router class="sidebar-menu modern-sidebar-menu"
                 :collapse="isCollapsed" background-color="transparent" text-color="#bfcbd9" active-text-color="#ffffff">
-                <el-menu-item index="/" class="modern-menu-item">
-                    <template #title>
-                        <el-icon>
-                            <House />
-                        </el-icon>
-                        <span>仪表盘</span>
-                    </template>
-                </el-menu-item>
-                <el-menu-item index="/files" class="modern-menu-item">
-                    <template #title>
-                        <el-icon>
-                            <Folder />
-                        </el-icon>
-                        <span>文件管理</span>
-                    </template>
-                </el-menu-item>
+                <!-- 管理员菜单项 -->
+                <template v-if="isAdmin">
+                    <el-menu-item index="/" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <House />
+                            </el-icon>
+                            <span>仪表盘</span>
+                        </template>
+                    </el-menu-item>
+                    <el-menu-item index="/files" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <Folder />
+                            </el-icon>
+                            <span>文件管理</span>
+                        </template>
+                    </el-menu-item>
+                    <el-menu-item index="/editor" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <Edit />
+                            </el-icon>
+                            <span>数据编辑</span>
+                        </template>
+                    </el-menu-item>
+                    <el-menu-item index="/mappings" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <Connection />
+                            </el-icon>
+                            <span>映射关系</span>
+                        </template>
+                    </el-menu-item>
+                    <el-menu-item index="/forms" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <Document />
+                            </el-icon>
+                            <span>表单管理</span>
+                        </template>
+                    </el-menu-item>
+                    <el-menu-item index="/api-guide" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <Document />
+                            </el-icon>
+                            <span>API指南</span>
+                        </template>
+                    </el-menu-item>
+                    <el-menu-item index="/users" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <User />
+                            </el-icon>
+                            <span>用户管理</span>
+                        </template>
+                    </el-menu-item>
+                    <el-menu-item index="/logs" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <Notebook />
+                            </el-icon>
+                            <span>操作日志</span>
+                        </template>
+                    </el-menu-item>
+                    <el-menu-item index="/table-structure" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <Setting />
+                            </el-icon>
+                            <span>表结构编辑</span>
+                        </template>
+                    </el-menu-item>
+                </template>
+                
+                <!-- 所有用户都能访问的菜单项 -->
                 <el-menu-item index="/data" class="modern-menu-item">
                     <template #title>
                         <el-icon>
                             <DataBoard />
                         </el-icon>
                         <span>数据浏览</span>
-                    </template>
-                </el-menu-item>
-                <el-menu-item index="/editor" class="modern-menu-item">
-                    <template #title>
-                        <el-icon>
-                            <Edit />
-                        </el-icon>
-                        <span>数据编辑</span>
-                    </template>
-                </el-menu-item>
-                <el-menu-item index="/mappings" class="modern-menu-item">
-                    <template #title>
-                        <el-icon>
-                            <Connection />
-                        </el-icon>
-                        <span>映射关系</span>
-                    </template>
-                </el-menu-item>
-                <el-menu-item index="/forms" class="modern-menu-item">
-                    <template #title>
-                        <el-icon>
-                            <Document />
-                        </el-icon>
-                        <span>表单管理</span>
-                    </template>
-                </el-menu-item>
-                <el-menu-item index="/api-guide" class="modern-menu-item">
-                    <template #title>
-                        <el-icon>
-                            <Document />
-                        </el-icon>
-                        <span>API指南</span>
-                    </template>
-                </el-menu-item>
-                <el-menu-item index="/users" class="modern-menu-item">
-                    <template #title>
-                        <el-icon>
-                            <User />
-                        </el-icon>
-                        <span>用户管理</span>
-                    </template>
-                </el-menu-item>
-                <el-menu-item index="/logs" class="modern-menu-item">
-                    <template #title>
-                        <el-icon>
-                            <Notebook />
-                        </el-icon>
-                        <span>操作日志</span>
                     </template>
                 </el-menu-item>
             </el-menu>
@@ -163,7 +176,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -184,6 +197,7 @@ import {
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 
 // 侧边栏折叠状态
@@ -191,6 +205,9 @@ const isCollapsed = ref(false)
 
 // 侧边栏宽度计算
 const sidebarWidth = computed(() => isCollapsed.value ? '64px' : '200px')
+
+// 检查是否为管理员
+const isAdmin = computed(() => authStore.userInfo?.role === 'admin')
 
 // 当前激活的菜单
 const activeMenu = computed(() => route.path)
@@ -235,7 +252,8 @@ const handleCommand = async (command: string) => {
             // 用户取消操作
         }
     } else if (command === 'profile') {
-        ElMessage.info('个人资料功能开发中...')
+        // 跳转到个人资料页面
+        router.push('/profile')
     } else if (command === 'settings') {
         ElMessage.info('系统设置功能开发中...')
     }
