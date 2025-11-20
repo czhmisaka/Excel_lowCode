@@ -12,10 +12,14 @@ const { initModels } = require('./models');
 // 创建Express应用
 const app = express();
 
+// 导入请求计数器中间件
+const { requestCounter } = require('./middleware/requestCounter');
+
 // 中间件配置
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(requestCounter);
 
 // 静态文件服务
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

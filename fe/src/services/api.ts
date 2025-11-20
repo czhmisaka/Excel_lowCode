@@ -151,6 +151,7 @@ export interface SystemInfo {
         platform: string
         uptime: number
         timestamp: string
+        requestsPerMinute: number
     }
     database: {
         type: string
@@ -160,6 +161,7 @@ export interface SystemInfo {
         status: string
         tableCount: number
         totalRecords: number
+        size: number
         dialect: string
     }
     services: {

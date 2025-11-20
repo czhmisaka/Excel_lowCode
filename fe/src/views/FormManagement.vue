@@ -42,7 +42,38 @@
         <el-table-column prop="formId" label="表单ID" min-width="180" />
         <el-table-column prop="name" label="表单名称" min-width="150" />
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="tableMapping" label="关联表" min-width="120" />
+        <el-table-column prop="tableMapping" label="关联表" min-width="150">
+          <template #default="scope">
+            <el-popover
+              placement="top-start"
+              trigger="hover"
+              :width="300"
+            >
+              <template #reference>
+                <span class="table-name-display">
+                  {{ getTableName(scope.row.tableMapping) }}
+                </span>
+              </template>
+              <div class="table-hash-popover">
+                <div class="popover-title">表哈希值</div>
+                <div class="hash-value">
+                  {{ scope.row.tableMapping || '未关联' }}
+                </div>
+                <div class="popover-actions">
+                  <el-button
+                    type="primary"
+                    link
+                    size="small"
+                    @click="copyTableHash(scope.row.tableMapping)"
+                    :disabled="!scope.row.tableMapping"
+                  >
+                    复制哈希值
+                  </el-button>
+                </div>
+              </div>
+            </el-popover>
+          </template>
+        </el-table-column>
         <el-table-column prop="fieldCount" label="字段数" width="80" align="center">
           <template #default="scope">
             <el-tag size="small" type="info">{{ scope.row.fieldCount || 0 }}</el-tag>
@@ -649,6 +680,27 @@ const getParsedFormDefinition = (definition: any) => {
   return definition
 }
 
+// 根据哈希值获取表名
+const getTableName = (hashValue: string) => {
+  if (!hashValue) return '未关联'
+  
+  const mapping = tableMappings.value.find(m => m.hashValue === hashValue)
+  return mapping ? mapping.tableName : '未知表'
+}
+
+// 复制表哈希值到剪贴板
+const copyTableHash = async (hashValue: string) => {
+  if (!hashValue) return
+  
+  try {
+    await navigator.clipboard.writeText(hashValue)
+    ElMessage.success('哈希值已复制到剪贴板')
+  } catch (error) {
+    console.error('复制失败:', error)
+    ElMessage.error('复制失败')
+  }
+}
+
 // 工具函数
 const nextTick = (fn: () => void) => {
   setTimeout(fn, 0)
@@ -758,6 +810,45 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   justify-content: center;
+}
+
+/* 关联表显示样式 */
+.table-name-display {
+  color: var(--el-color-primary);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.table-name-display:hover {
+  text-decoration: underline;
+}
+
+/* 表哈希值popover样式 */
+.table-hash-popover {
+  padding: 8px 0;
+}
+
+.popover-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.hash-value {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  background: var(--el-fill-color-light);
+  padding: 8px 12px;
+  border-radius: 4px;
+  word-break: break-all;
+  margin-bottom: 12px;
+  border: 1px solid var(--el-border-color);
+}
+
+.popover-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* 响应式设计 */

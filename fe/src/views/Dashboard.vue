@@ -154,7 +154,35 @@
                 <div class="compact-card">
                     <div class="compact-card-header">
                         <span>系统状态概览</span>
-                        <el-button type="primary" text @click="refreshSystemInfo" class="compact-button">刷新</el-button>
+                        <div class="refresh-controls">
+                            <el-button 
+                                type="primary" 
+                                text 
+                                @click="refreshSystemInfo" 
+                                class="compact-button"
+                                :loading="isAutoRefreshing"
+                            >
+                                {{ isAutoRefreshing ? '刷新中...' : '手动刷新' }}
+                            </el-button>
+                            <el-button 
+                                type="success" 
+                                text 
+                                @click="startAutoRefresh" 
+                                class="compact-button"
+                                v-if="!autoRefreshTimer"
+                            >
+                                启动自动刷新
+                            </el-button>
+                            <el-button 
+                                type="warning" 
+                                text 
+                                @click="stopAutoRefresh" 
+                                class="compact-button"
+                                v-else
+                            >
+                                停止自动刷新
+                            </el-button>
+                        </div>
                     </div>
                     <div class="compact-info-grid">
                         <div class="compact-info-item">
@@ -197,9 +225,22 @@
                             </div>
                         </div>
                         <div class="compact-info-item">
-                            <span class="compact-info-label">运行时间</span>
+                            <span class="compact-info-label">运行时间 & 数据库</span>
                             <div class="compact-info-value">
                                 <span class="compact-info-main">{{ formatUptime(systemInfo?.system?.uptime) }}</span>
+                                <span class="compact-info-desc">{{ formatBytes(systemInfo?.database?.size) }} | {{ systemInfo?.database?.tableCount || 0 }} 个表</span>
+                            </div>
+                        </div>
+                        <div class="compact-info-item">
+                            <span class="compact-info-label">请求频率</span>
+                            <div class="compact-info-value">
+                                <span class="compact-info-main">{{ systemInfo?.system?.requestsPerMinute || 0 }} 次/分钟</span>
+                                <span class="compact-info-desc">
+                                    当前负载
+                                    <span v-if="lastRefreshTime" class="refresh-info">
+                                        | 更新时间: {{ lastRefreshTime }} | 耗时: {{ apiResponseTime }}ms
+                                    </span>
+                                </span>
                             </div>
                         </div>
                         <div class="compact-info-item">
@@ -343,7 +384,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFilesStore } from '@/stores/files'
 import { apiService, type SystemInfo } from '@/services/api'
@@ -379,6 +420,12 @@ const recentOperations = ref<any[]>([])
 const selectedTable = ref('')
 const availableTables = ref<string[]>([])
 const expandedOperations = ref<number[]>([])
+
+// 自动刷新相关状态
+const autoRefreshTimer = ref<NodeJS.Timeout | null>(null)
+const isAutoRefreshing = ref(false)
+const lastRefreshTime = ref<string>('')
+const apiResponseTime = ref<number>(0)
 
 // 初始化数据
 const initData = async () => {
@@ -438,8 +485,11 @@ const goToMappingRelations = () => {
     router.push('/mappings')
 }
 
-// 刷新系统信息
+// 刷新系统信息（带耗时统计）
 const refreshSystemInfo = async () => {
+    const startTime = Date.now()
+    isAutoRefreshing.value = true
+    
     try {
         const info = await apiService.getSystemInfo()
         systemInfo.value = info
@@ -452,9 +502,49 @@ const refreshSystemInfo = async () => {
         }
 
         lastCheckTime.value = new Date().toLocaleString()
+        
+        // 计算接口响应时间
+        const endTime = Date.now()
+        apiResponseTime.value = endTime - startTime
+        lastRefreshTime.value = new Date().toLocaleTimeString('zh-CN', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        })
     } catch (error) {
         console.error('获取系统信息失败:', error)
         systemStatus.value = '异常'
+        apiResponseTime.value = 0
+    } finally {
+        isAutoRefreshing.value = false
+    }
+}
+
+// 启动自动刷新
+const startAutoRefresh = () => {
+    // 先立即刷新一次
+    refreshSystemInfo()
+    
+    // 然后每5秒刷新一次
+    autoRefreshTimer.value = setInterval(() => {
+        refreshSystemInfo()
+    }, 1000)
+}
+
+// 停止自动刷新
+const stopAutoRefresh = () => {
+    if (autoRefreshTimer.value) {
+        clearInterval(autoRefreshTimer.value)
+        autoRefreshTimer.value = null
+    }
+}
+
+// 切换自动刷新状态
+const toggleAutoRefresh = () => {
+    if (isAutoRefreshing.value) {
+        stopAutoRefresh()
+    } else {
+        startAutoRefresh()
     }
 }
 
@@ -501,6 +591,17 @@ const formatUptime = (uptime: number | undefined): string => {
     } else {
         return `${seconds}秒`
     }
+}
+
+// 格式化字节大小
+const formatBytes = (bytes: number | undefined): string => {
+    if (!bytes || bytes === 0) return '0 B'
+
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 // 导航到日志管理
@@ -653,6 +754,11 @@ onMounted(() => {
     initData()
     refreshSystemInfo()
     initDefaultTable()
+})
+
+// 组件销毁时清理定时器
+onUnmounted(() => {
+    stopAutoRefresh()
 })
 </script>
 
@@ -830,6 +936,18 @@ onMounted(() => {
 .operation-controls {
     display: flex;
     align-items: center;
+}
+
+.refresh-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.refresh-info {
+    color: #409eff;
+    font-size: 9px;
+    font-weight: 500;
 }
 
 .compact-action-buttons {

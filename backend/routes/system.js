@@ -2,6 +2,51 @@ const express = require('express');
 const router = express.Router();
 const { sequelize } = require('../config/database');
 const { TableMapping } = require('../models');
+const fs = require('fs');
+const path = require('path');
+const { getRequestsPerMinute } = require('../middleware/requestCounter');
+
+/**
+ * 获取数据库占用空间大小
+ * @returns {Promise<number>} 数据库占用空间大小（字节）
+ */
+const getDatabaseSize = async () => {
+    try {
+        const dialect = sequelize.getDialect();
+        
+        if (dialect === 'mysql') {
+            // MySQL: 查询 information_schema.TABLES 获取数据大小
+            const [results] = await sequelize.query(`
+                SELECT SUM(data_length + index_length) as size
+                FROM information_schema.TABLES 
+                WHERE table_schema = ?
+            `, {
+                replacements: [sequelize.config.database],
+                type: sequelize.QueryTypes.SELECT
+            });
+            
+            return results.size || 0;
+        } else if (dialect === 'sqlite') {
+            // SQLite: 使用 PRAGMA 获取数据库文件大小
+            const dbPath = process.env.SQLITE_DB_PATH || './data/annual_leave.db';
+            const absolutePath = path.isAbsolute(dbPath) ? dbPath : path.join(process.cwd(), dbPath);
+            
+            try {
+                const stats = fs.statSync(absolutePath);
+                return stats.size;
+            } catch (fileError) {
+                console.warn('无法获取SQLite数据库文件大小:', fileError.message);
+                return 0;
+            }
+        } else {
+            console.warn(`不支持的数据库类型: ${dialect}`);
+            return 0;
+        }
+    } catch (error) {
+        console.error('获取数据库占用空间失败:', error.message);
+        return 0;
+    }
+};
 
 /**
  * @swagger
@@ -117,6 +162,7 @@ router.get('/info', async (req, res) => {
         let dbStatus = 'disconnected';
         let tableCount = 0;
         let totalRecords = 0;
+        let databaseSize = 0;
 
         try {
             await sequelize.authenticate();
@@ -132,10 +178,16 @@ router.get('/info', async (req, res) => {
             for (const mapping of mappings) {
                 totalRecords += mapping.rowCount || 0;
             }
+
+            // 获取数据库占用空间
+            databaseSize = await getDatabaseSize();
         } catch (dbError) {
             console.error('数据库连接测试失败:', dbError.message);
             dbStatus = 'disconnected';
         }
+
+        // 获取每分钟请求数
+        const requestsPerMinute = getRequestsPerMinute();
 
         // 构建系统信息响应
         const systemInfo = {
@@ -144,7 +196,8 @@ router.get('/info', async (req, res) => {
                 nodeVersion: process.version,
                 platform: process.platform,
                 uptime: Math.floor(process.uptime()),
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                requestsPerMinute: requestsPerMinute
             },
             database: {
                 type: process.env.DB_TYPE || 'mysql',
@@ -154,6 +207,7 @@ router.get('/info', async (req, res) => {
                 status: dbStatus,
                 tableCount: tableCount,
                 totalRecords: totalRecords,
+                size: databaseSize,
                 dialect: sequelize.getDialect()
             },
             services: {
