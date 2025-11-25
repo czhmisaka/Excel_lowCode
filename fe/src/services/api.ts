@@ -23,14 +23,96 @@ const publicApiClient = axios.create({
     }
 })
 
+/**
+ * 检测是否为安全整数（避免JavaScript精度问题）
+ * @param {*} value - 要检测的值
+ * @returns {boolean} 是否为安全整数
+ */
+const isSafeInteger = (value: any): boolean => {
+    if (value === null || value === undefined || value === '') {
+        return true
+    }
+    
+    const num = Number(value)
+    return Number.isSafeInteger(num)
+}
+
+/**
+ * 处理大数字，避免精度丢失
+ * @param {*} value - 原始值
+ * @returns {*} 处理后的值
+ */
+const handleLargeNumber = (value: any): any => {
+    if (value === null || value === undefined || value === '') {
+        return value
+    }
+    
+    // 如果是数字类型且超出安全整数范围，转换为字符串
+    if (typeof value === 'number' && !Number.isSafeInteger(value)) {
+        return value.toString()
+    }
+    
+    // 如果是字符串，检查是否可以转换为数字且超出安全范围
+    if (typeof value === 'string') {
+        const trimmedValue = value.trim()
+        if (trimmedValue === '') {
+            return value
+        }
+        
+        const num = Number(trimmedValue)
+        if (!isNaN(num) && !Number.isSafeInteger(num)) {
+            return trimmedValue // 保持原字符串，避免精度丢失
+        }
+    }
+    
+    return value
+}
+
+/**
+ * 深度处理对象中的大数字
+ * @param {*} obj - 要处理的对象
+ * @returns {*} 处理后的对象
+ */
+const processLargeNumbers = (obj: any): any => {
+    if (obj === null || obj === undefined) {
+        return obj
+    }
+    
+    if (Array.isArray(obj)) {
+        return obj.map(item => processLargeNumbers(item))
+    }
+    
+    if (typeof obj === 'object') {
+        const processed: any = {}
+        for (const [key, value] of Object.entries(obj)) {
+            processed[key] = processLargeNumbers(value)
+        }
+        return processed
+    }
+    
+    return handleLargeNumber(obj)
+}
+
 // 请求拦截器
 apiClient.interceptors.request.use(
     (config) => {
+        console.log('请求拦截器:', config.method, config.url, 'Content-Type:', config.headers['Content-Type'])
+        
         // 添加认证token
         const authStore = useAuthStore()
         if (authStore.token) {
             config.headers.Authorization = `Bearer ${authStore.token}`
         }
+        
+        // 处理请求数据中的大数字 - 仅对JSON请求处理，避免影响FormData
+        const contentType = config.headers['Content-Type']
+        if (config.data && contentType === 'application/json') {
+            console.log('处理JSON数据中的大数字')
+            config.data = processLargeNumbers(config.data)
+        } else if (config.data && typeof contentType === 'string' && contentType.includes('multipart/form-data')) {
+            console.log('跳过FormData请求的大数字处理')
+        }
+        
         return config
     },
     (error) => {
@@ -41,6 +123,10 @@ apiClient.interceptors.request.use(
 // 响应拦截器
 apiClient.interceptors.response.use(
     (response) => {
+        // 处理响应数据中的大数字
+        if (response.data) {
+            response.data = processLargeNumbers(response.data)
+        }
         return response
     },
     (error) => {

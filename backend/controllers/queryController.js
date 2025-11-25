@@ -138,12 +138,12 @@ const queryData = async (req, res) => {
                             }
 
                             for (const [operator, value] of Object.entries(condition)) {
-                                // 特殊处理数字字段的 $like 操作符
-                                if (operator === '$like' && fieldType === 'number') {
-                                    // 对于数字字段的模糊查询，标记需要特殊处理
-                                    hasNumberLikeCondition = true;
-                                    fieldCondition[Op.like] = value;
-                                } else {
+                // 特殊处理数字字段的 $like 操作符
+                if (operator === '$like' && fieldType === 'number') {
+                    // 对于数字字段的模糊查询，标记需要特殊处理
+                    hasNumberLikeCondition = true;
+                    fieldCondition[Op.like] = value;
+                } else {
                                     switch (operator) {
                                         case '$eq':
                                             fieldCondition[Op.eq] = value;
@@ -211,140 +211,125 @@ const queryData = async (req, res) => {
             let count, rows;
 
             if (hasNumberLikeCondition) {
-                // 对于数字字段的模糊查询，使用原始SQL查询
+                // 对于数字字段的模糊查询，直接使用原始SQL查询
                 const tableName = `data_${hash}`;
+                console.log('检测到数字字段模糊查询，使用原始SQL查询');
 
-                // 简化处理：只处理包含数字字段模糊查询的简单条件
-                // 对于复杂的 $or 条件，回退到正常查询
-                try {
-                    // 尝试使用正常查询
-                    const result = await DynamicModel.findAndCountAll({
-                        where: whereClause,
-                        limit: parseInt(limit),
-                        offset: offset,
-                        order: [['id', 'ASC']]
-                    });
-                    count = result.count;
-                    rows = result.rows;
-                } catch (error) {
-                    console.log('正常查询失败，尝试原始SQL查询:', error.message);
+                // 构建完整的WHERE条件
+                const buildCompleteWhereSQL = (conditions, columnDefs = columnDefinitions) => {
+                    const sqlConditions = [];
+                    const params = [];
 
-                    // 构建完整的WHERE条件
-                    const buildCompleteWhereSQL = (conditions, columnDefs = columnDefinitions) => {
-                        const sqlConditions = [];
-                        const params = [];
-
-                        const processCondition = (condition, parentField = null) => {
-                            for (const [field, value] of Object.entries(condition)) {
-                                // 处理特殊操作符
-                                if (field === '$or' && Array.isArray(value)) {
-                                    const orConditions = [];
-                                    for (const orCondition of value) {
-                                        const orResult = processCondition(orCondition);
-                                        if (orResult.conditions.length > 0) {
-                                            orConditions.push(`(${orResult.conditions.join(' AND ')})`);
-                                            params.push(...orResult.params);
-                                        }
-                                    }
-                                    if (orConditions.length > 0) {
-                                        sqlConditions.push(`(${orConditions.join(' OR ')})`);
-                                    }
-                                } else if (field === '$and' && Array.isArray(value)) {
-                                    const andConditions = [];
-                                    for (const andCondition of value) {
-                                        const andResult = processCondition(andCondition);
-                                        if (andResult.conditions.length > 0) {
-                                            andConditions.push(`(${andResult.conditions.join(' AND ')})`);
-                                            params.push(...andResult.params);
-                                        }
-                                    }
-                                    if (andConditions.length > 0) {
-                                        sqlConditions.push(`(${andConditions.join(' AND ')})`);
-                                    }
-                                } else {
-                                    // 处理普通字段条件
-                                    if (value && typeof value === 'object' && !Array.isArray(value)) {
-                                        // 字段操作符条件
-                                        for (const [operator, opValue] of Object.entries(value)) {
-                                            let sqlOperator = '';
-                                            let processedValue = opValue;
-
-                                            switch (operator) {
-                                                case '$eq':
-                                                    sqlOperator = '=';
-                                                    break;
-                                                case '$ne':
-                                                    sqlOperator = '!=';
-                                                    break;
-                                                case '$like':
-                                                    sqlOperator = 'LIKE';
-                                                    // 检查字段类型
-                                                    const columnDef = columnDefs.find(col => col.name === field);
-                                                    const fieldType = columnDef ? columnDef.type : 'string';
-
-                                                    if (fieldType === 'number') {
-                                                        // 数字字段的模糊查询需要类型转换
-                                                        sqlConditions.push(`CAST(\`${field}\` AS CHAR) LIKE ?`);
-                                                    } else {
-                                                        // 字符串字段直接使用
-                                                        sqlConditions.push(`\`${field}\` LIKE ?`);
-                                                    }
-                                                    params.push(processedValue);
-                                                    continue; // 跳过后续处理
-                                                case '$gt':
-                                                    sqlOperator = '>';
-                                                    break;
-                                                case '$lt':
-                                                    sqlOperator = '<';
-                                                    break;
-                                                case '$gte':
-                                                    sqlOperator = '>=';
-                                                    break;
-                                                case '$lte':
-                                                    sqlOperator = '<=';
-                                                    break;
-                                                default:
-                                                    continue; // 跳过不支持的操作符
-                                            }
-
-                                            if (sqlOperator) {
-                                                sqlConditions.push(`\`${field}\` ${sqlOperator} ?`);
-                                                params.push(processedValue);
-                                            }
-                                        }
-                                    } else {
-                                        // 简单相等条件
-                                        sqlConditions.push(`\`${field}\` = ?`);
-                                        params.push(value);
+                    const processCondition = (condition, parentField = null) => {
+                        for (const [field, value] of Object.entries(condition)) {
+                            // 处理特殊操作符
+                            if (field === '$or' && Array.isArray(value)) {
+                                const orConditions = [];
+                                for (const orCondition of value) {
+                                    const orResult = processCondition(orCondition);
+                                    if (orResult.conditions.length > 0) {
+                                        orConditions.push(`(${orResult.conditions.join(' AND ')})`);
+                                        params.push(...orResult.params);
                                     }
                                 }
-                            }
-                            return { conditions: sqlConditions, params };
-                        };
+                                if (orConditions.length > 0) {
+                                    sqlConditions.push(`(${orConditions.join(' OR ')})`);
+                                }
+                            } else if (field === '$and' && Array.isArray(value)) {
+                                const andConditions = [];
+                                for (const andCondition of value) {
+                                    const andResult = processCondition(andCondition);
+                                    if (andResult.conditions.length > 0) {
+                                        andConditions.push(`(${andResult.conditions.join(' AND ')})`);
+                                        params.push(...andResult.params);
+                                    }
+                                }
+                                if (andConditions.length > 0) {
+                                    sqlConditions.push(`(${andConditions.join(' AND ')})`);
+                                }
+                            } else {
+                                // 处理普通字段条件
+                                if (value && typeof value === 'object' && !Array.isArray(value)) {
+                                    // 字段操作符条件
+                                    for (const [operator, opValue] of Object.entries(value)) {
+                                        let sqlOperator = '';
+                                        let processedValue = opValue;
 
-                        return processCondition(conditions);
+                                        switch (operator) {
+                                            case '$eq':
+                                                sqlOperator = '=';
+                                                break;
+                                            case '$ne':
+                                                sqlOperator = '!=';
+                                                break;
+                                            case '$like':
+                                                sqlOperator = 'LIKE';
+                                                // 检查字段类型
+                                                const columnDef = columnDefs.find(col => col.name === field);
+                                                const fieldType = columnDef ? columnDef.type : 'string';
+
+                                                if (fieldType === 'number') {
+                                                    // 数字字段的模糊查询需要类型转换
+                                                    sqlConditions.push(`CAST(\`${field}\` AS CHAR) LIKE ?`);
+                                                } else {
+                                                    // 字符串字段直接使用
+                                                    sqlConditions.push(`\`${field}\` LIKE ?`);
+                                                }
+                                                params.push(processedValue);
+                                                continue; // 跳过后续处理
+                                            case '$gt':
+                                                sqlOperator = '>';
+                                                break;
+                                            case '$lt':
+                                                sqlOperator = '<';
+                                                break;
+                                            case '$gte':
+                                                sqlOperator = '>=';
+                                                break;
+                                            case '$lte':
+                                                sqlOperator = '<=';
+                                                break;
+                                            default:
+                                                continue; // 跳过不支持的操作符
+                                        }
+
+                                        if (sqlOperator) {
+                                            sqlConditions.push(`\`${field}\` ${sqlOperator} ?`);
+                                            params.push(processedValue);
+                                        }
+                                    }
+                                } else {
+                                    // 简单相等条件
+                                    sqlConditions.push(`\`${field}\` = ?`);
+                                    params.push(value);
+                                }
+                            }
+                        }
+                        return { conditions: sqlConditions, params };
                     };
 
-                    const whereResult = buildCompleteWhereSQL(whereClause);
-                    let whereSQL = '';
-                    if (whereResult.conditions.length > 0) {
-                        whereSQL = `WHERE ${whereResult.conditions.join(' AND ')}`;
-                    }
+                    return processCondition(conditions);
+                };
 
-                    // 执行原始查询
-                    const countQuery = `SELECT COUNT(*) as total FROM \`${tableName}\` ${whereSQL}`;
-                    const dataQuery = `SELECT * FROM \`${tableName}\` ${whereSQL} ORDER BY id ASC LIMIT ${offset}, ${limit}`;
-
-                    console.log('执行原始查询 - count:', countQuery);
-                    console.log('执行原始查询 - data:', dataQuery);
-                    console.log('查询参数:', whereResult.params);
-
-                    const [countResult] = await sequelize.query(countQuery, { replacements: whereResult.params });
-                    const [dataResult] = await sequelize.query(dataQuery, { replacements: whereResult.params });
-
-                    count = countResult[0].total;
-                    rows = dataResult;
+                const whereResult = buildCompleteWhereSQL(whereClause);
+                let whereSQL = '';
+                if (whereResult.conditions.length > 0) {
+                    whereSQL = `WHERE ${whereResult.conditions.join(' AND ')}`;
                 }
+
+                // 执行原始查询
+                const countQuery = `SELECT COUNT(*) as total FROM \`${tableName}\` ${whereSQL}`;
+                const dataQuery = `SELECT * FROM \`${tableName}\` ${whereSQL} ORDER BY id ASC LIMIT ${offset}, ${limit}`;
+
+                console.log('执行原始查询 - count:', countQuery);
+                console.log('执行原始查询 - data:', dataQuery);
+                console.log('查询参数:', whereResult.params);
+
+                const [countResult] = await sequelize.query(countQuery, { replacements: whereResult.params });
+                const [dataResult] = await sequelize.query(dataQuery, { replacements: whereResult.params });
+
+                count = countResult[0].total;
+                rows = dataResult;
             } else {
                 // 正常查询
                 const result = await DynamicModel.findAndCountAll({

@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-27 23:16:15
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-19 00:23:42
+ * @LastEditTime: 2025-11-25 18:43:15
  * @FilePath: /lowCode_excel/backend/config/database.js
  */
 const { Sequelize } = require('sequelize');
@@ -13,7 +13,7 @@ let sequelize;
 
 if (process.env.DB_TYPE === 'sqlite') {
     // SQLite 连接
-    const dbPath = process.env.SQLITE_DB_PATH || '/app/data/annual_leave.db';
+    const dbPath = process.env.DB_STORAGE || './database.sqlite';
     console.log(`使用 SQLite 数据库: ${dbPath}`);
 
     sequelize = new Sequelize({
@@ -77,7 +77,7 @@ const testConnection = async () => {
             console.error('- 数据库:', process.env.DB_NAME);
             console.error('- 用户:', process.env.DB_USER);
         } else {
-            console.error('SQLite数据库路径:', process.env.SQLITE_DB_PATH || './data/annual_leave.db');
+            console.error('SQLite数据库路径:', process.env.DB_STORAGE || './database.sqlite');
         }
         
         return false;

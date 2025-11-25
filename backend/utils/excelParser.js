@@ -1,6 +1,51 @@
 const XLSX = require('xlsx');
 
 /**
+ * 检测是否为安全整数（避免JavaScript精度问题）
+ * @param {*} value - 要检测的值
+ * @returns {boolean} 是否为安全整数
+ */
+const isSafeInteger = (value) => {
+    if (value === null || value === undefined || value === '') {
+        return true;
+    }
+    
+    const num = Number(value);
+    return Number.isSafeInteger(num);
+};
+
+/**
+ * 处理大数字，避免精度丢失
+ * @param {*} value - 原始值
+ * @returns {*} 处理后的值
+ */
+const handleLargeNumber = (value) => {
+    if (value === null || value === undefined || value === '') {
+        return value;
+    }
+    
+    // 如果是数字类型且超出安全整数范围，转换为字符串
+    if (typeof value === 'number' && !Number.isSafeInteger(value)) {
+        return value.toString();
+    }
+    
+    // 如果是字符串，检查是否可以转换为数字且超出安全范围
+    if (typeof value === 'string') {
+        const trimmedValue = value.trim();
+        if (trimmedValue === '') {
+            return value;
+        }
+        
+        const num = Number(trimmedValue);
+        if (!isNaN(num) && !Number.isSafeInteger(num)) {
+            return trimmedValue; // 保持原字符串，避免精度丢失
+        }
+    }
+    
+    return value;
+};
+
+/**
  * 推断数据类型
  * @param {*} value - 单元格值
  * @param {string} fieldName - 字段名（可选）
@@ -12,6 +57,10 @@ const inferDataType = (value, fieldName = '') => {
     }
 
     if (typeof value === 'number') {
+        // 检查是否为安全整数，如果不是则使用字符串类型
+        if (!Number.isSafeInteger(value)) {
+            return 'string';
+        }
         return 'number';
     }
 
@@ -37,9 +86,15 @@ const inferDataType = (value, fieldName = '') => {
                 lowerFieldName.includes('数量') ||
                 lowerFieldName.includes('数值') ||
                 lowerFieldName.includes('数字')) {
-                // 尝试解析为数字
+                // 尝试解析为数字，但检查是否为安全整数
                 if (!isNaN(Number(trimmedValue)) && trimmedValue !== '') {
-                    return 'number';
+                    const num = Number(trimmedValue);
+                    if (Number.isSafeInteger(num)) {
+                        return 'number';
+                    } else {
+                        // 大数字使用字符串类型避免精度丢失
+                        return 'string';
+                    }
                 }
             }
 
@@ -62,9 +117,15 @@ const inferDataType = (value, fieldName = '') => {
             return 'date';
         }
 
-        // 尝试解析为数字
+        // 尝试解析为数字，但检查是否为安全整数
         if (!isNaN(Number(trimmedValue)) && trimmedValue !== '') {
-            return 'number';
+            const num = Number(trimmedValue);
+            if (Number.isSafeInteger(num)) {
+                return 'number';
+            } else {
+                // 大数字使用字符串类型避免精度丢失
+                return 'string';
+            }
         }
 
         // 检查布尔值
@@ -202,12 +263,22 @@ const parseExcel = (fileBuffer, headerRow = 0) => {
                 if (value === null || value === undefined || value === '') {
                     value = null;
                 } else {
-                    // 根据数据类型转换值 - 添加安全检查
+                    // 根据数据类型转换值 - 添加安全检查和大数字保护
                     const columnDef = columnDefinitions.find(def => def && def.index === columnIndex);
                     if (columnDef) {
                         if (columnDef.type === 'number') {
-                            value = Number(value);
-                            if (isNaN(value)) value = null;
+                            // 对于数字类型，先检查是否为安全整数
+                            const numValue = Number(value);
+                            if (isNaN(numValue)) {
+                                value = null;
+                            } else if (!Number.isSafeInteger(numValue)) {
+                                // 如果超出安全整数范围，转换为字符串避免精度丢失
+                                value = value.toString();
+                                // 更新列定义为字符串类型，避免后续处理问题
+                                columnDef.type = 'string';
+                            } else {
+                                value = numValue;
+                            }
                         } else if (columnDef.type === 'boolean') {
                             value = Boolean(value);
                         } else if (columnDef.type === 'date') {

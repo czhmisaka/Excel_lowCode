@@ -1,13 +1,14 @@
 /*
  * @Date: 2025-11-17 09:25:23
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-23 15:17:01
+ * @LastEditTime: 2025-11-25 19:21:15
  * @FilePath: /lowCode_excel/backend/utils/autoTableCreator.js
  * @Description: 自动建表模块核心功能
  */
 
 const { sequelize } = require('../config/database');
-const { getRequiredTableNames, getTableCreateSQL, getTableIndexSQL } = require('../config/tableDefinitions');
+const { tableDefinitions } = require('../config/tableDefinitions');
+const TableDefinitionGenerator = require('./tableDefinitionGenerator');
 
 /**
  * 自动建表模块
@@ -16,7 +17,7 @@ const { getRequiredTableNames, getTableCreateSQL, getTableIndexSQL } = require('
 class AutoTableCreator {
   constructor() {
     this.dialect = sequelize.getDialect();
-    this.requiredTables = getRequiredTableNames();
+    this.requiredTables = Object.keys(tableDefinitions);
   }
 
   /**
@@ -59,6 +60,88 @@ class AutoTableCreator {
   }
 
   /**
+   * 获取表的SQL创建语句
+   * @param {string} tableName 表名
+   * @param {string} dialect 数据库类型
+   * @returns {string} SQL创建语句
+   */
+  getTableCreateSQL(tableName, dialect = 'sqlite') {
+    const definition = tableDefinitions[tableName];
+    if (!definition) {
+      throw new Error(`表定义不存在: ${tableName}`);
+    }
+
+    const columns = definition.columns.map(col => {
+      let columnDef = dialect === 'sqlite' 
+        ? `"${col.name}" ${col.type}`
+        : `\`${col.name}\` ${col.type}`;
+      
+      if (col.primaryKey) {
+        columnDef += ' PRIMARY KEY';
+        if (col.autoIncrement) {
+          columnDef += dialect === 'sqlite' ? ' AUTOINCREMENT' : ' AUTO_INCREMENT';
+        }
+      }
+      
+      if (col.unique) {
+        columnDef += ' UNIQUE';
+      }
+      
+      if (!col.allowNull) {
+        columnDef += ' NOT NULL';
+      }
+      
+      if (col.defaultValue !== null && col.defaultValue !== undefined) {
+        if (typeof col.defaultValue === 'string' && col.defaultValue !== 'CURRENT_TIMESTAMP') {
+          columnDef += ` DEFAULT '${col.defaultValue}'`;
+        } else {
+          columnDef += ` DEFAULT ${col.defaultValue}`;
+        }
+      }
+      
+      return columnDef;
+    }).join(',\n  ');
+
+    let sql = dialect === 'sqlite' 
+      ? `CREATE TABLE IF NOT EXISTS "${definition.name}" (\n  ${columns}\n)`
+      : `CREATE TABLE IF NOT EXISTS \`${definition.name}\` (\n  ${columns}\n)`;
+
+    // 添加表注释（MySQL支持）
+    if (dialect === 'mysql' && definition.description) {
+      sql += ` COMMENT '${definition.description}'`;
+    }
+
+    return sql + ';';
+  }
+
+  /**
+   * 获取表的索引创建语句
+   * @param {string} tableName 表名
+   * @param {string} dialect 数据库类型
+   * @returns {string[]} 索引创建语句数组
+   */
+  getTableIndexSQL(tableName, dialect = 'sqlite') {
+    const definition = tableDefinitions[tableName];
+    if (!definition || !definition.indexes) {
+      return [];
+    }
+
+    return definition.indexes.map(index => {
+      const columns = index.columns.map(col => 
+        dialect === 'sqlite' ? `"${col}"` : `\`${col}\``
+      ).join(', ');
+      
+      const uniqueKeyword = index.unique ? 'UNIQUE ' : '';
+      
+      if (dialect === 'sqlite') {
+        return `CREATE ${uniqueKeyword}INDEX IF NOT EXISTS "${index.name}" ON "${definition.name}" (${columns});`;
+      } else {
+        return `CREATE ${uniqueKeyword}INDEX IF NOT EXISTS \`${index.name}\` ON \`${definition.name}\` (${columns});`;
+      }
+    });
+  }
+
+  /**
    * 创建表
    * @param {string} tableName 表名
    * @returns {Promise<boolean>} 创建是否成功
@@ -68,7 +151,7 @@ class AutoTableCreator {
       console.log(`正在创建表: ${tableName}`);
       
       // 获取创建表的SQL语句
-      const createSQL = getTableCreateSQL(tableName, this.dialect);
+      const createSQL = this.getTableCreateSQL(tableName, this.dialect);
       console.log(`执行建表SQL: ${createSQL}`);
       
       // 执行建表语句
@@ -76,7 +159,7 @@ class AutoTableCreator {
       console.log(`✅ 表 ${tableName} 创建成功`);
       
       // 创建索引
-      const indexSQLs = getTableIndexSQL(tableName, this.dialect);
+      const indexSQLs = this.getTableIndexSQL(tableName, this.dialect);
       for (const indexSQL of indexSQLs) {
         try {
           await sequelize.query(indexSQL);
