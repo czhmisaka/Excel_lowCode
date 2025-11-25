@@ -45,11 +45,19 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
+      - CACHE_ENABLED=true
+      - CACHE_MAX_MEMORY=104857600
+      - CACHE_TTL=300000
+      - REDIS_ENABLED=true
+      - REDIS_URL=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - backend-uploads:/app/uploads
     networks:
       - app-network
     restart: unless-stopped
+    depends_on:
+      - redis
     healthcheck:
       test:
         [
@@ -63,6 +71,26 @@ services:
       retries: 3
       start_period: 40s
 
+  # Redis缓存服务（可选）
+  redis:
+    image: redis:7-alpine
+    container_name: excel-data-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
   # MCP服务器服务
   mcp-server:
     image: ${IMAGE_PREFIX}-mcp-server:${MCP_SERVER_TAG}
@@ -74,6 +102,9 @@ services:
       - MCP_SERVER_PORT=3001
       - API_BASE_URL=http://backend:3000
       - MODE=http-streams
+      - REDIS_ENABLED=true
+      - REDIS_URL=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
       - mcp-exports:/app/exports
     networks:
@@ -81,6 +112,7 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+      - redis
     healthcheck:
       test:
         [
@@ -109,4 +141,6 @@ volumes:
   backend-uploads:
     driver: local
   mcp-exports:
+    driver: local
+  redis-data:
     driver: local

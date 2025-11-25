@@ -677,6 +677,14 @@ class ApiService {
         return response.data
     }
 
+    // 批量删除表单
+    async batchDeleteForms(formIds: string[]): Promise<any> {
+        const response = await apiClient.post('/api/forms/batch-delete', {
+            formIds
+        })
+        return response.data
+    }
+
     // 获取表单的Hook列表
     async getFormHooks(formId: string): Promise<any> {
         const response = await apiClient.get(`/api/forms/${formId}/hooks`)

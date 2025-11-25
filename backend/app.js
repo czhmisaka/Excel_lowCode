@@ -39,7 +39,7 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:3000',
+                url: 'http://localhost:4000',
                 description: '开发服务器'
             },
             {
@@ -71,6 +71,10 @@ const options = {
             {
                 name: '系统状态',
                 description: '系统健康检查接口'
+            },
+            {
+                name: '缓存管理',
+                description: '缓存统计和管理接口'
             }
         ],
         components: {
@@ -202,6 +206,7 @@ app.use('/api/service-accounts', require('./routes/serviceAccounts'));
 app.use('/api/forms', require('./routes/forms'));
 app.use('/api/health', require('./routes/health'));
 app.use('/api/tables', require('./routes/tables'));
+app.use('/api/cache', require('./routes/cache'));
 
 // 404处理
 app.use('*', (req, res) => {
@@ -237,9 +242,22 @@ app.use((error, req, res, next) => {
     });
 });
 
+// 内存监控函数
+const monitorMemory = () => {
+    const used = process.memoryUsage();
+    console.log('内存使用情况:');
+    console.log(`- RSS: ${Math.round(used.rss / 1024 / 1024)} MB`);
+    console.log(`- Heap Total: ${Math.round(used.heapTotal / 1024 / 1024)} MB`);
+    console.log(`- Heap Used: ${Math.round(used.heapUsed / 1024 / 1024)} MB`);
+    console.log(`- External: ${Math.round(used.external / 1024 / 1024)} MB`);
+};
+
 // 启动服务器
 const startServer = async () => {
     try {
+        console.log('启动服务器前内存状态:');
+        monitorMemory();
+        
         // 测试数据库连接
         const dbConnected = await testConnection();
         if (!dbConnected) {
@@ -284,6 +302,9 @@ const startServer = async () => {
 
         // 使用自动建表模块初始化数据库表结构
         console.log('开始自动建表流程...');
+        console.log('自动建表前内存状态:');
+        monitorMemory();
+        
         const { initializeDatabase } = require('./config/database');
         const dbInitResult = await initializeDatabase();
         
@@ -294,6 +315,8 @@ const startServer = async () => {
         }
         
         console.log('✅ 数据库表结构初始化成功');
+        console.log('自动建表后内存状态:');
+        monitorMemory();
 
         // 初始化数据模型
         await initModels();
@@ -306,7 +329,7 @@ const startServer = async () => {
             console.warn('MCP服务账户初始化失败，但服务器继续启动');
         }
 
-        const PORT = process.env.PORT || 3000;
+        const PORT = process.env.PORT || 4000;
         app.listen(PORT, () => {
             console.log(`服务器启动成功，端口: ${PORT}`);
             console.log(`环境: ${process.env.NODE_ENV || 'development'}`);

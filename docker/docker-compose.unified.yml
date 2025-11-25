@@ -14,7 +14,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - BACKEND_PORT=3000
-      - DB_TYPE=${DB_TYPE}
+      - DB_TYPE=sqlite
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
       - DB_NAME=${DB_NAME}
@@ -24,6 +24,8 @@ services:
       - MCP_SERVER_PORT=${MCP_SERVER_PORT:-3001}
       - API_BASE_URL=http://localhost:3000
       - MCP_API_KEY=${MCP_API_KEY}
+      - CACHE_ENABLED=false
+      - REDIS_ENABLED=false
     volumes:
       - app-uploads:/app/uploads
       - app-data:/app/data
@@ -50,6 +52,10 @@ services:
       dockerfile: docker/unified/Dockerfile
       args:
         - VITE_API_BASE_URL=/backend
+    deploy:
+      resources:
+        limits:
+          memory: 8G
 
 # 网络配置
 networks:

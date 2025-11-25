@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-11-17 09:25:23
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-17 09:27:17
+ * @LastEditTime: 2025-11-23 15:17:01
  * @FilePath: /lowCode_excel/backend/utils/autoTableCreator.js
  * @Description: 自动建表模块核心功能
  */
@@ -110,26 +110,36 @@ class AutoTableCreator {
   }
 
   /**
-   * 检查表结构完整性
+   * 检查表结构完整性（优化版本，减少内存使用）
    * @param {string} tableName 表名
    * @returns {Promise<boolean>} 表结构是否完整
    */
   async checkTableStructure(tableName) {
     try {
-      // 简单检查：尝试查询表结构
-      const [results] = await sequelize.query(
-        this.dialect === 'sqlite' 
-          ? `PRAGMA table_info("${tableName}")`
-          : `DESCRIBE \`${tableName}\``
-      );
-      
-      if (!results || results.length === 0) {
-        console.warn(`⚠️ 表 ${tableName} 结构检查失败：无法获取表信息`);
-        return false;
+      // 优化检查：只检查表是否存在，不加载表结构详情
+      // 这样可以避免加载大量字段信息导致内存溢出
+      if (this.dialect === 'sqlite') {
+        // SQLite: 使用更轻量的检查
+        const [results] = await sequelize.query(
+          `SELECT name FROM sqlite_master WHERE type='table' AND name = ?`,
+          {
+            replacements: [tableName],
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
+        return !!results;
+      } else {
+        // MySQL: 使用更轻量的检查
+        const [results] = await sequelize.query(
+          `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES 
+           WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`,
+          {
+            replacements: [sequelize.config.database, tableName],
+            type: sequelize.QueryTypes.SELECT
+          }
+        );
+        return !!results;
       }
-      
-      console.log(`✅ 表 ${tableName} 结构检查通过，包含 ${results.length} 个字段`);
-      return true;
     } catch (error) {
       console.error(`❌ 表 ${tableName} 结构检查失败:`, error.message);
       return false;
@@ -152,37 +162,48 @@ class AutoTableCreator {
 
     console.log(`开始检查 ${this.requiredTables.length} 个必需表...`);
 
-    for (const tableName of this.requiredTables) {
-      const tableReport = {
-        name: tableName,
-        exists: false,
-        structureValid: false,
-        error: null
-      };
+    // 分批检查表，避免一次性加载过多数据
+    const batchSize = 2; // 每次检查2个表
+    for (let i = 0; i < this.requiredTables.length; i += batchSize) {
+      const batch = this.requiredTables.slice(i, i + batchSize);
+      
+      for (const tableName of batch) {
+        const tableReport = {
+          name: tableName,
+          exists: false,
+          structureValid: false,
+          error: null
+        };
 
-      try {
-        // 检查表是否存在
-        tableReport.exists = await this.checkTableExists(tableName);
-        
-        if (tableReport.exists) {
-          // 检查表结构
-          tableReport.structureValid = await this.checkTableStructure(tableName);
+        try {
+          // 检查表是否存在
+          tableReport.exists = await this.checkTableExists(tableName);
           
-          if (!tableReport.structureValid) {
-            report.corruptedTables.push(tableName);
+          if (tableReport.exists) {
+            // 简化表结构检查，避免加载大量数据
+            tableReport.structureValid = await this.checkTableStructure(tableName);
+            
+            if (!tableReport.structureValid) {
+              report.corruptedTables.push(tableName);
+              report.success = false;
+            }
+          } else {
+            report.missingTables.push(tableName);
             report.success = false;
           }
-        } else {
-          report.missingTables.push(tableName);
+        } catch (error) {
+          tableReport.error = error.message;
           report.success = false;
+          console.error(`检查表 ${tableName} 时出错:`, error.message);
         }
-      } catch (error) {
-        tableReport.error = error.message;
-        report.success = false;
-        console.error(`检查表 ${tableName} 时出错:`, error);
-      }
 
-      report.tables[tableName] = tableReport;
+        report.tables[tableName] = tableReport;
+        
+        // 添加短暂延迟，避免内存压力
+        if (i + batchSize < this.requiredTables.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
     }
 
     console.log(`表检查完成:`);

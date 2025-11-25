@@ -358,4 +358,66 @@ router.get('/:formId/hooks', formController.getFormHooks);
  */
 router.post('/:formId/hooks', formController.createHook);
 
+/**
+ * @swagger
+ * /api/forms/batch-delete:
+ *   post:
+ *     summary: 批量删除表单
+ *     description: 批量删除多个表单及其关联的Hook配置和提交记录
+ *     tags:
+ *       - 表单管理
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - formIds
+ *             properties:
+ *               formIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: 要删除的表单ID数组
+ *                 example: ["form1", "form2", "form3"]
+ *     responses:
+ *       200:
+ *         description: 批量删除表单成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "批量删除表单成功"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deletedCount:
+ *                       type: integer
+ *                       example: 3
+ *                     deletedFormIds:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["form1", "form2", "form3"]
+ *                     notFoundFormIds:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: []
+ *       400:
+ *         description: 请求参数错误
+ *       404:
+ *         description: 未找到要删除的表单
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.post('/batch-delete', formController.batchDeleteForms);
+
 module.exports = router;

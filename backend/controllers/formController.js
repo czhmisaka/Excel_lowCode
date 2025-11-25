@@ -354,6 +354,123 @@ const createHook = async (req, res) => {
   }
 };
 
+/**
+ * 批量删除表单
+ */
+const batchDeleteForms = async (req, res) => {
+  let transaction;
+
+  try {
+    const { formIds } = req.body;
+
+    // 验证请求参数
+    if (!formIds || !Array.isArray(formIds) || formIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '请提供要删除的表单ID数组'
+      });
+    }
+
+    // 限制批量删除的最大数量
+    if (formIds.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: '批量删除的表单数量不能超过100个'
+      });
+    }
+
+    // 验证表单ID格式
+    const invalidFormIds = formIds.filter(id => !id || typeof id !== 'string' || id.trim() === '');
+    if (invalidFormIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: '存在无效的表单ID',
+        invalidFormIds
+      });
+    }
+
+    // 开启事务
+    transaction = await FormDefinition.sequelize.transaction();
+
+    // 查找所有要删除的表单
+    const formsToDelete = await FormDefinition.findAll({
+      where: {
+        formId: {
+          [Op.in]: formIds
+        }
+      },
+      transaction
+    });
+
+    if (formsToDelete.length === 0) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        message: '未找到要删除的表单'
+      });
+    }
+
+    // 记录找到的表单ID
+    const foundFormIds = formsToDelete.map(form => form.formId);
+    const notFoundFormIds = formIds.filter(id => !foundFormIds.includes(id));
+
+    // 批量删除关联的Hook和提交记录
+    await FormHook.destroy({
+      where: {
+        formId: {
+          [Op.in]: foundFormIds
+        }
+      },
+      transaction
+    });
+
+    await FormSubmission.destroy({
+      where: {
+        formId: {
+          [Op.in]: foundFormIds
+        }
+      },
+      transaction
+    });
+
+    // 批量删除表单
+    await FormDefinition.destroy({
+      where: {
+        formId: {
+          [Op.in]: foundFormIds
+        }
+      },
+      transaction
+    });
+
+    // 提交事务
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      message: '批量删除表单成功',
+      data: {
+        deletedCount: foundFormIds.length,
+        deletedFormIds: foundFormIds,
+        notFoundFormIds: notFoundFormIds
+      }
+    });
+
+  } catch (error) {
+    // 回滚事务
+    if (transaction) {
+      await transaction.rollback();
+    }
+
+    console.error('批量删除表单失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '批量删除表单失败',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getForms,
   getForm,
@@ -361,5 +478,6 @@ module.exports = {
   updateForm,
   deleteForm,
   getFormHooks,
-  createHook
+  createHook,
+  batchDeleteForms
 };

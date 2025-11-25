@@ -2,7 +2,7 @@
 ###
  # @Date: 2025-10-31 11:17:36
  # @LastEditors: CZH
- # @LastEditTime: 2025-11-19 00:21:33
+ # @LastEditTime: 2025-11-23 14:22:55
  # @FilePath: /lowCode_excel/docker/unified/startup-simple.sh
 ### 
 
@@ -212,7 +212,7 @@ stdout_logfile=/var/log/supervisor/nginx.out.log
 user=root
 
 [program:backend]
-command=npm start
+command=node --max-old-space-size=12288 app.js
 directory=/app
 autostart=true
 autorestart=true
@@ -220,7 +220,7 @@ startretries=3
 stderr_logfile=/var/log/supervisor/backend.err.log
 stdout_logfile=/var/log/supervisor/backend.out.log
 user=root
-environment=NODE_ENV=production,PORT=$BACKEND_PORT
+environment=NODE_ENV=production,PORT=$BACKEND_PORT,CACHE_ENABLED=false,REDIS_ENABLED=false
 
 [program:mcp-server]
 command=npm start

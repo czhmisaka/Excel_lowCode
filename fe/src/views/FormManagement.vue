@@ -11,9 +11,21 @@
     <!-- 工具栏 -->
     <div class="modern-toolbar">
       <div class="toolbar-content">
-        <el-button type="primary" @click="handleCreateForm" class="modern-button" :icon="Plus">
-          创建表单
-        </el-button>
+        <div class="toolbar-left">
+          <el-button type="primary" @click="handleCreateForm" class="modern-button" :icon="Plus">
+            创建表单
+          </el-button>
+          <el-button 
+            type="danger" 
+            @click="handleBatchDelete" 
+            class="modern-button" 
+            :icon="Delete"
+            :disabled="selectedForms.length === 0"
+            v-if="selectedForms.length > 0"
+          >
+            批量删除 ({{ selectedForms.length }})
+          </el-button>
+        </div>
         <div class="toolbar-actions">
           <el-input
             v-model="searchKeyword"
@@ -38,7 +50,9 @@
         stripe
         class="modern-table"
         style="width: 100%"
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="formId" label="表单ID" min-width="180" />
         <el-table-column prop="name" label="表单名称" min-width="150" />
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
@@ -378,6 +392,7 @@ const tableMappings = ref<TableMapping[]>([])
 const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
+const selectedForms = ref<FormDefinition[]>([])
 
 // 对话框状态
 const formDialogVisible = ref(false)
@@ -527,6 +542,60 @@ const handleDeleteForm = async (form: FormDefinition) => {
       ElMessage.error('删除表单失败')
     }
   }
+}
+
+// 批量删除表单
+const handleBatchDelete = async () => {
+  if (selectedForms.value.length === 0) {
+    ElMessage.warning('请选择要删除的表单')
+    return
+  }
+
+  try {
+    const formIds = selectedForms.value.map(form => form.formId)
+    const formNames = selectedForms.value.map(form => form.name).join('、')
+    
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedForms.value.length} 个表单吗？此操作不可恢复。\n\n删除的表单：${formNames}`,
+      '批量删除确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        dangerouslyUseHTMLString: true
+      }
+    )
+    
+    loading.value = true
+    const response = await apiService.batchDeleteForms(formIds)
+    
+    if (response.success) {
+      ElMessage.success(`批量删除成功，共删除 ${response.data.deletedCount} 个表单`)
+      
+      // 如果有未找到的表单，显示提示
+      if (response.data.notFoundFormIds && response.data.notFoundFormIds.length > 0) {
+        ElMessage.warning(`有 ${response.data.notFoundFormIds.length} 个表单未找到`)
+      }
+      
+      // 清空选择
+      selectedForms.value = []
+      await fetchForms()
+    } else {
+      ElMessage.error('批量删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量删除表单失败:', error)
+      ElMessage.error('批量删除表单失败')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// 处理表格选择变化
+const handleSelectionChange = (selection: FormDefinition[]) => {
+  selectedForms.value = selection
 }
 
 // 保存表单

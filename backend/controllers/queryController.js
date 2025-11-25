@@ -2,6 +2,9 @@ const { TableMapping, getDynamicModel } = require('../models');
 const { validateHash } = require('../utils/hashGenerator');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
+const cacheService = require('../utils/cacheService');
+const dynamicTableIndexManager = require('../utils/dynamicTableIndexManager');
+const queryOptimizer = require('../utils/queryOptimizer');
 
 /**
  * 获取所有映射关系
@@ -29,7 +32,7 @@ const getMappings = async (req, res) => {
 };
 
 /**
- * 查询数据
+ * 查询数据（带缓存支持）
  */
 const queryData = async (req, res) => {
     try {
@@ -43,6 +46,18 @@ const queryData = async (req, res) => {
                 message: '无效的哈希值格式'
             });
         }
+
+        // 生成缓存键
+        const cacheKey = cacheService.getDataCacheKey(hash, page, limit, search);
+
+        // 尝试从缓存获取数据
+        const cachedResult = await cacheService.get(cacheKey);
+        if (cachedResult) {
+            console.log(`缓存命中: ${cacheKey}`);
+            return res.json(cachedResult);
+        }
+
+        console.log(`缓存未命中: ${cacheKey}, 从数据库查询`);
 
         // 检查映射关系是否存在
         const mapping = await TableMapping.findOne({
@@ -73,6 +88,9 @@ const queryData = async (req, res) => {
         // 获取动态表模型 - 使用统一的表名格式：data_${hash}
         const actualTableName = `data_${hash}`;
         const DynamicModel = getDynamicModel(hash, columnDefinitions, actualTableName);
+
+        // 为动态表自动创建索引（异步执行，不阻塞查询）
+        createIndexesForTableAsync(actualTableName, columnDefinitions);
 
         // 构建查询条件
         const whereClause = {};
@@ -347,7 +365,8 @@ const queryData = async (req, res) => {
                 totalRecords: count
             };
 
-            res.json({
+            // 构建响应数据
+            const responseData = {
                 success: true,
                 data: rows,
                 tableInfo: tableInfo,
@@ -357,7 +376,12 @@ const queryData = async (req, res) => {
                     total: count,
                     pages: Math.ceil(count / parseInt(limit))
                 }
-            });
+            };
+
+            // 将结果存入缓存
+            await cacheService.set(cacheKey, responseData);
+
+            res.json(responseData);
 
         } catch (error) {
             console.error('查询数据错误:', error);
@@ -373,7 +397,7 @@ const queryData = async (req, res) => {
             message: `查询数据失败: ${error.message}`
         });
     }
-}
+};
 
 /**
  * 获取表结构信息
@@ -390,6 +414,18 @@ const getTableInfo = async (req, res) => {
             });
         }
 
+        // 生成缓存键
+        const cacheKey = cacheService.getTableInfoCacheKey(hash);
+
+        // 尝试从缓存获取数据
+        const cachedResult = await cacheService.get(cacheKey);
+        if (cachedResult) {
+            console.log(`表信息缓存命中: ${cacheKey}`);
+            return res.json(cachedResult);
+        }
+
+        console.log(`表信息缓存未命中: ${cacheKey}, 从数据库查询`);
+
         // 检查映射关系是否存在
         const mapping = await TableMapping.findOne({
             where: { hashValue: hash }
@@ -402,7 +438,7 @@ const getTableInfo = async (req, res) => {
             });
         }
 
-        res.json({
+        const responseData = {
             success: true,
             data: {
                 tableName: mapping.tableName,
@@ -413,7 +449,12 @@ const getTableInfo = async (req, res) => {
                 createdAt: mapping.createdAt,
                 updatedAt: mapping.updatedAt
             }
-        });
+        };
+
+        // 将结果存入缓存
+        await cacheService.set(cacheKey, responseData);
+
+        res.json(responseData);
 
     } catch (error) {
         console.error('获取表信息错误:', error);
@@ -577,8 +618,29 @@ const validateSearchConditions = (conditions) => {
     }
 };
 
+/**
+ * 异步为表创建索引（不阻塞查询）
+ * @param {string} tableName 表名
+ * @param {Array} columnDefinitions 列定义
+ */
+const createIndexesForTableAsync = (tableName, columnDefinitions) => {
+    // 异步执行索引创建，不阻塞查询
+    dynamicTableIndexManager.createIndexesForTable(tableName, columnDefinitions)
+        .then(result => {
+            console.log(`表 ${tableName} 索引创建完成:`, {
+                created: result.indexesCreated.length,
+                skipped: result.indexesSkipped.length,
+                errors: result.errors.length
+            });
+        })
+        .catch(error => {
+            console.error(`表 ${tableName} 索引创建失败:`, error.message);
+        });
+};
+
 module.exports = {
     getMappings,
     queryData,
-    getTableInfo
+    getTableInfo,
+    createIndexesForTableAsync
 };

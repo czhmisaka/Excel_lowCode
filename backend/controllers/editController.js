@@ -1,6 +1,7 @@
 const { TableMapping, getDynamicModel } = require('../models');
 const { validateHash } = require('../utils/hashGenerator');
 const OperationLogger = require('../utils/logger');
+const cacheService = require('../utils/cacheService');
 
 /**
  * 更新数据
@@ -148,6 +149,16 @@ const addData = async (req, res) => {
         // 执行新增操作
         const newRecord = await DynamicModel.create(data);
 
+        // 更新 TableMapping 表的 rowCount 字段
+        const currentRowCount = await DynamicModel.count();
+        await TableMapping.update(
+            { rowCount: currentRowCount },
+            { where: { hashValue: hash } }
+        );
+
+        // 清除表相关的缓存
+        await cacheService.clearTableCache(hash);
+
         // 记录操作日志
         const userInfo = OperationLogger.extractUserInfo(req);
         const clientInfo = OperationLogger.extractClientInfo(req);
@@ -171,7 +182,8 @@ const addData = async (req, res) => {
         res.json({
             success: true,
             message: '数据新增成功',
-            data: newRecord
+            data: newRecord,
+            updatedRowCount: currentRowCount
         });
 
     } catch (error) {
@@ -239,6 +251,16 @@ const deleteData = async (req, res) => {
             where: conditions
         });
 
+        // 更新 TableMapping 表的 rowCount 字段
+        const currentRowCount = await DynamicModel.count();
+        await TableMapping.update(
+            { rowCount: currentRowCount },
+            { where: { hashValue: hash } }
+        );
+
+        // 清除表相关的缓存
+        await cacheService.clearTableCache(hash);
+
         // 记录操作日志
         const userInfo = OperationLogger.extractUserInfo(req);
         const clientInfo = OperationLogger.extractClientInfo(req);
@@ -264,7 +286,8 @@ const deleteData = async (req, res) => {
         res.json({
             success: true,
             message: '数据删除成功',
-            affectedRows: affectedRows
+            affectedRows: affectedRows,
+            updatedRowCount: currentRowCount
         });
 
     } catch (error) {
