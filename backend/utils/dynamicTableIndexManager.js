@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-11-23 18:02:00
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-23 18:04:17
+ * @LastEditTime: 2025-11-25 22:22:19
  * @FilePath: /lowCode_excel/backend/utils/dynamicTableIndexManager.js
  * @Description: 动态表索引管理模块
  */
@@ -203,7 +203,11 @@ class DynamicTableIndexManager {
                         type: sequelize.QueryTypes.SELECT
                     }
                 );
-                return results || [];
+                // SQLite 返回的是对象数组，需要转换为索引名数组
+                if (Array.isArray(results)) {
+                    return results.map(item => ({ name: item.name }));
+                }
+                return [];
             } else {
                 const [results] = await sequelize.query(
                     `SELECT INDEX_NAME as name FROM INFORMATION_SCHEMA.STATISTICS 

@@ -92,102 +92,75 @@ const queryData = async (req, res) => {
         // 为动态表自动创建索引（异步执行，不阻塞查询）
         createIndexesForTableAsync(actualTableName, columnDefinitions);
 
-        // 构建查询条件
+        // 构建查询条件 - 直接使用原始搜索参数，不进行 Sequelize 转换
         const whereClause = {};
         let hasNumberLikeCondition = false;
 
         if (search) {
             try {
                 const searchConditions = JSON.parse(search);
-
-                // 递归转换查询条件
-                const convertConditions = (conditions, columnDefs = columnDefinitions) => {
-                    const converted = {};
-
+                console.log('原始搜索条件:', searchConditions);
+                
+                // 处理字段名映射 - 确保查询条件中的字段名与数据库中的字段名匹配
+                const processFieldMapping = (conditions, columnDefs = columnDefinitions) => {
+                    const processedConditions = {};
+                    
                     for (const [field, condition] of Object.entries(conditions)) {
-                        // 处理特殊操作符 ($or, $and 等)
-                        if (field === '$or') {
-                            if (Array.isArray(condition)) {
-                                // 递归处理嵌套条件，使用 Sequelize Op.or
-                                converted[Op.or] = condition.map(nestedCondition =>
-                                    convertConditions(nestedCondition, columnDefs)
-                                );
-                            } else {
-                                throw new Error('$or 操作符的值必须是数组');
-                            }
-                        } else if (field === '$and') {
-                            if (Array.isArray(condition)) {
-                                // 递归处理嵌套条件，使用 Sequelize Op.and
-                                converted[Op.and] = condition.map(nestedCondition =>
-                                    convertConditions(nestedCondition, columnDefs)
-                                );
-                            } else {
-                                throw new Error('$and 操作符的值必须是数组');
-                            }
-                        } else if (condition && typeof condition === 'object' && !Array.isArray(condition)) {
-                            // 处理普通字段条件
-                            const fieldCondition = {};
-
-                            // 获取字段类型
-                            let fieldType = 'string'; // 默认字符串类型
-                            if (columnDefs && Array.isArray(columnDefs)) {
-                                const columnDef = columnDefs.find(col => col.name === field);
-                                if (columnDef && columnDef.type) {
-                                    fieldType = columnDef.type;
-                                }
-                            }
-
-                            for (const [operator, value] of Object.entries(condition)) {
-                // 特殊处理数字字段的 $like 操作符
-                if (operator === '$like' && fieldType === 'number') {
-                    // 对于数字字段的模糊查询，标记需要特殊处理
-                    hasNumberLikeCondition = true;
-                    fieldCondition[Op.like] = value;
-                } else {
-                                    switch (operator) {
-                                        case '$eq':
-                                            fieldCondition[Op.eq] = value;
-                                            break;
-                                        case '$ne':
-                                            fieldCondition[Op.ne] = value;
-                                            break;
-                                        case '$like':
-                                            fieldCondition[Op.like] = value;
-                                            break;
-                                        case '$gt':
-                                            fieldCondition[Op.gt] = value;
-                                            break;
-                                        case '$lt':
-                                            fieldCondition[Op.lt] = value;
-                                            break;
-                                        case '$gte':
-                                            fieldCondition[Op.gte] = value;
-                                            break;
-                                        case '$lte':
-                                            fieldCondition[Op.lte] = value;
-                                            break;
-                                        case '$in':
-                                            fieldCondition[Op.in] = value;
-                                            break;
-                                        case '$notIn':
-                                            fieldCondition[Op.notIn] = value;
-                                            break;
-                                        default:
-                                            throw new Error(`不支持的操作符: ${operator}`);
-                                    }
-                                }
-                            }
-                            converted[field] = fieldCondition;
+                        // 处理特殊操作符
+                        if (field === '$or' && Array.isArray(condition)) {
+                            processedConditions[field] = condition.map(nestedCondition => 
+                                processFieldMapping(nestedCondition, columnDefs)
+                            );
+                        } else if (field === '$and' && Array.isArray(condition)) {
+                            processedConditions[field] = condition.map(nestedCondition => 
+                                processFieldMapping(nestedCondition, columnDefs)
+                            );
                         } else {
-                            // 简单相等条件
-                            converted[field] = condition;
+                            // 处理普通字段条件
+                            // 查找对应的列定义，确保字段名正确
+                            const columnDef = columnDefs.find(col => col.name === field);
+                            if (columnDef) {
+                                // 使用数据库中的实际字段名
+                                processedConditions[field] = condition;
+                            } else {
+                                console.warn(`字段 ${field} 在表结构中不存在，跳过该条件`);
+                                // 跳过不存在的字段条件
+                            }
                         }
                     }
-
-                    return converted;
+                    
+                    return processedConditions;
                 };
-
-                Object.assign(whereClause, convertConditions(searchConditions));
+                
+                // 应用字段名映射处理
+                const processedConditions = processFieldMapping(searchConditions);
+                Object.assign(whereClause, processedConditions);
+                
+                // 检查是否有数字字段的模糊查询
+                const checkNumberLikeConditions = (conditions) => {
+                    for (const [field, condition] of Object.entries(conditions)) {
+                        if (field === '$or' && Array.isArray(condition)) {
+                            // 递归检查 $or 中的条件
+                            for (const nestedCondition of condition) {
+                                checkNumberLikeConditions(nestedCondition);
+                            }
+                        } else if (condition && typeof condition === 'object' && !Array.isArray(condition)) {
+                            // 检查字段类型和操作符
+                            const columnDef = columnDefinitions.find(col => col.name === field);
+                            const fieldType = columnDef ? columnDef.type : 'string';
+                            
+                            for (const [operator, value] of Object.entries(condition)) {
+                                if (operator === '$like' && fieldType === 'number') {
+                                    hasNumberLikeCondition = true;
+                                    console.log(`检测到数字字段模糊查询: ${field}, 值: ${value}`);
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                checkNumberLikeConditions(searchConditions);
+                
             } catch (parseError) {
                 return res.status(400).json({
                     success: false,
@@ -206,22 +179,71 @@ const queryData = async (req, res) => {
         console.log('原始搜索参数:', search);
         console.log('表哈希:', hash);
         console.log('分页参数:', { page, limit, offset });
+        
+        // 调试：检查 whereClause 的实际结构
+        console.log('whereClause 详细结构:');
+        console.log('whereClause 对象:', whereClause);
+        console.log('whereClause 键:', Object.keys(whereClause));
+        console.log('whereClause Symbol 键:', Object.getOwnPropertySymbols(whereClause));
+        
+        // 检查是否有 Sequelize Op.or 符号
+        const symbolKeys = Object.getOwnPropertySymbols(whereClause);
+        console.log('Symbol 键数量:', symbolKeys.length);
+        for (const symbolKey of symbolKeys) {
+            console.log(`Symbol 键:`, symbolKey);
+            console.log(`Symbol 值:`, whereClause[symbolKey]);
+            if (symbolKey === Op.or) {
+                console.log('检测到 Sequelize Op.or 符号');
+                console.log('Op.or 值:', whereClause[symbolKey]);
+            }
+        }
+        
+        // 如果 whereClause 是空的，说明 $or 操作符转换有问题
+        if (Object.keys(whereClause).length === 0 && symbolKeys.length === 0) {
+            console.log('警告: whereClause 为空，$or 操作符可能没有被正确转换');
+            console.log('尝试直接处理原始搜索参数...');
+            
+            // 直接处理原始搜索参数
+            try {
+                const searchConditions = JSON.parse(search);
+                console.log('原始搜索条件:', searchConditions);
+                
+                // 如果包含 $or 操作符，直接构建 SQL 条件
+                if (searchConditions.$or && Array.isArray(searchConditions.$or)) {
+                    console.log('检测到 $or 操作符，直接构建 SQL 条件');
+                    hasNumberLikeCondition = true; // 强制使用原始 SQL 查询
+                    
+                    // 直接构建 whereClause 用于后续处理
+                    whereClause.$or = searchConditions.$or;
+                    console.log('重新构建的 whereClause:', whereClause);
+                }
+            } catch (error) {
+                console.log('解析原始搜索参数失败:', error.message);
+            }
+        }
 
         try {
             let count, rows;
 
-            if (hasNumberLikeCondition) {
-                // 对于数字字段的模糊查询，直接使用原始SQL查询
+            // 如果包含 $or 操作符或者有数字字段的模糊查询，使用原始SQL查询
+            if (hasNumberLikeCondition || (whereClause.$or && Array.isArray(whereClause.$or))) {
+                // 对于复杂查询，直接使用原始SQL查询
                 const tableName = `data_${hash}`;
-                console.log('检测到数字字段模糊查询，使用原始SQL查询');
+                console.log('检测到复杂查询条件，使用原始SQL查询');
 
                 // 构建完整的WHERE条件
                 const buildCompleteWhereSQL = (conditions, columnDefs = columnDefinitions) => {
                     const sqlConditions = [];
                     const params = [];
 
-                    const processCondition = (condition, parentField = null) => {
+                    const processCondition = (condition) => {
+                        console.log('开始处理条件:', condition);
+                        const currentConditions = [];
+                        const currentParams = [];
+
                         for (const [field, value] of Object.entries(condition)) {
+                            console.log('处理字段:' + field, '字段类型:', typeof field, '值:', value);
+                            
                             // 处理特殊操作符
                             if (field === '$or' && Array.isArray(value)) {
                                 const orConditions = [];
@@ -229,11 +251,11 @@ const queryData = async (req, res) => {
                                     const orResult = processCondition(orCondition);
                                     if (orResult.conditions.length > 0) {
                                         orConditions.push(`(${orResult.conditions.join(' AND ')})`);
-                                        params.push(...orResult.params);
+                                        currentParams.push(...orResult.params);
                                     }
                                 }
                                 if (orConditions.length > 0) {
-                                    sqlConditions.push(`(${orConditions.join(' OR ')})`);
+                                    currentConditions.push(`(${orConditions.join(' OR ')})`);
                                 }
                             } else if (field === '$and' && Array.isArray(value)) {
                                 const andConditions = [];
@@ -241,11 +263,11 @@ const queryData = async (req, res) => {
                                     const andResult = processCondition(andCondition);
                                     if (andResult.conditions.length > 0) {
                                         andConditions.push(`(${andResult.conditions.join(' AND ')})`);
-                                        params.push(...andResult.params);
+                                        currentParams.push(...andResult.params);
                                     }
                                 }
                                 if (andConditions.length > 0) {
-                                    sqlConditions.push(`(${andConditions.join(' AND ')})`);
+                                    currentConditions.push(`(${andConditions.join(' AND ')})`);
                                 }
                             } else {
                                 // 处理普通字段条件
@@ -267,16 +289,16 @@ const queryData = async (req, res) => {
                                                 // 检查字段类型
                                                 const columnDef = columnDefs.find(col => col.name === field);
                                                 const fieldType = columnDef ? columnDef.type : 'string';
-
                                                 if (fieldType === 'number') {
                                                     // 数字字段的模糊查询需要类型转换
-                                                    sqlConditions.push(`CAST(\`${field}\` AS CHAR) LIKE ?`);
+                                                    currentConditions.push(`CAST(\`${field}\` AS CHAR) LIKE ?`);
                                                 } else {
                                                     // 字符串字段直接使用
-                                                    sqlConditions.push(`\`${field}\` LIKE ?`);
+                                                    currentConditions.push(`\`${field}\` LIKE ?`);
                                                 }
-                                                params.push(processedValue);
-                                                continue; // 跳过后续处理
+                                                console.log(`检测到模糊查询，字段: ${field}, 值: ${processedValue}, 类型: ${fieldType}`);
+                                                currentParams.push(processedValue);
+                                                break; // 跳过后续处理
                                             case '$gt':
                                                 sqlOperator = '>';
                                                 break;
@@ -294,21 +316,27 @@ const queryData = async (req, res) => {
                                         }
 
                                         if (sqlOperator) {
-                                            sqlConditions.push(`\`${field}\` ${sqlOperator} ?`);
-                                            params.push(processedValue);
+                                            currentConditions.push(`\`${field}\` ${sqlOperator} ?`);
+                                            currentParams.push(processedValue);
                                         }
                                     }
                                 } else {
                                     // 简单相等条件
-                                    sqlConditions.push(`\`${field}\` = ?`);
-                                    params.push(value);
+                                    currentConditions.push(`\`${field}\` = ?`);
+                                    currentParams.push(value);
                                 }
                             }
                         }
-                        return { conditions: sqlConditions, params };
+                        console.log('当前层级SQL条件:', currentConditions, currentParams);
+                        return { conditions: currentConditions, params: currentParams };
                     };
 
-                    return processCondition(conditions);
+                    const result = processCondition(conditions);
+                    sqlConditions.push(...result.conditions);
+                    params.push(...result.params);
+                    
+                    console.log('最终SQL条件:', sqlConditions, params);
+                    return { conditions: sqlConditions, params };
                 };
 
                 const whereResult = buildCompleteWhereSQL(whereClause);
@@ -331,9 +359,61 @@ const queryData = async (req, res) => {
                 count = countResult[0].total;
                 rows = dataResult;
             } else {
-                // 正常查询
+                // 对于简单查询，使用 Sequelize 查询
+                console.log('使用 Sequelize 进行简单查询');
+                
+                // 将原始条件转换为 Sequelize 格式
+                const convertToSequelizeFormat = (conditions) => {
+                    const converted = {};
+                    
+                    for (const [field, condition] of Object.entries(conditions)) {
+                        if (condition && typeof condition === 'object' && !Array.isArray(condition)) {
+                            const fieldCondition = {};
+                            
+                            for (const [operator, value] of Object.entries(condition)) {
+                                switch (operator) {
+                                    case '$eq':
+                                        fieldCondition[Op.eq] = value;
+                                        break;
+                                    case '$ne':
+                                        fieldCondition[Op.ne] = value;
+                                        break;
+                                    case '$like':
+                                        fieldCondition[Op.like] = value;
+                                        break;
+                                    case '$gt':
+                                        fieldCondition[Op.gt] = value;
+                                        break;
+                                    case '$lt':
+                                        fieldCondition[Op.lt] = value;
+                                        break;
+                                    case '$gte':
+                                        fieldCondition[Op.gte] = value;
+                                        break;
+                                    case '$lte':
+                                        fieldCondition[Op.lte] = value;
+                                        break;
+                                    default:
+                                        // 跳过不支持的操作符
+                                        continue;
+                                }
+                            }
+                            
+                            converted[field] = fieldCondition;
+                        } else {
+                            // 简单相等条件
+                            converted[field] = condition;
+                        }
+                    }
+                    
+                    return converted;
+                };
+                
+                const sequelizeWhereClause = convertToSequelizeFormat(whereClause);
+                console.log('转换后的 Sequelize 条件:', sequelizeWhereClause);
+                
                 const result = await DynamicModel.findAndCountAll({
-                    where: whereClause,
+                    where: sequelizeWhereClause,
                     limit: parseInt(limit),
                     offset: offset,
                     order: [['id', 'ASC']]
