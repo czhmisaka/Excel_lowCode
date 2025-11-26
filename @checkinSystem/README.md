@@ -1,7 +1,7 @@
 <!--
  * @Date: 2025-11-18 23:52:52
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-25 23:49:20
+ * @LastEditTime: 2025-11-25 23:57:22
  * @FilePath: /lowCode_excel/@checkinSystem/README.md
 -->
 # 签到系统文件索引
@@ -84,7 +84,28 @@ node scripts/远程签到系统部署脚本.js
 
 ## 部署状态
 
-当前系统状态：**等待数据库初始化**
+### 当前可用系统
+- **无Hook版本** (推荐使用): `labor_sign_in_no_hook`
+  - 状态: ✅ **已部署并可用**
+  - 访问地址: `http://localhost:4000/api/public/form/forms/labor_sign_in_no_hook`
+  - 特点: 基本功能正常，需要手动填写时间信息
+
+- **完整版本** (存在问题): `labor_sign_in`
+  - 状态: ⚠️ **Hook配置问题**
+  - 访问地址: `http://localhost:4000/api/public/form/forms/labor_sign_in`
+  - 问题: Hook执行失败，无法自动记录时间
+
+- **V2版本** (存在问题): `labor_sign_in_v2`
+  - 状态: ⚠️ **Hook配置问题**
+  - 访问地址: `http://localhost:4000/api/public/form/forms/labor_sign_in_v2`
+  - 问题: Hook执行失败，无法自动记录时间
+
+### 部署总结
+- ✅ 服务器连接正常 (端口4000)
+- ✅ 表单创建功能正常
+- ✅ 基本表单提交功能正常
+- ⚠️ JavaScript Hook执行存在问题
+- ✅ 无Hook版本可用并稳定
 
 详细部署状态请查看 `docs/签到系统部署状态总结.md`
 

@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-27 23:17:13
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-20 15:10:34
+ * @LastEditTime: 2025-11-26 00:08:08
  * @FilePath: /lowCode_excel/backend/models/index.js
  */
 const { sequelize } = require('../config/database');
@@ -11,6 +11,9 @@ const TableLog = require('./TableLog');
 const FormDefinition = require('./FormDefinition');
 const FormHook = require('./FormHook');
 const FormSubmission = require('./FormSubmission');
+
+// 初始化 TableLog 模型
+const TableLogModel = TableLog(sequelize);
 
 // 检查数据完整性
 const checkDataIntegrity = async () => {
@@ -136,9 +139,10 @@ const initModels = async () => {
             alter: false         // 在SQLite中禁用alter，避免表结构修改问题
         };
         
-        // 单独同步其他表，跳过 form_definitions 和 TableLog
+        // 同步所有表，包括 TableLog
         await TableMapping.sync(syncOptions);
         await User.sync(syncOptions);
+        await TableLogModel.sync(syncOptions);
         await FormHook.sync(syncOptions);
         await FormSubmission.sync(syncOptions);
         
@@ -147,7 +151,7 @@ const initModels = async () => {
         return {
             TableMapping,
             User,
-            TableLog,
+            TableLog: TableLogModel,
             FormDefinition,
             FormHook,
             FormSubmission
@@ -173,7 +177,7 @@ const initModels = async () => {
             return {
                 TableMapping,
                 User,
-                TableLog,
+                TableLog: TableLogModel,
                 FormDefinition,
                 FormHook,
                 FormSubmission

@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'http://localhost:4000/api';
 
 // 三个企业的配置
 const COMPANIES = [

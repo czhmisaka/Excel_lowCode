@@ -61,6 +61,10 @@ const inferDataType = (value, fieldName = '') => {
         if (!Number.isSafeInteger(value)) {
             return 'string';
         }
+        // 大于100000的数字都作为字符串处理，避免精度问题
+        if (Math.abs(value) > 100000) {
+            return 'string';
+        }
         return 'number';
     }
 

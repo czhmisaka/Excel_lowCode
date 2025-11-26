@@ -431,18 +431,35 @@ const queryData = async (req, res) => {
                 totalRecords: count
             };
 
-            // 构建响应数据
-            const responseData = {
-                success: true,
-                data: rows,
-                tableInfo: tableInfo,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total: count,
-                    pages: Math.ceil(count / parseInt(limit))
+        // 处理大数字，避免精度丢失，并转换为纯对象
+        const processedRows = rows.map(row => {
+            // 将 Sequelize 模型实例转换为纯对象
+            const plainRow = row.get ? row.get({ plain: true }) : row;
+            const processedRow = {};
+            
+            for (const [key, value] of Object.entries(plainRow)) {
+                // 如果值大于100000且是数字类型，转换为字符串避免精度问题
+                if (typeof value === 'number' && Math.abs(value) > 100000) {
+                    processedRow[key] = value.toString();
+                } else {
+                    processedRow[key] = value;
                 }
-            };
+            }
+            return processedRow;
+        });
+
+        // 构建响应数据
+        const responseData = {
+            success: true,
+            data: processedRows,
+            tableInfo: tableInfo,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: count,
+                pages: Math.ceil(count / parseInt(limit))
+            }
+        };
 
             // 将结果存入缓存
             await cacheService.set(cacheKey, responseData);
