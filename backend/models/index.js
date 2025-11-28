@@ -1,138 +1,37 @@
 /*
  * @Date: 2025-09-27 23:17:13
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-26 00:08:08
- * @FilePath: /lowCode_excel/backend/models/index.js
+ * @LastEditTime: 2025-11-27 14:42:12
+ * @FilePath: /打卡/backend/models/index.js
  */
 const { sequelize } = require('../config/database');
 const TableMapping = require('./TableMapping');
 const User = require('./User');
 const TableLog = require('./TableLog');
-const FormDefinition = require('./FormDefinition');
-const FormHook = require('./FormHook');
-const FormSubmission = require('./FormSubmission');
+const CheckinRecord = require('./CheckinRecord');
+const Company = require('./Company');
 
 // 初始化 TableLog 模型
 const TableLogModel = TableLog(sequelize);
 
-// 检查数据完整性
-const checkDataIntegrity = async () => {
-    try {
-        console.log('开始检查数据完整性...');
-        
-        // 检查 form_definitions 表的数据完整性
-        const formDefinitions = await FormDefinition.findAll();
-        console.log(`form_definitions 表共有 ${formDefinitions.length} 条记录`);
-        
-        // 检查 form_id 的唯一性和有效性
-        const formIds = formDefinitions.map(fd => fd.formId);
-        const uniqueFormIds = [...new Set(formIds)];
-        
-        if (formIds.length !== uniqueFormIds.length) {
-            console.warn('⚠️ 发现重复的 form_id，需要清理数据');
-            return false;
-        }
-        
-        const nullFormIds = formDefinitions.filter(fd => !fd.formId || fd.formId.trim() === '');
-        if (nullFormIds.length > 0) {
-            console.warn(`⚠️ 发现 ${nullFormIds.length} 条记录的 form_id 为空或无效`);
-            return false;
-        }
-        
-        console.log('✅ 数据完整性检查通过');
-        return true;
-    } catch (error) {
-        console.error('数据完整性检查失败:', error);
-        return false;
-    }
-};
+// 初始化签到系统模型
+const CheckinRecordModel = CheckinRecord(sequelize);
+const CompanyModel = Company(sequelize);
 
-// 清理问题数据
-const cleanupProblematicData = async () => {
-    try {
-        console.log('开始清理问题数据...');
-        
-        // 删除 form_id 为 null 或空的记录
-        const deletedNullFormIds = await FormDefinition.destroy({
-            where: {
-                formId: {
-                    [sequelize.Op.or]: [
-                        null,
-                        '',
-                        sequelize.where(sequelize.fn('TRIM', sequelize.col('form_id')), '')
-                    ]
-                }
-            }
-        });
-        
-        if (deletedNullFormIds > 0) {
-            console.log(`✅ 已删除 ${deletedNullFormIds} 条 form_id 为空的记录`);
-        }
-        
-        // 删除重复的 form_id 记录（保留最新的）
-        const duplicates = await FormDefinition.findAll({
-            attributes: [
-                'formId',
-                [sequelize.fn('COUNT', sequelize.col('form_id')), 'count']
-            ],
-            group: ['formId'],
-            having: sequelize.where(sequelize.fn('COUNT', sequelize.col('form_id')), '>', 1)
-        });
-        
-        let totalDuplicatesDeleted = 0;
-        for (const dup of duplicates) {
-            const records = await FormDefinition.findAll({
-                where: { formId: dup.formId },
-                order: [['created_at', 'ASC']]
-            });
-            
-            // 保留最新的记录，删除其他重复记录
-            const recordsToDelete = records.slice(0, -1);
-            for (const record of recordsToDelete) {
-                await record.destroy();
-                totalDuplicatesDeleted++;
-            }
-        }
-        
-        if (totalDuplicatesDeleted > 0) {
-            console.log(`✅ 已删除 ${totalDuplicatesDeleted} 条重复的 form_id 记录`);
-        }
-        
-        console.log('✅ 数据清理完成');
-        return true;
-    } catch (error) {
-        console.error('数据清理失败:', error);
-        return false;
-    }
-};
+// 设置模型关联
+CheckinRecordModel.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+CheckinRecordModel.belongsTo(CompanyModel, { foreignKey: 'company_id', as: 'company' });
+User.hasMany(CheckinRecordModel, { foreignKey: 'user_id', as: 'checkinRecords' });
+CompanyModel.hasMany(CheckinRecordModel, { foreignKey: 'company_id', as: 'checkinRecords' });
+
+// 添加User和Company之间的关联
+User.belongsTo(CompanyModel, { foreignKey: 'company_id', as: 'company' });
+CompanyModel.hasMany(User, { foreignKey: 'company_id', as: 'users' });
+
 
 // 初始化所有模型
 const initModels = async () => {
     try {
-        // 建立模型关联关系
-        // FormDefinition 和 FormHook 的一对多关系
-        FormDefinition.hasMany(FormHook, {
-            foreignKey: 'form_id',
-            sourceKey: 'formId',
-            as: 'hooks'
-        });
-        
-        FormHook.belongsTo(FormDefinition, {
-            foreignKey: 'form_id',
-            targetKey: 'formId',
-            as: 'form'
-        });
-
-        // 先检查数据完整性
-        const isDataValid = await checkDataIntegrity();
-        
-        if (!isDataValid) {
-            console.log('发现数据问题，正在自动清理...');
-            await cleanupProblematicData();
-            console.log('数据清理完成，重新检查数据完整性...');
-            await checkDataIntegrity();
-        }
-
         // 安全同步数据库表 - 对于SQLite，避免使用alter选项
         const syncOptions = {
             force: false,        // 不强制重建表
@@ -143,8 +42,8 @@ const initModels = async () => {
         await TableMapping.sync(syncOptions);
         await User.sync(syncOptions);
         await TableLogModel.sync(syncOptions);
-        await FormHook.sync(syncOptions);
-        await FormSubmission.sync(syncOptions);
+        await CheckinRecordModel.sync(syncOptions);
+        await CompanyModel.sync(syncOptions);
         
         console.log('数据库表同步成功');
 
@@ -152,9 +51,8 @@ const initModels = async () => {
             TableMapping,
             User,
             TableLog: TableLogModel,
-            FormDefinition,
-            FormHook,
-            FormSubmission
+            CheckinRecord: CheckinRecordModel,
+            Company: CompanyModel
         };
     } catch (error) {
         console.error('数据库表同步失败:', error);
@@ -177,10 +75,7 @@ const initModels = async () => {
             return {
                 TableMapping,
                 User,
-                TableLog: TableLogModel,
-                FormDefinition,
-                FormHook,
-                FormSubmission
+                TableLog: TableLogModel
             };
         }
         
@@ -351,9 +246,8 @@ module.exports = {
     TableMapping,
     User,
     TableLog,
-    FormDefinition,
-    FormHook,
-    FormSubmission,
+    CheckinRecord: CheckinRecordModel,
+    Company: CompanyModel,
     getDynamicModel,
     dropDynamicTable
 };

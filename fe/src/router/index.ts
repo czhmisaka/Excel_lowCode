@@ -1,14 +1,13 @@
 /*
  * @Date: 2025-08-28 07:54:03
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-19 18:05:07
- * @FilePath: /lowCode_excel/fe/src/router/index.ts
+ * @LastEditTime: 2025-11-27 10:11:59
+ * @FilePath: /打卡/fe/src/router/index.ts
  */
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import MainLayout from '@/components/Layout/MainLayout.vue'
 import QueryOnlyLayout from '@/components/Layout/QueryOnlyLayout.vue'
-import FormFillLayout from '@/components/Layout/FormFillLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -77,37 +76,27 @@ const router = createRouter({
           meta: { requiresAdmin: true }
         },
         {
-          path: '/forms',
-          name: 'FormManagement',
-          component: () => import('@/views/FormManagement.vue'),
-          meta: { requiresAdmin: true }
-        },
-        {
-          path: '/forms/:id',
-          name: 'FormDetail',
-          component: () => import('@/views/FormDetail.vue'),
-          meta: { requiresAdmin: true }
-        },
-        {
           path: '/profile',
           name: 'Profile',
           component: () => import('@/views/ProfileView.vue')
-        }
-      ]
-    },
-    {
-      path: '/form',
-      component: FormFillLayout,
-      children: [
-        {
-          path: '',
-          name: 'FormFill',
-          component: () => import('@/views/FormFillView.vue')
         },
         {
-          path: ':formId',
-          name: 'PublicForm',
-          component: () => import('@/views/PublicFormView.vue')
+          path: '/checkin',
+          name: 'Checkin',
+          component: () => import('@/views/CheckinPage.vue'),
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: '/companies',
+          name: 'CompanyManagement',
+          component: () => import('@/views/CompanyManagement.vue'),
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: '/company-checkin-records/:id',
+          name: 'CompanyCheckinRecords',
+          component: () => import('@/views/CompanyCheckinRecords.vue'),
+          meta: { requiresAdmin: true }
         }
       ]
     },
@@ -121,6 +110,18 @@ const router = createRouter({
           component: () => import('@/views/QueryOnlyView.vue')
         }
       ]
+    },
+    {
+      path: '/checkin/:companyCode',
+      name: 'CompanyCheckin',
+      component: () => import('@/views/CheckinPage.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/checkout/:companyCode',
+      name: 'CompanyCheckout',
+      component: () => import('@/views/CheckoutPage.vue'),
+      meta: { requiresAuth: true }
     }
   ]
 })

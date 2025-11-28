@@ -22,6 +22,14 @@
                             <span>仪表盘</span>
                         </template>
                     </el-menu-item>
+                    <el-menu-item index="/companies" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <OfficeBuilding />
+                            </el-icon>
+                            <span>公司管理</span>
+                        </template>
+                    </el-menu-item>
                     <el-menu-item index="/files" class="modern-menu-item">
                         <template #title>
                             <el-icon>
@@ -36,14 +44,6 @@
                                 <Edit />
                             </el-icon>
                             <span>数据编辑</span>
-                        </template>
-                    </el-menu-item>
-                    <el-menu-item index="/forms" class="modern-menu-item">
-                        <template #title>
-                            <el-icon>
-                                <Document />
-                            </el-icon>
-                            <span>表单管理</span>
                         </template>
                     </el-menu-item>
                     <el-menu-item index="/api-guide" class="modern-menu-item">
@@ -177,7 +177,8 @@ import {
     ArrowRight,
     ArrowDown,
     Setting,
-    SwitchButton
+    SwitchButton,
+    OfficeBuilding
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -204,9 +205,9 @@ const currentRouteName = computed(() => {
         '/data': '数据浏览',
         '/editor': '数据编辑',
         '/mappings': '映射关系',
-        '/forms': '表单管理',
         '/api-guide': 'API指南',
         '/users': '用户管理',
+        '/companies': '公司管理',
         '/logs': '操作日志'
     }
     return routeMap[route.path] || '未知页面'

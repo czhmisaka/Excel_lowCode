@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-09-28 01:00:38
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-28 15:31:04
- * @FilePath: /lowCode_excel/fe/vite.config.ts
+ * @LastEditTime: 2025-11-27 13:59:01
+ * @FilePath: /打卡/fe/vite.config.ts
  */
 import { fileURLToPath, URL } from 'node:url'
 

@@ -1,32 +1,13 @@
-/*
- * @Date: 2025-10-28 14:34:00
- * @LastEditors: CZH
- * @LastEditTime: 2025-10-28 14:35:10
- * @FilePath: /lowCode_excel/backend/routes/users.js
- */
 const express = require('express');
 const router = express.Router();
-const {
-    getUsers,
-    getUserById,
-    updateUser,
-    deleteUser,
-    resetUserPassword,
-    createUser
-} = require('../controllers/userController');
-const { authenticateToken, requireRole } = require('../middleware/auth');
-
-// 所有用户管理路由都需要管理员权限
-router.use(authenticateToken, requireRole(['admin']));
+const UserController = require('../controllers/userController');
 
 /**
  * @swagger
  * /api/users:
  *   get:
- *     summary: 获取用户列表（管理员权限）
+ *     summary: 获取用户列表
  *     tags: [用户管理]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -38,31 +19,87 @@ router.use(authenticateToken, requireRole(['admin']));
  *         name: limit
  *         schema:
  *           type: integer
- *           default: 20
+ *           default: 10
  *         description: 每页数量
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
- *         description: 搜索关键词（用户名、显示名称、邮箱）
+ *         description: 搜索关键词（姓名、手机号、用户名）
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *         description: 公司ID（可选）
+ *       - in: query
+ *         name: isActive
+ *         schema:
+ *           type: boolean
+ *         description: 是否启用（true/false）
  *     responses:
  *       200:
  *         description: 获取成功
- *       401:
- *         description: 未认证
- *       403:
- *         description: 权限不足
  */
-router.get('/', getUsers);
+router.get('/', UserController.getUsers);
+
+/**
+ * @swagger
+ * /api/users/phone/{phone}:
+ *   get:
+ *     summary: 根据手机号获取用户信息
+ *     tags: [用户管理]
+ *     parameters:
+ *       - in: path
+ *         name: phone
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 手机号
+ *     responses:
+ *       200:
+ *         description: 获取成功
+ *       404:
+ *         description: 用户不存在
+ */
+router.get('/phone/:phone', UserController.getUserByPhone);
+
+/**
+ * @swagger
+ * /api/users/login:
+ *   post:
+ *     summary: 手机号登录/自动注册
+ *     tags: [用户管理]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - phone
+ *             properties:
+ *               phone:
+ *                 type: string
+ *                 description: 手机号
+ *               companyCode:
+ *                 type: string
+ *                 description: 公司代码（可选，用于自动注册）
+ *     responses:
+ *       200:
+ *         description: 登录成功
+ *       400:
+ *         description: 登录失败
+ *       404:
+ *         description: 用户不存在
+ */
+router.post('/login', UserController.loginByPhone);
 
 /**
  * @swagger
  * /api/users:
  *   post:
- *     summary: 创建用户（管理员权限）
+ *     summary: 创建用户
  *     tags: [用户管理]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -71,77 +108,47 @@ router.get('/', getUsers);
  *             type: object
  *             required:
  *               - username
- *               - password
+ *               - realName
+ *               - phone
+ *               - companyId
  *             properties:
  *               username:
  *                 type: string
  *                 description: 用户名
- *               password:
+ *               realName:
  *                 type: string
- *                 description: 密码
- *               email:
+ *                 description: 真实姓名
+ *               phone:
  *                 type: string
- *                 description: 邮箱（可选）
- *               displayName:
+ *                 description: 手机号
+ *               companyId:
  *                 type: string
- *                 description: 显示名称（可选）
+ *                 description: 公司ID
  *               role:
  *                 type: string
- *                 enum: [admin, user, guest]
+ *                 enum: [employee, manager, admin]
+ *                 default: employee
  *                 description: 用户角色
  *     responses:
  *       201:
  *         description: 创建成功
  *       400:
- *         description: 用户名已存在或其他验证错误
- *       401:
- *         description: 未认证
- *       403:
- *         description: 权限不足
+ *         description: 创建失败（手机号已存在等）
  */
-router.post('/', createUser);
+router.post('/', UserController.createUser);
 
 /**
  * @swagger
- * /api/users/{id}:
- *   get:
- *     summary: 获取单个用户信息（管理员权限）
- *     tags: [用户管理]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: 用户ID
- *     responses:
- *       200:
- *         description: 获取成功
- *       404:
- *         description: 用户不存在
- *       401:
- *         description: 未认证
- *       403:
- *         description: 权限不足
- */
-router.get('/:id', getUserById);
-
-/**
- * @swagger
- * /api/users/{id}:
+ * /api/users/{userId}:
  *   put:
- *     summary: 更新用户信息（管理员权限）
+ *     summary: 更新用户信息
  *     tags: [用户管理]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: userId
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *         description: 用户ID
  *     requestBody:
  *       required: true
@@ -150,77 +157,51 @@ router.get('/:id', getUserById);
  *           schema:
  *             type: object
  *             properties:
- *               displayName:
+ *               realName:
  *                 type: string
- *                 description: 显示名称
- *               email:
- *                 type: string
- *                 description: 邮箱
+ *                 description: 真实姓名
  *               role:
  *                 type: string
- *                 enum: [admin, user, guest]
+ *                 enum: [employee, manager, admin]
  *                 description: 用户角色
  *               isActive:
  *                 type: boolean
- *                 description: 是否激活
+ *                 description: 是否启用
  *     responses:
  *       200:
  *         description: 更新成功
- *       400:
- *         description: 邮箱已被其他用户使用
- *       401:
- *         description: 未认证
- *       403:
- *         description: 权限不足
  *       404:
  *         description: 用户不存在
  */
-router.put('/:id', updateUser);
+router.put('/:userId', UserController.updateUser);
 
 /**
  * @swagger
- * /api/users/{id}:
+ * /api/users/{userId}:
  *   delete:
- *     summary: 删除用户（管理员权限）
+ *     summary: 删除用户
  *     tags: [用户管理]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: userId
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *         description: 用户ID
  *     responses:
  *       200:
  *         description: 删除成功
- *       400:
- *         description: 不能删除自己的账户
- *       401:
- *         description: 未认证
- *       403:
- *         description: 权限不足
  *       404:
  *         description: 用户不存在
  */
-router.delete('/:id', deleteUser);
+router.delete('/:userId', UserController.deleteUser);
 
 /**
  * @swagger
- * /api/users/{id}/reset-password:
+ * /api/users/batch:
  *   post:
- *     summary: 重置用户密码（管理员权限）
+ *     summary: 批量导入用户
  *     tags: [用户管理]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: 用户ID
  *     requestBody:
  *       required: true
  *       content:
@@ -228,23 +209,36 @@ router.delete('/:id', deleteUser);
  *           schema:
  *             type: object
  *             required:
- *               - newPassword
+ *               - users
  *             properties:
- *               newPassword:
- *                 type: string
- *                 description: 新密码
+ *               users:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - username
+ *                     - realName
+ *                     - phone
+ *                     - companyId
+ *                   properties:
+ *                     username:
+ *                       type: string
+ *                     realName:
+ *                       type: string
+ *                     phone:
+ *                       type: string
+ *                     companyId:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                       enum: [employee, manager, admin]
+ *                       default: employee
  *     responses:
- *       200:
- *         description: 密码重置成功
+ *       201:
+ *         description: 批量导入成功
  *       400:
- *         description: 新密码不能为空
- *       401:
- *         description: 未认证
- *       403:
- *         description: 权限不足
- *       404:
- *         description: 用户不存在
+ *         description: 批量导入失败
  */
-router.post('/:id/reset-password', resetUserPassword);
+router.post('/batch', UserController.batchImportUsers);
 
 module.exports = router;

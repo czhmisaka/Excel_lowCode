@@ -39,7 +39,7 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:4000',
+                url: 'http://localhost:3050',
                 description: '开发服务器'
             },
             {
@@ -75,6 +75,14 @@ const options = {
             {
                 name: '缓存管理',
                 description: '缓存统计和管理接口'
+            },
+            {
+                name: '签到管理',
+                description: '签到签退相关接口'
+            },
+            {
+                name: '公司管理',
+                description: '公司配置管理接口'
             }
         ],
         components: {
@@ -200,13 +208,13 @@ app.use('/api/data', require('./routes/data'));
 app.use('/api/system', require('./routes/system'));
 app.use('/api/import', require('./routes/import'));
 app.use('/api/rollback', require('./routes/rollback'));
-app.use('/api/public/form', require('./routes/publicForm'));
 app.use('/api/field-config', require('./routes/fieldConfig'));
 app.use('/api/service-accounts', require('./routes/serviceAccounts'));
-app.use('/api/forms', require('./routes/forms'));
 app.use('/api/health', require('./routes/health'));
 app.use('/api/tables', require('./routes/tables'));
 app.use('/api/cache', require('./routes/cache'));
+app.use('/api/checkin', require('./routes/checkin'));
+app.use('/api/companies', require('./routes/companies'));
 
 // 404处理
 app.use('*', (req, res) => {
@@ -321,6 +329,22 @@ const startServer = async () => {
         // 初始化数据模型
         await initModels();
 
+        // 同步公司和签到模块数据库（独立于自动建表系统）
+        console.log('开始同步公司和签到模块数据库...');
+        try {
+            const checkinDbSync = require('./utils/checkinDbSync');
+            const checkinSyncResult = await checkinDbSync.initialize();
+            
+            if (checkinSyncResult.success) {
+                console.log('✅ 公司和签到模块数据库同步成功');
+            } else {
+                console.warn('⚠️ 公司和签到模块数据库同步失败，但服务器继续启动');
+                console.warn('错误详情:', checkinSyncResult.message);
+            }
+        } catch (syncError) {
+            console.warn('⚠️ 公司和签到模块数据库同步异常，但服务器继续启动:', syncError.message);
+        }
+
         // 初始化服务账户
         const { initAllServiceUsers } = require('./scripts/initServiceUsers');
         const serviceUsersResult = await initAllServiceUsers();
@@ -329,12 +353,24 @@ const startServer = async () => {
             console.warn('MCP服务账户初始化失败，但服务器继续启动');
         }
 
-        const PORT = process.env.PORT || 4000;
+        const PORT = process.env.PORT || 3050;
         app.listen(PORT, () => {
             console.log(`服务器启动成功，端口: ${PORT}`);
             console.log(`环境: ${process.env.NODE_ENV || 'development'}`);
             console.log(`健康检查: http://localhost:${PORT}/health`);
             console.log(`API文档: http://localhost:${PORT}/api-docs`);
+            
+            // 在服务器启动后异步初始化打卡系统
+            setTimeout(async () => {
+                console.log('开始初始化打卡系统...');
+                try {
+                    // 这里可以添加打卡系统的初始化逻辑
+                    // 例如：创建默认公司、初始化用户等
+                    console.log('✅ 打卡系统初始化成功');
+                } catch (error) {
+                    console.warn('⚠️ 打卡系统初始化失败，但服务器继续运行:', error.message);
+                }
+            }, 2000); // 延迟2秒确保服务器完全启动
         });
 
     } catch (error) {

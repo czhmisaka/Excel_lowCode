@@ -14,14 +14,6 @@ const apiClient = axios.create({
     }
 })
 
-// 创建公开表单专用的axios实例（不携带认证token）
-const publicApiClient = axios.create({
-    baseURL: API_BASE_URL,
-    timeout: 10000,
-    headers: {
-        'Content-Type': 'application/json'
-    }
-})
 
 /**
  * 检测是否为安全整数（避免JavaScript精度问题）
@@ -272,6 +264,55 @@ export interface SystemInfo {
         composeVersion: string
         healthChecks: boolean
         volumes: string[]
+    }
+}
+
+// 签到系统类型定义
+export interface User {
+    id: number
+    username: string
+    displayName?: string
+    email?: string
+    status: string
+    createdAt: string
+    updatedAt: string
+}
+
+export interface Company {
+    id: number
+    name: string
+    code: string
+    description?: string
+    status: string
+    checkinUrl?: string
+    checkoutUrl?: string
+    createdAt: string
+    updatedAt: string
+}
+
+export interface CheckinRecord {
+    id: number
+    userId: number
+    companyId: number
+    checkinTime: string
+    checkoutTime?: string
+    workHours?: number
+    status: string
+    ipAddress?: string
+    userAgent?: string
+    createdAt: string
+    updatedAt: string
+    user?: User
+    company?: Company
+}
+
+export interface CompanyStats {
+    company: Company
+    stats: {
+        totalCheckins: number
+        completedCheckins: number
+        activeCheckins: number
+        avgWorkHours: string
     }
 }
 
@@ -602,11 +643,6 @@ class ApiService {
         return response.data
     }
 
-    // 获取用户列表（管理员权限）
-    async getUsers(): Promise<any> {
-        const response = await apiClient.get('/api/users')
-        return response.data
-    }
 
     // 更新用户信息
     async updateUser(userId: number, userData: any): Promise<any> {
@@ -674,22 +710,6 @@ class ApiService {
         return response.data
     }
 
-    // 公开表单 - 获取表结构信息（免认证）
-    async getPublicFormStructure(hash: string): Promise<{
-        columns: ColumnDefinition[],
-        tableName: string
-    }> {
-        const response = await publicApiClient.get(`/api/public/form/${hash}/structure`)
-        return response.data.data
-    }
-
-    // 公开表单 - 提交数据（免认证）
-    async submitPublicForm(hash: string, data: any): Promise<any> {
-        const response = await publicApiClient.post(`/api/public/form/${hash}/submit`, {
-            data
-        })
-        return response.data
-    }
 
     // 获取字段配置
     async getFieldConfig(hash: string): Promise<any> {
@@ -711,128 +731,165 @@ class ApiService {
         return response.data.data
     }
 
-    // === 表单系统API ===
 
-    // 获取表单列表
-    async getForms(params: {
+    // === 新的签到系统API ===
+
+    // 手机号登录/自动注册
+    async loginByPhone(data: {
+        phone: string
+        companyCode?: string
+    }): Promise<any> {
+        const response = await apiClient.post('/api/users/login', data)
+        return response.data
+    }
+
+    // 签到
+    async checkin(data: {
+        realName: string
+        phone: string
+        idCard: string
+        companyCode: string
+        location?: string
+    }): Promise<any> {
+        const response = await apiClient.post('/api/checkin/checkin', data)
+        return response.data
+    }
+
+    // 签退
+    async checkout(data: {
+        phone: string
+        companyCode: string
+    }): Promise<any> {
+        const response = await apiClient.post('/api/checkin/checkout', data)
+        return response.data
+    }
+
+    // 获取今日状态
+    async getTodayStatus(params: {
+        userId: string
+        companyId: string
+    }): Promise<any> {
+        const response = await apiClient.get('/api/checkin/today-status', { params })
+        return response.data
+    }
+
+    // 获取签到历史
+    async getCheckinHistory(params: {
+        userId?: string
+        companyId?: string
+        startDate?: string
+        endDate?: string
+        page?: number
+        limit?: number
+    } = {}): Promise<any> {
+        const response = await apiClient.get('/api/checkin/history', { params })
+        return response.data
+    }
+
+    // 获取用户列表
+    async getUsers(params: {
         page?: number
         limit?: number
         search?: string
+        companyId?: string
+        isActive?: boolean
     } = {}): Promise<any> {
-        const queryParams = new URLSearchParams()
-        if (params.page) queryParams.append('page', params.page.toString())
-        if (params.limit) queryParams.append('limit', params.limit.toString())
-        if (params.search) queryParams.append('search', params.search)
-
-        const response = await apiClient.get(`/api/forms?${queryParams.toString()}`)
+        const response = await apiClient.get('/api/users', { params })
         return response.data
     }
 
-    // 获取表单详情
-    async getForm(formId: string): Promise<any> {
-        const response = await apiClient.get(`/api/forms/${formId}`)
+    // 根据手机号获取用户信息
+    async getUserByPhone(phone: string): Promise<any> {
+        const response = await apiClient.get(`/api/users/phone/${phone}`)
         return response.data
     }
 
-    // 创建表单
-    async createForm(formData: {
-        formId: string
+    // === 公司管理API ===
+
+    // 获取公司列表
+    async getCompanies(params: {
+        page?: number
+        limit?: number
+        search?: string
+        isActive?: boolean
+    } = {}): Promise<any> {
+        const response = await apiClient.get('/api/companies', { params })
+        return response.data
+    }
+
+    // 根据公司代码获取公司信息
+    async getCompanyByCode(companyCode: string): Promise<any> {
+        const response = await apiClient.get(`/api/companies/code/${companyCode}`)
+        return response.data
+    }
+
+    // 创建公司
+    async createCompany(companyData: {
         name: string
+        code: string
         description?: string
-        tableMapping?: string
-        definition: any
     }): Promise<any> {
-        const response = await apiClient.post('/api/forms', formData)
+        const response = await apiClient.post('/api/companies', companyData)
         return response.data
     }
 
-    // 更新表单
-    async updateForm(formId: string, formData: {
+    // 更新公司信息
+    async updateCompany(companyId: string, companyData: {
         name?: string
         description?: string
-        tableMapping?: string
-        definition?: any
+        status?: string
     }): Promise<any> {
-        const response = await apiClient.put(`/api/forms/${formId}`, formData)
+        const response = await apiClient.put(`/api/companies/${companyId}`, companyData)
         return response.data
     }
 
-    // 删除表单
-    async deleteForm(formId: string): Promise<any> {
-        const response = await apiClient.delete(`/api/forms/${formId}`)
+    // 删除公司
+    async deleteCompany(companyId: string): Promise<any> {
+        const response = await apiClient.delete(`/api/companies/${companyId}`)
         return response.data
     }
 
-    // 批量删除表单
-    async batchDeleteForms(formIds: string[]): Promise<any> {
-        const response = await apiClient.post('/api/forms/batch-delete', {
-            formIds
-        })
+    // 批量创建公司
+    async batchCreateCompanies(companies: any[]): Promise<any> {
+        const response = await apiClient.post('/api/companies/batch', { companies })
         return response.data
     }
 
-    // 获取表单的Hook列表
-    async getFormHooks(formId: string): Promise<any> {
-        const response = await apiClient.get(`/api/forms/${formId}/hooks`)
+    // === 打卡记录管理API ===
+
+    // 获取打卡记录
+    async getCheckinRecords(params: {
+        page?: number
+        limit?: number
+        search?: string
+        companyId?: string
+        startDate?: string
+        endDate?: string
+    } = {}): Promise<any> {
+        const response = await apiClient.get('/api/checkin/records', { params })
         return response.data
     }
 
-    // 创建Hook
-    async createHook(formId: string, hookData: {
-        type: string
-        triggerType: string
-        config: any
-        enabled?: boolean
-    }): Promise<any> {
-        const response = await apiClient.post(`/api/forms/${formId}/hooks`, hookData)
+    // 导出打卡记录
+    async exportCheckinRecords(params: {
+        companyId?: string
+        startDate?: string
+        endDate?: string
+        search?: string
+    } = {}): Promise<any> {
+        const response = await apiClient.get('/api/checkin/export', { params })
         return response.data
     }
 
-    // === Hook管理API ===
-
-    // 获取所有表单定义（用于Hook管理）
-    async getFormDefinitions(): Promise<any> {
-        const response = await apiClient.get('/api/forms')
+    // 获取单个公司信息
+    async getCompany(companyId: string): Promise<any> {
+        const response = await apiClient.get(`/api/companies/${companyId}`)
         return response.data
     }
 
-    // 创建表单Hook
-    async createFormHook(formId: string, hookData: any): Promise<any> {
-        const response = await apiClient.post(`/api/forms/${formId}/hooks`, hookData)
-        return response.data
-    }
-
-    // 更新表单Hook
-    async updateFormHook(formId: string, hookId: string, hookData: any): Promise<any> {
-        const response = await apiClient.put(`/api/forms/${formId}/hooks/${hookId}`, hookData)
-        return response.data
-    }
-
-    // 删除表单Hook
-    async deleteFormHook(formId: string, hookId: string): Promise<any> {
-        const response = await apiClient.delete(`/api/forms/${formId}/hooks/${hookId}`)
-        return response.data
-    }
-
-    // 测试Hook
-    async testFormHook(formId: string, hookId: string, testData: any): Promise<any> {
-        const response = await apiClient.post(`/api/forms/${formId}/hooks/${hookId}/test`, testData)
-        return response.data
-    }
-
-    // === 公开表单系统API（免认证）===
-
-    // 获取表单定义（免认证）
-    async getPublicFormDefinition(formId: string): Promise<any> {
-        const response = await publicApiClient.get(`/api/public/form/forms/${formId}`)
-        return response.data
-    }
-
-    // 提交表单数据（免认证，带Hook处理）
-    async submitPublicFormData(formId: string, data: any): Promise<any> {
-        const response = await publicApiClient.post(`/api/public/form/forms/${formId}/submit`, {
-            data
-        })
+    // 删除打卡记录
+    async deleteCheckinRecord(recordId: string): Promise<any> {
+        const response = await apiClient.delete(`/api/checkin/record/${recordId}`)
         return response.data
     }
 }

@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-10-28 14:28:00
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-28 14:28:54
- * @FilePath: /lowCode_excel/backend/models/User.js
+ * @LastEditTime: 2025-11-27 09:30:38
+ * @FilePath: /打卡/backend/models/User.js
  */
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
@@ -47,6 +47,30 @@ const User = sequelize.define('User', {
         allowNull: true,
         comment: '显示名称',
         field: 'display_name'
+    },
+    realName: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        comment: '真实姓名',
+        field: 'real_name'
+    },
+    phone: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        comment: '手机号',
+        field: 'phone'
+    },
+    idCard: {
+        type: DataTypes.STRING(18),
+        allowNull: true,
+        comment: '身份证号',
+        field: 'id_card'
+    },
+    companyId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: '所属公司ID',
+        field: 'company_id'
     },
     role: {
         type: DataTypes.ENUM('admin', 'user', 'guest'),
@@ -98,6 +122,15 @@ const User = sequelize.define('User', {
         },
         {
             fields: ['created_at']
+        },
+        {
+            fields: ['phone']
+        },
+        {
+            fields: ['id_card']
+        },
+        {
+            fields: ['company_id']
         }
     ]
 });
