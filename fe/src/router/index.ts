@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-08-28 07:54:03
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-27 10:11:59
+ * @LastEditTime: 2025-11-28 16:25:50
  * @FilePath: /打卡/fe/src/router/index.ts
  */
 import { createRouter, createWebHistory } from 'vue-router'
@@ -114,14 +114,12 @@ const router = createRouter({
     {
       path: '/checkin/:companyCode',
       name: 'CompanyCheckin',
-      component: () => import('@/views/CheckinPage.vue'),
-      meta: { requiresAuth: true }
+      component: () => import('@/views/CheckinPage.vue')
     },
     {
       path: '/checkout/:companyCode',
       name: 'CompanyCheckout',
-      component: () => import('@/views/CheckoutPage.vue'),
-      meta: { requiresAuth: true }
+      component: () => import('@/views/CheckoutPage.vue')
     }
   ]
 })

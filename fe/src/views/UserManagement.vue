@@ -53,10 +53,13 @@
                         {{ formatDate(row.createdAt) }}
                     </template>
                 </el-table-column>
-                <el-table-column label="操作" width="200" fixed="right">
+                <el-table-column label="操作" width="280" fixed="right">
                     <template #default="{ row }">
                         <el-button size="small" type="primary" :icon="Edit" @click="handleEditUser(row)">
                             编辑
+                        </el-button>
+                        <el-button size="small" type="warning" :icon="Key" @click="handleChangePassword(row)">
+                            修改密码
                         </el-button>
                         <el-button size="small" type="danger" :icon="Delete" @click="handleDeleteUser(row)"
                             :disabled="row.id === currentUser?.id">
@@ -120,7 +123,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Edit, Delete, Refresh, Search } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Refresh, Search, Key } from '@element-plus/icons-vue'
 import { apiService } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -303,6 +306,57 @@ const handleDeleteUser = async (user: User) => {
         }
     } catch (error) {
         // 用户取消删除
+    }
+}
+
+const handleChangePassword = async (user: User) => {
+    try {
+        // 确认修改密码
+        await ElMessageBox.confirm(
+            `确定要修改用户 "${user.username}" 的密码吗？`,
+            '修改密码确认',
+            {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }
+        )
+
+        // 输入新密码
+        const { value: newPassword } = await ElMessageBox.prompt(
+            `请输入用户 "${user.username}" 的新密码（至少6个字符）`,
+            '输入新密码',
+            {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                inputType: 'password',
+                inputPlaceholder: '请输入新密码',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return '密码不能为空'
+                    }
+                    if (value.length < 6) {
+                        return '密码长度不能少于6个字符'
+                    }
+                    return true
+                }
+            }
+        )
+
+        if (newPassword) {
+            // 调用API修改密码
+            const response = await apiService.adminChangePassword(user.id, newPassword)
+            if (response.success) {
+                ElMessage.success('密码修改成功')
+            } else {
+                ElMessage.error(response.message || '密码修改失败')
+            }
+        }
+    } catch (error) {
+        // 用户取消操作
+        if (error !== 'cancel') {
+            ElMessage.error('操作失败')
+        }
     }
 }
 

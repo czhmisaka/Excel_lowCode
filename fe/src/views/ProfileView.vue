@@ -75,6 +75,44 @@
                             <el-form-item label="邮箱" prop="email">
                                 <el-input v-model="profileForm.email" placeholder="请输入邮箱地址" />
                             </el-form-item>
+                            <el-form-item label="手机号" prop="phone">
+                                <el-input 
+                                    v-model="profileForm.phone" 
+                                    placeholder="请输入11位手机号" 
+                                    maxlength="11" 
+                                    :disabled="hasCheckinRecords"
+                                    :title="hasCheckinRecords ? '由于您已有签到记录，手机号不可修改' : ''"
+                                />
+                                <div v-if="hasCheckinRecords" class="field-tip">
+                                    <el-icon><InfoFilled /></el-icon>
+                                    <span>由于您已有签到记录，手机号不可修改</span>
+                                </div>
+                            </el-form-item>
+                            <el-form-item label="身份证号" prop="idCard">
+                                <el-input 
+                                    v-model="profileForm.idCard" 
+                                    placeholder="请输入18位身份证号" 
+                                    maxlength="18" 
+                                    :disabled="hasCheckinRecords"
+                                    :title="hasCheckinRecords ? '由于您已有签到记录，身份证号不可修改' : ''"
+                                />
+                                <div v-if="hasCheckinRecords" class="field-tip">
+                                    <el-icon><InfoFilled /></el-icon>
+                                    <span>由于您已有签到记录，身份证号不可修改</span>
+                                </div>
+                            </el-form-item>
+                            <el-form-item label="真实姓名" prop="realName">
+                                <el-input 
+                                    v-model="profileForm.realName" 
+                                    placeholder="请输入真实姓名" 
+                                    :disabled="hasCheckinRecords"
+                                    :title="hasCheckinRecords ? '由于您已有签到记录，真实姓名不可修改' : ''"
+                                />
+                                <div v-if="hasCheckinRecords" class="field-tip">
+                                    <el-icon><InfoFilled /></el-icon>
+                                    <span>由于您已有签到记录，真实姓名不可修改</span>
+                                </div>
+                            </el-form-item>
                         </el-form>
                         
                         <div v-else class="info-display">
@@ -85,6 +123,18 @@
                             <div class="info-item">
                                 <span class="info-label">邮箱：</span>
                                 <span class="info-value">{{ safeUserInfo.email || '未设置' }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">手机号：</span>
+                                <span class="info-value">{{ safeUserInfo.phone || '未设置' }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">身份证号：</span>
+                                <span class="info-value">{{ safeUserInfo.idCard || '未设置' }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">真实姓名：</span>
+                                <span class="info-value">{{ safeUserInfo.realName || '未设置' }}</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">用户名：</span>
@@ -164,7 +214,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Edit, Lock } from '@element-plus/icons-vue'
+import { Edit, Lock, InfoFilled } from '@element-plus/icons-vue'
 import { apiService } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -173,6 +223,9 @@ interface UserInfo {
     username: string
     email?: string
     displayName?: string
+    phone?: string
+    idCard?: string
+    realName?: string
     role: string
     isActive: boolean
     lastLogin?: string
@@ -184,6 +237,9 @@ interface UserInfo {
 interface ProfileForm {
     displayName: string
     email: string
+    phone: string
+    idCard: string
+    realName: string
 }
 
 interface PasswordForm {
@@ -199,6 +255,7 @@ const editingProfile = ref(false)
 const changingPassword = ref(false)
 const savingProfile = ref(false)
 const savingPassword = ref(false)
+const hasCheckinRecords = ref(false)
 
 const profileFormRef = ref<FormInstance>()
 const passwordFormRef = ref<FormInstance>()
@@ -221,7 +278,10 @@ const safeUserInfo = computed(() => userInfo.value || {
 // 表单数据
 const profileForm = reactive<ProfileForm>({
     displayName: '',
-    email: ''
+    email: '',
+    phone: '',
+    idCard: '',
+    realName: ''
 })
 
 const passwordForm = reactive<PasswordForm>({
@@ -239,6 +299,34 @@ const profileFormRules: FormRules = {
     email: [
         { required: true, message: '请输入邮箱地址', trigger: 'blur' },
         { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+    ],
+    phone: [
+        {
+            validator: (rule, value, callback) => {
+                if (value && !/^1[3-9]\d{9}$/.test(value)) {
+                    callback(new Error('请输入11位有效手机号'))
+                } else {
+                    callback()
+                }
+            },
+            trigger: 'blur'
+        }
+    ],
+    idCard: [
+        {
+            validator: (rule, value, callback) => {
+                if (value && !/^\d{17}[\dXx]$/.test(value)) {
+                    callback(new Error('请输入18位有效身份证号'))
+                } else {
+                    callback()
+                }
+            },
+            trigger: 'blur'
+        }
+    ],
+    realName: [
+        { required: true, message: '请输入真实姓名', trigger: 'blur' },
+        { min: 2, max: 50, message: '真实姓名长度在 2 到 50 个字符', trigger: 'blur' }
     ]
 }
 
@@ -276,6 +364,9 @@ const startEditProfile = () => {
     
     profileForm.displayName = userInfo.value.displayName || ''
     profileForm.email = userInfo.value.email || ''
+    profileForm.phone = userInfo.value.phone || ''
+    profileForm.idCard = userInfo.value.idCard || ''
+    profileForm.realName = userInfo.value.realName || ''
     editingProfile.value = true
 }
 
@@ -296,7 +387,10 @@ const saveProfile = async () => {
     try {
         const response = await apiService.updateCurrentUser({
             displayName: profileForm.displayName,
-            email: profileForm.email
+            email: profileForm.email,
+            phone: profileForm.phone,
+            idCard: profileForm.idCard,
+            realName: profileForm.realName
         })
 
         if (response.success) {
@@ -355,12 +449,35 @@ const savePassword = async () => {
     }
 }
 
+// 检查用户是否有签到记录
+const checkUserCheckinRecords = async () => {
+    try {
+        if (!userInfo.value?.id) return
+        
+        // 获取用户的签到记录
+        const response = await apiService.getCheckinRecords({
+            page: 1,
+            limit: 1,
+            search: JSON.stringify({ userId: userInfo.value.id })
+        })
+        
+        if (response.success && response.data && response.data.length > 0) {
+            hasCheckinRecords.value = true
+        }
+    } catch (error) {
+        console.error('检查用户签到记录失败:', error)
+    }
+}
+
 // 生命周期
-onMounted(() => {
+onMounted(async () => {
     // 确保用户信息已加载
     if (!userInfo.value) {
-        authStore.getCurrentUser()
+        await authStore.getCurrentUser()
     }
+    
+    // 检查用户是否有签到记录
+    await checkUserCheckinRecords()
 })
 </script>
 
@@ -507,6 +624,23 @@ onMounted(() => {
 
 .security-info p:last-child {
     margin-bottom: 0;
+}
+
+.field-tip {
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background-color: #f0f9ff;
+    border: 1px solid #91d5ff;
+    border-radius: 4px;
+    color: #1890ff;
+    font-size: 12px;
+}
+
+.field-tip .el-icon {
+    margin-right: 6px;
+    font-size: 14px;
 }
 
 /* 响应式设计 */

@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-11-26 16:23:34
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-27 10:31:10
+ * @LastEditTime: 2025-11-29 01:00:23
  * @FilePath: /打卡/backend/models/CheckinRecord.js
  */
 const { DataTypes } = require('sequelize');
@@ -53,6 +53,11 @@ module.exports = (sequelize) => {
     type: DataTypes.INTEGER,
     allowNull: true,
     comment: '工作时长（分钟）'
+  },
+  remark: {
+    type: DataTypes.STRING(300),
+    allowNull: true,
+    comment: '备注信息'
   },
   createdAt: {
     type: DataTypes.DATE,

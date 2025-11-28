@@ -30,30 +30,6 @@
                             <span>公司管理</span>
                         </template>
                     </el-menu-item>
-                    <el-menu-item index="/files" class="modern-menu-item">
-                        <template #title>
-                            <el-icon>
-                                <Folder />
-                            </el-icon>
-                            <span>文件管理</span>
-                        </template>
-                    </el-menu-item>
-                    <el-menu-item index="/editor" class="modern-menu-item">
-                        <template #title>
-                            <el-icon>
-                                <Edit />
-                            </el-icon>
-                            <span>数据编辑</span>
-                        </template>
-                    </el-menu-item>
-                    <el-menu-item index="/api-guide" class="modern-menu-item">
-                        <template #title>
-                            <el-icon>
-                                <Document />
-                            </el-icon>
-                            <span>API指南</span>
-                        </template>
-                    </el-menu-item>
                     <el-menu-item index="/users" class="modern-menu-item">
                         <template #title>
                             <el-icon>
@@ -62,25 +38,61 @@
                             <span>用户管理</span>
                         </template>
                     </el-menu-item>
-                    <el-menu-item index="/logs" class="modern-menu-item">
+                    
+                    <!-- 系统管理分组 -->
+                    <el-sub-menu index="system-management" class="modern-menu-item">
                         <template #title>
                             <el-icon>
-                                <Notebook />
+                                <Setting />
                             </el-icon>
-                            <span>操作日志</span>
+                            <span>系统管理</span>
+                        </template>
+                        <el-menu-item index="/files" class="modern-submenu-item">
+                            <template #title>
+                                <el-icon>
+                                    <Folder />
+                                </el-icon>
+                                <span>文件管理</span>
+                            </template>
+                        </el-menu-item>
+                        <el-menu-item index="/editor" class="modern-submenu-item">
+                            <template #title>
+                                <el-icon>
+                                    <Edit />
+                                </el-icon>
+                                <span>数据编辑</span>
+                            </template>
+                        </el-menu-item>
+                        <el-menu-item index="/api-guide" class="modern-submenu-item">
+                            <template #title>
+                                <el-icon>
+                                    <Document />
+                                </el-icon>
+                                <span>API指南</span>
+                            </template>
+                        </el-menu-item>
+                        <el-menu-item index="/logs" class="modern-submenu-item">
+                            <template #title>
+                                <el-icon>
+                                    <Notebook />
+                                </el-icon>
+                                <span>操作日志</span>
+                            </template>
+                        </el-menu-item>
+                    </el-sub-menu>
+                </template>
+                
+                <!-- 所有用户都能访问的菜单项（管理员视角隐藏数据浏览） -->
+                <template v-if="!isAdmin">
+                    <el-menu-item index="/data" class="modern-menu-item">
+                        <template #title>
+                            <el-icon>
+                                <DataBoard />
+                            </el-icon>
+                            <span>数据浏览</span>
                         </template>
                     </el-menu-item>
                 </template>
-                
-                <!-- 所有用户都能访问的菜单项 -->
-                <el-menu-item index="/data" class="modern-menu-item">
-                    <template #title>
-                        <el-icon>
-                            <DataBoard />
-                        </el-icon>
-                        <span>数据浏览</span>
-                    </template>
-                </el-menu-item>
             </el-menu>
             <div class="sidebar-footer">
                 <el-button type="text" class="collapse-btn" @click="toggleSidebar"
@@ -345,6 +357,43 @@ const handleCommand = async (command: string) => {
 .modern-sidebar-menu .el-icon {
     font-size: 18px;
     margin-right: 12px;
+}
+
+/* 子菜单项样式 */
+.modern-submenu-item {
+    height: 40px !important;
+    line-height: 40px !important;
+    margin: 2px 8px !important;
+    border-radius: var(--radius-base) !important;
+    transition: all var(--transition-base) !important;
+}
+
+.modern-submenu-item:not(.is-active):hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+    transform: translateX(2px) !important;
+}
+
+.modern-submenu-item.is-active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%) !important;
+    box-shadow: var(--gradient-shadow) !important;
+    color: #fff !important;
+}
+
+.modern-submenu-item.is-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 16px;
+    background: #fff;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.modern-submenu-item .el-icon {
+    font-size: 16px !important;
+    margin-right: 8px !important;
 }
 
 /* 修复折叠状态下tooltip中的图标显示 */

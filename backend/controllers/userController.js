@@ -1,5 +1,5 @@
 // 用户信息管理控制器
-const { User, Company } = require('../models');
+const { User, Company, CheckinRecord } = require('../models');
 const { Op } = require('sequelize');
 
 /**
@@ -34,6 +34,7 @@ const getUsers = async (req, res) => {
       include: [
         {
           model: Company,
+          as: 'company',
           attributes: ['id', 'name', 'code']
         }
       ],
@@ -296,6 +297,13 @@ const deleteUser = async (req, res) => {
       });
     }
 
+    // 先删除用户相关的签到记录，避免外键约束错误
+    await CheckinRecord.destroy({ 
+      where: { 
+        userId: userId 
+      } 
+    });
+
     // 删除用户
     await user.destroy();
 
@@ -381,6 +389,56 @@ const batchImportUsers = async (req, res) => {
   }
 };
 
+/**
+ * 管理员修改用户密码
+ */
+const adminChangePassword = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { newPassword } = req.body;
+
+    // 验证必填字段
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: '新密码是必填项'
+      });
+    }
+
+    // 验证密码长度
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: '密码长度不能少于6个字符'
+      });
+    }
+
+    // 查找用户
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+
+    // 使用User模型的静态方法更新密码
+    await User.updatePassword(userId, newPassword);
+
+    res.json({
+      success: true,
+      message: '密码修改成功'
+    });
+  } catch (error) {
+    console.error('管理员修改密码失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '修改密码失败',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getUsers,
   getUserByPhone,
@@ -388,5 +446,6 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
-  batchImportUsers
+  batchImportUsers,
+  adminChangePassword
 };

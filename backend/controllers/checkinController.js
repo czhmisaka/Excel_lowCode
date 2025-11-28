@@ -24,7 +24,7 @@ function calculateWorkDuration(checkinTime, checkoutTime) {
  */
 const checkin = async (req, res) => {
   try {
-    const { realName, phone, idCard, companyCode, location } = req.body;
+    const { realName, phone, idCard, companyCode, location, remark } = req.body;
     
     // 1. 根据公司代码获取公司信息
     const company = await Company.findOne({ 
@@ -41,40 +41,19 @@ const checkin = async (req, res) => {
       });
     }
     
-    // 2. 用户登录/自动注册
-    let user = await User.findOne({ 
+    // 2. 检查用户是否存在
+    const user = await User.findOne({ 
       where: { 
-        phone, 
-        companyId: company.id,
+        phone,
         isActive: true 
       } 
     });
     
     if (!user) {
-      // 自动创建用户，使用前端传递的姓名和身份证号
-      // 为签到用户设置默认密码
-      const bcrypt = require('bcryptjs');
-      const saltRounds = 10;
-      const defaultPassword = 'checkin_default_password';
-      const passwordHash = await bcrypt.hash(defaultPassword, saltRounds);
-      
-      user = await User.create({
-        username: `user_${phone}`,
-        realName: realName || `用户${phone}`,
-        phone,
-        idCard: idCard,
-        companyId: company.id,
-        passwordHash: passwordHash
+      return res.status(400).json({
+        success: false,
+        message: '用户不存在，请先注册或联系管理员'
       });
-    } else {
-      // 如果用户已存在，更新姓名和身份证号（如果提供了新的值）
-      if (realName && realName !== user.realName) {
-        user.realName = realName;
-      }
-      if (idCard && idCard !== user.idCard) {
-        user.idCard = idCard;
-      }
-      await user.save();
     }
     
     // 3. 检查今日是否已签到
@@ -103,6 +82,7 @@ const checkin = async (req, res) => {
       checkinType: 'checkin',
       checkinTime: new Date(),
       location,
+      remark,
       deviceInfo: req.headers['user-agent']
     });
     
@@ -142,7 +122,7 @@ const checkin = async (req, res) => {
  */
 const checkout = async (req, res) => {
   try {
-    const { phone, companyCode } = req.body;
+    const { phone, companyCode, remark } = req.body;
     
     // 1. 根据公司代码获取公司信息
     const company = await Company.findOne({ 
@@ -162,8 +142,7 @@ const checkout = async (req, res) => {
     // 2. 获取用户信息
     const user = await User.findOne({ 
       where: { 
-        phone, 
-        companyId: company.id,
+        phone,
         isActive: true 
       } 
     });
@@ -199,9 +178,10 @@ const checkout = async (req, res) => {
     const checkoutTime = new Date();
     const workDuration = calculateWorkDuration(todayCheckin.checkinTime, checkoutTime);
     
-    // 更新签到记录，添加工作时长
+    // 更新签到记录，添加工作时长和备注
     await todayCheckin.update({
       workDuration: workDuration,
+      remark: remark,
       deviceInfo: req.headers['user-agent'] // 更新设备信息为签退时的设备
     });
     

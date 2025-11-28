@@ -618,6 +618,9 @@ class ApiService {
     async updateCurrentUser(userData: {
         displayName?: string
         email?: string
+        phone?: string
+        idCard?: string
+        realName?: string
     }): Promise<any> {
         const response = await apiClient.put('/api/auth/me', userData)
         return response.data
@@ -653,6 +656,14 @@ class ApiService {
     // 删除用户（管理员权限）
     async deleteUser(userId: number): Promise<any> {
         const response = await apiClient.delete(`/api/users/${userId}`)
+        return response.data
+    }
+
+    // 管理员修改用户密码
+    async adminChangePassword(userId: number, newPassword: string): Promise<any> {
+        const response = await apiClient.put(`/api/users/${userId}/password`, {
+            newPassword
+        })
         return response.data
     }
 
@@ -743,22 +754,24 @@ class ApiService {
         return response.data
     }
 
-    // 签到
-    async checkin(data: {
-        realName: string
-        phone: string
-        idCard: string
-        companyCode: string
-        location?: string
-    }): Promise<any> {
-        const response = await apiClient.post('/api/checkin/checkin', data)
-        return response.data
-    }
+  // 签到
+  async checkin(data: {
+    realName: string
+    phone: string
+    idCard: string
+    companyCode: string
+    location?: string
+    remark?: string
+  }): Promise<any> {
+    const response = await apiClient.post('/api/checkin/checkin', data)
+    return response.data
+  }
 
     // 签退
     async checkout(data: {
         phone: string
         companyCode: string
+        remark?: string
     }): Promise<any> {
         const response = await apiClient.post('/api/checkin/checkout', data)
         return response.data

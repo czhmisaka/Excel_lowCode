@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-10-28 14:30:00
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-28 14:31:28
- * @FilePath: /lowCode_excel/backend/controllers/authController.js
+ * @LastEditTime: 2025-11-29 01:53:07
+ * @FilePath: /打卡/backend/controllers/authController.js
  */
 const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
@@ -201,62 +201,115 @@ const getCurrentUser = async (req, res) => {
  * 更新当前用户信息
  */
 const updateCurrentUser = async (req, res) => {
-    try {
-        const { displayName, email } = req.body;
-        const userId = req.user.id;
+  try {
+    const { displayName, email, phone, idCard, realName } = req.body;
+    const userId = req.user.id;
 
-        // 构建更新数据
-        const updateData = {};
-        if (displayName !== undefined) updateData.displayName = displayName;
-        if (email !== undefined) updateData.email = email;
+    // 构建更新数据
+    const updateData = {};
+    if (displayName !== undefined) updateData.displayName = displayName;
+    if (email !== undefined) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+    if (idCard !== undefined) updateData.idCard = idCard;
+    if (realName !== undefined) updateData.realName = realName;
 
-        // 检查邮箱是否已被其他用户使用
-        if (email) {
-            const existingEmail = await User.findOne({
-                where: {
-                    email,
-                    id: { $ne: userId }
-                }
-            });
-
-            if (existingEmail) {
-                return res.status(400).json({
-                    success: false,
-                    message: '邮箱已被其他用户使用'
-                });
-            }
-        }
-
-        // 更新用户信息
-        const [affectedRows] = await User.update(updateData, {
-            where: { id: userId }
-        });
-
-        if (affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: '用户不存在'
-            });
-        }
-
-        // 获取更新后的用户信息
-        const updatedUser = await User.findByPk(userId, {
-            attributes: { exclude: ['passwordHash'] }
-        });
-
-        res.json({
-            success: true,
-            message: '用户信息更新成功',
-            data: updatedUser
-        });
-
-    } catch (error) {
-        console.error('更新用户信息错误:', error);
-        res.status(500).json({
-            success: false,
-            message: `更新用户信息失败: ${error.message}`
-        });
+    // 验证手机号格式（如果提供）
+    if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: '手机号格式不正确，请输入11位有效手机号'
+      });
     }
+
+    // 验证身份证号格式（如果提供）
+    if (idCard && !/^\d{17}[\dXx]$/.test(idCard)) {
+      return res.status(400).json({
+        success: false,
+        message: '身份证号格式不正确，请输入18位有效身份证号'
+      });
+    }
+
+    // 检查邮箱是否已被其他用户使用
+    if (email) {
+      const existingEmail = await User.findOne({
+        where: {
+          email,
+          id: { $ne: userId }
+        }
+      });
+
+      if (existingEmail) {
+        return res.status(400).json({
+          success: false,
+          message: '邮箱已被其他用户使用'
+        });
+      }
+    }
+
+    // 检查手机号是否已被其他用户使用
+    if (phone) {
+      const existingPhone = await User.findOne({
+        where: {
+          phone,
+          id: { $ne: userId }
+        }
+      });
+
+      if (existingPhone) {
+        return res.status(400).json({
+          success: false,
+          message: '手机号已被其他用户使用'
+        });
+      }
+    }
+
+    // 检查身份证号是否已被其他用户使用
+    if (idCard) {
+      const existingIdCard = await User.findOne({
+        where: {
+          idCard,
+          id: { $ne: userId }
+        }
+      });
+
+      if (existingIdCard) {
+        return res.status(400).json({
+          success: false,
+          message: '身份证号已被其他用户使用'
+        });
+      }
+    }
+
+    // 更新用户信息
+    const [affectedRows] = await User.update(updateData, {
+      where: { id: userId }
+    });
+
+    if (affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '用户不存在'
+      });
+    }
+
+    // 获取更新后的用户信息
+    const updatedUser = await User.findByPk(userId, {
+      attributes: { exclude: ['passwordHash'] }
+    });
+
+    res.json({
+      success: true,
+      message: '用户信息更新成功',
+      data: updatedUser
+    });
+
+  } catch (error) {
+    console.error('更新用户信息错误:', error);
+    res.status(500).json({
+      success: false,
+      message: `更新用户信息失败: ${error.message}`
+    });
+  }
 };
 
 /**

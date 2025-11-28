@@ -241,4 +241,39 @@ router.delete('/:userId', UserController.deleteUser);
  */
 router.post('/batch', UserController.batchImportUsers);
 
+/**
+ * @swagger
+ * /api/users/{userId}/password:
+ *   put:
+ *     summary: 管理员修改用户密码
+ *     tags: [用户管理]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 用户ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newPassword
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *                 description: 新密码（至少6个字符）
+ *     responses:
+ *       200:
+ *         description: 密码修改成功
+ *       400:
+ *         description: 密码格式错误
+ *       404:
+ *         description: 用户不存在
+ */
+router.put('/:userId/password', UserController.adminChangePassword);
+
 module.exports = router;

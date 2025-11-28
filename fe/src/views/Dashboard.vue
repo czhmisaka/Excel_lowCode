@@ -1,15 +1,15 @@
 <template>
     <div class="dashboard fade-in-up">
-        <!-- 统计卡片 - 保留背景图标矩阵，增强数据可视化 -->
+        <!-- 统计卡片 - 签到系统数据概览 -->
         <el-row :gutter="16">
-            <el-col :span="6">
-                <div class="compact-stat-card file-stat">
+            <el-col :span="4">
+                <div class="compact-stat-card company-stat">
                     <div class="compact-stat-background">
                         <div class="icon-matrix">
                             <div class="icon-row" v-for="row in 4" :key="row">
                                 <div class="icon-item" v-for="col in 4" :key="col">
                                     <el-icon>
-                                        <Folder />
+                                        <OfficeBuilding />
                                     </el-icon>
                                 </div>
                             </div>
@@ -19,29 +19,23 @@
                         <div class="compact-stat-info">
                             <div class="stat-value-container">
                                 <div v-if="loading" class="skeleton skeleton-value"></div>
-                                <div v-else class="compact-stat-value">{{ fileCount }}</div>
-                                <div v-if="!loading" class="trend-indicator trend-up">
-                                    <el-icon>
-                                        <ArrowUp />
-                                    </el-icon>
-                                    <span>12%</span>
-                                </div>
+                                <div v-else class="compact-stat-value">{{ companyCount }}</div>
                             </div>
                             <div v-if="loading" class="skeleton skeleton-label"></div>
-                            <div v-else class="compact-stat-label">文件数</div>
+                            <div v-else class="compact-stat-label">公司总数</div>
                         </div>
                     </div>
                 </div>
             </el-col>
 
-            <el-col :span="6">
-                <div class="compact-stat-card record-stat">
+            <el-col :span="4">
+                <div class="compact-stat-card user-stat">
                     <div class="compact-stat-background">
                         <div class="icon-matrix">
                             <div class="icon-row" v-for="row in 4" :key="row">
                                 <div class="icon-item" v-for="col in 4" :key="col">
                                     <el-icon>
-                                        <DataBoard />
+                                        <User />
                                     </el-icon>
                                 </div>
                             </div>
@@ -49,17 +43,19 @@
                     </div>
                     <div class="compact-stat-content">
                         <div class="compact-stat-info">
-                            <div v-if="loading" class="skeleton skeleton-value"></div>
-                            <div v-else class="compact-stat-value">{{ totalRecords }}</div>
+                            <div class="stat-value-container">
+                                <div v-if="loading" class="skeleton skeleton-value"></div>
+                                <div v-else class="compact-stat-value">{{ userCount }}</div>
+                            </div>
                             <div v-if="loading" class="skeleton skeleton-label"></div>
-                            <div v-else class="compact-stat-label">记录数</div>
+                            <div v-else class="compact-stat-label">用户总数</div>
                         </div>
                     </div>
                 </div>
             </el-col>
 
-            <el-col :span="6">
-                <div class="compact-stat-card status-stat">
+            <el-col :span="4">
+                <div class="compact-stat-card checkin-stat">
                     <div class="compact-stat-background">
                         <div class="icon-matrix">
                             <div class="icon-row" v-for="row in 4" :key="row">
@@ -73,17 +69,71 @@
                     </div>
                     <div class="compact-stat-content">
                         <div class="compact-stat-info">
-                            <div v-if="loading" class="skeleton skeleton-value"></div>
-                            <div v-else class="compact-stat-value">{{ systemStatus }}</div>
+                            <div class="stat-value-container">
+                                <div v-if="loading" class="skeleton skeleton-value"></div>
+                                <div v-else class="compact-stat-value">{{ todayCheckinCount }}</div>
+                            </div>
                             <div v-if="loading" class="skeleton skeleton-label"></div>
-                            <div v-else class="compact-stat-label">系统状态</div>
+                            <div v-else class="compact-stat-label">今日签到</div>
                         </div>
                     </div>
                 </div>
             </el-col>
 
-            <el-col :span="6">
-                <div class="compact-stat-card update-stat">
+            <el-col :span="4">
+                <div class="compact-stat-card checkout-stat">
+                    <div class="compact-stat-background">
+                        <div class="icon-matrix">
+                            <div class="icon-row" v-for="row in 4" :key="row">
+                                <div class="icon-item" v-for="col in 4" :key="col">
+                                    <el-icon>
+                                        <SwitchButton />
+                                    </el-icon>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="compact-stat-content">
+                        <div class="compact-stat-info">
+                            <div class="stat-value-container">
+                                <div v-if="loading" class="skeleton skeleton-value"></div>
+                                <div v-else class="compact-stat-value">{{ todayCheckoutCount }}</div>
+                            </div>
+                            <div v-if="loading" class="skeleton skeleton-label"></div>
+                            <div v-else class="compact-stat-label">今日签退</div>
+                        </div>
+                    </div>
+                </div>
+            </el-col>
+
+            <el-col :span="4">
+                <div class="compact-stat-card active-stat">
+                    <div class="compact-stat-background">
+                        <div class="icon-matrix">
+                            <div class="icon-row" v-for="row in 4" :key="row">
+                                <div class="icon-item" v-for="col in 4" :key="col">
+                                    <el-icon>
+                                        <UserFilled />
+                                    </el-icon>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="compact-stat-content">
+                        <div class="compact-stat-info">
+                            <div class="stat-value-container">
+                                <div v-if="loading" class="skeleton skeleton-value"></div>
+                                <div v-else class="compact-stat-value">{{ activeUserCount }}</div>
+                            </div>
+                            <div v-if="loading" class="skeleton skeleton-label"></div>
+                            <div v-else class="compact-stat-label">活跃用户</div>
+                        </div>
+                    </div>
+                </div>
+            </el-col>
+
+            <el-col :span="4">
+                <div class="compact-stat-card duration-stat">
                     <div class="compact-stat-background">
                         <div class="icon-matrix">
                             <div class="icon-row" v-for="row in 4" :key="row">
@@ -97,60 +147,77 @@
                     </div>
                     <div class="compact-stat-content">
                         <div class="compact-stat-info">
-                            <div v-if="loading" class="skeleton skeleton-value"></div>
-                            <div v-else class="compact-stat-value">{{ lastUpdate }}</div>
+                            <div class="stat-value-container">
+                                <div v-if="loading" class="skeleton skeleton-value"></div>
+                                <div v-else class="compact-stat-value">{{ avgWorkDuration }}</div>
+                            </div>
                             <div v-if="loading" class="skeleton skeleton-label"></div>
-                            <div v-else class="compact-stat-label">最后更新</div>
+                            <div v-else class="compact-stat-label">平均工时(小时)</div>
                         </div>
                     </div>
                 </div>
             </el-col>
         </el-row>
 
-        <!-- 最近上传文件 -->
+        <!-- 今日签到时间分布柱状图 -->
         <div class="modern-card" style="margin-top: 20px;">
             <div class="modern-card-header">
-                <span>最近上传的文件</span>
-                <el-button type="primary" text @click="goToFileManagement" class="modern-button">查看全部</el-button>
+                <span>今日签到时间分布</span>
+                <el-button type="primary" text @click="refreshCheckinData" class="modern-button">刷新数据</el-button>
             </div>
-            <el-table :data="recentFiles" v-loading="loading" border stripe class="modern-table">
-                <el-table-column prop="originalFileName" label="文件名" min-width="200" />
-                <el-table-column prop="recordCount" label="记录数" width="100" />
-                <el-table-column prop="columnCount" label="列数" width="80" />
-                <el-table-column prop="createdAt" label="上传时间" width="180" />
-                <el-table-column label="操作" width="120">
-                    <template #default="scope">
-                        <el-button type="primary" link @click="viewData(scope.row)">查看数据</el-button>
-                    </template>
-                </el-table-column>
-            </el-table>
+            <div class="chart-container">
+                <div v-if="loading" class="chart-skeleton">
+                    <div class="skeleton skeleton-chart"></div>
+                </div>
+                <div v-else class="time-distribution-chart">
+                    <div class="chart-bars">
+                        <div v-for="(count, hour) in checkinTimeDistribution" :key="hour" class="chart-bar-container">
+                            <div class="chart-bar" :style="{ height: getBarHeight(count) + 'px' }">
+                                <div class="bar-value">{{ count }}</div>
+                            </div>
+                            <div class="chart-label">{{ hour }}:00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- 快速操作和系统状态 -->
+        <!-- 最近签到记录和系统状态 -->
         <el-row :gutter="16" style="margin-top: 20px;">
-            <el-col :span="8">
+            <el-col :span="12">
                 <div class="compact-card">
                     <div class="compact-card-header">
-                        <span>快速操作</span>
+                        <span>最近签到记录</span>
+                        <el-button type="primary" text @click="goToCheckinRecords" class="compact-button">查看全部</el-button>
                     </div>
-                    <div class="compact-action-buttons">
-                        <el-button type="primary" @click="goToFileManagement" class="compact-button"
-                            style="width: 100%; margin-bottom: 8px;" :icon="Upload">
-                            上传文件
-                        </el-button>
-                        <el-button @click="goToDataBrowser" class="compact-button"
-                            style="width: 100%; margin-bottom: 8px;" :icon="DataBoard">
-                            浏览数据
-                        </el-button>
-                        <el-button @click="goToMappingRelations" class="compact-button" style="width: 100%;"
-                            :icon="Connection">
-                            查看映射
-                        </el-button>
+                    <div class="recent-checkin-records">
+                        <div v-if="recentCheckinRecords.length === 0" class="no-records">
+                            <el-empty description="暂无签到记录" :image-size="60" />
+                        </div>
+                        <div v-else class="checkin-list">
+                            <div v-for="record in recentCheckinRecords" :key="record.id" class="checkin-item">
+                                <div class="checkin-icon">
+                                    <el-icon>
+                                        <Check />
+                                    </el-icon>
+                                </div>
+                                <div class="checkin-content">
+                                    <div class="checkin-title">
+                                        <span class="user-name">{{ record.user?.realName || record.user?.username || '未知用户' }}</span>
+                                        <span class="company-name">{{ record.company?.name || '未知公司' }}</span>
+                                    </div>
+                                    <div class="checkin-meta">
+                                        <span class="checkin-time">{{ formatCheckinTime(record.checkinTime) }}</span>
+                                        <span class="checkin-type">{{ record.checkinType === 'checkin' ? '签到' : '签退' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </el-col>
 
-            <el-col :span="16">
+            <el-col :span="12">
                 <div class="compact-card">
                     <div class="compact-card-header">
                         <span>系统状态概览</span>
@@ -163,24 +230,6 @@
                                 :loading="isAutoRefreshing"
                             >
                                 {{ isAutoRefreshing ? '刷新中...' : '手动刷新' }}
-                            </el-button>
-                            <el-button 
-                                type="success" 
-                                text 
-                                @click="startAutoRefresh" 
-                                class="compact-button"
-                                v-if="!autoRefreshTimer"
-                            >
-                                启动自动刷新
-                            </el-button>
-                            <el-button 
-                                type="warning" 
-                                text 
-                                @click="stopAutoRefresh" 
-                                class="compact-button"
-                                v-else
-                            >
-                                停止自动刷新
                             </el-button>
                         </div>
                     </div>
@@ -400,7 +449,11 @@ import {
     Delete,
     Document,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    OfficeBuilding,
+    User,
+    SwitchButton,
+    UserFilled
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -421,6 +474,16 @@ const selectedTable = ref('')
 const availableTables = ref<string[]>([])
 const expandedOperations = ref<number[]>([])
 
+// 签到系统状态
+const companyCount = ref(0)
+const userCount = ref(0)
+const todayCheckinCount = ref(0)
+const todayCheckoutCount = ref(0)
+const activeUserCount = ref(0)
+const avgWorkDuration = ref('0.0')
+const checkinTimeDistribution = ref<number[]>(new Array(24).fill(0))
+const recentCheckinRecords = ref<any[]>([])
+
 // 自动刷新相关状态
 const autoRefreshTimer = ref<NodeJS.Timeout | null>(null)
 const isAutoRefreshing = ref(false)
@@ -431,6 +494,9 @@ const apiResponseTime = ref<number>(0)
 const initData = async () => {
     loading.value = true
     try {
+        // 获取签到系统数据
+        await refreshCheckinData()
+        
         // 获取文件列表
         await filesStore.fetchMappings()
         fileCount.value = filesStore.fileList.length
@@ -450,6 +516,102 @@ const initData = async () => {
     } finally {
         loading.value = false
     }
+}
+
+// 刷新签到数据
+const refreshCheckinData = async () => {
+    try {
+        // 获取公司列表
+        const companiesResponse = await apiService.getCompanies({ limit: 1000 })
+        console.log('公司API响应:', companiesResponse)
+        companyCount.value = companiesResponse.data?.length || companiesResponse.data?.total || 0
+
+        // 获取用户列表
+        const usersResponse = await apiService.getUsers({ limit: 1000 })
+        console.log('用户API响应:', usersResponse)
+        userCount.value = usersResponse.data?.length || usersResponse.data?.total || 0
+
+        // 获取今日签到记录（用于统计）
+        const today = new Date()
+        const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString()
+        const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString()
+        
+        console.log('今日时间范围:', startDate, '到', endDate)
+        
+        const todayCheckinResponse = await apiService.getCheckinRecords({
+            startDate,
+            endDate,
+            limit: 1000
+        })
+        
+        console.log('今日签到API响应:', todayCheckinResponse)
+        // 获取今日签到记录 - 注意：apiService.getCheckinRecords返回的是完整响应对象
+        const todayRecords = todayCheckinResponse.data?.data || []
+        console.log('今日签到记录数量:', todayRecords.length)
+        
+        // 计算今日签到数据
+        todayCheckinCount.value = todayRecords.filter((record: any) => record.checkinType === 'checkin').length
+        todayCheckoutCount.value = todayRecords.filter((record: any) => record.checkinType === 'checkout').length
+        
+        // 计算活跃用户数
+        const activeUserIds = new Set(todayRecords.map((record: any) => record.userId))
+        activeUserCount.value = activeUserIds.size
+        
+        // 计算平均工作时长
+        const completedRecords = todayRecords.filter((record: any) => record.workDuration)
+        if (completedRecords.length > 0) {
+            const totalDuration = completedRecords.reduce((sum: number, record: any) => sum + record.workDuration, 0)
+            avgWorkDuration.value = (totalDuration / completedRecords.length / 60).toFixed(1)
+        } else {
+            avgWorkDuration.value = '0.0'
+        }
+        
+        // 计算时间分布
+        const distribution = new Array(24).fill(0)
+        todayRecords.forEach((record: any) => {
+            if (record.checkinType === 'checkin') {
+                const hour = new Date(record.checkinTime).getHours()
+                distribution[hour]++
+            }
+        })
+        checkinTimeDistribution.value = distribution
+        
+        // 获取最近签到记录（所有记录，不限制日期）
+        const recentCheckinResponse = await apiService.getCheckinRecords({
+            limit: 5
+        })
+        
+        console.log('最近签到API响应:', recentCheckinResponse)
+        // 获取最近签到记录 - 注意：apiService.getCheckinRecords返回的是完整响应对象
+        recentCheckinRecords.value = recentCheckinResponse.data || []
+        console.log('最近签到记录数量:', recentCheckinRecords.value.length)
+        
+    } catch (error) {
+        console.error('刷新签到数据失败:', error)
+    }
+}
+
+// 获取柱状图高度
+const getBarHeight = (count: number): number => {
+    const maxCount = Math.max(...checkinTimeDistribution.value)
+    if (maxCount === 0) return 0
+    return (count / maxCount) * 120 // 最大高度120px
+}
+
+// 格式化签到时间
+const formatCheckinTime = (time: string): string => {
+    if (!time) return '-'
+    const date = new Date(time)
+    return date.toLocaleTimeString('zh-CN', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+    })
+}
+
+// 导航到签到记录页面
+const goToCheckinRecords = () => {
+    router.push('/checkin-records')
 }
 
 // 检查后端服务状态
@@ -524,11 +686,13 @@ const refreshSystemInfo = async () => {
 const startAutoRefresh = () => {
     // 先立即刷新一次
     refreshSystemInfo()
+    refreshCheckinData()
     
     // 然后每5秒刷新一次
     autoRefreshTimer.value = setInterval(() => {
         refreshSystemInfo()
-    }, 1000)
+        refreshCheckinData()
+    }, 5000)
 }
 
 // 停止自动刷新
@@ -754,6 +918,7 @@ onMounted(() => {
     initData()
     refreshSystemInfo()
     initDefaultTable()
+    startAutoRefresh()
 })
 
 // 组件销毁时清理定时器
@@ -1488,6 +1653,199 @@ onUnmounted(() => {
     }
 }
 
+/* 柱状图样式 */
+.chart-container {
+    height: 200px;
+    padding: 20px 0;
+}
+
+.chart-skeleton {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.skeleton-chart {
+    height: 150px;
+    width: 100%;
+}
+
+.time-distribution-chart {
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+}
+
+.chart-bars {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    height: 150px;
+    width: 100%;
+    gap: 4px;
+}
+
+.chart-bar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    height: 100%;
+}
+
+.chart-bar {
+    background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+    border-radius: 4px 4px 0 0;
+    min-width: 20px;
+    width: 80%;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.chart-bar:hover {
+    background: linear-gradient(135deg, #66b1ff 0%, #8cc5ff 100%);
+    transform: scale(1.05);
+}
+
+.bar-value {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 600;
+    color: #409eff;
+    white-space: nowrap;
+}
+
+.chart-label {
+    margin-top: 8px;
+    font-size: 10px;
+    color: #8c8c8c;
+    text-align: center;
+}
+
+/* 最近签到记录样式 */
+.recent-checkin-records {
+    min-height: 160px;
+}
+
+.no-records {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 160px;
+}
+
+.checkin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.checkin-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-radius: 6px;
+    background: #fafafa;
+    transition: all 0.2s ease;
+    border: 1px solid #f0f0f0;
+}
+
+.checkin-item:hover {
+    background: #f5f5f5;
+    transform: translateY(-1px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.checkin-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+}
+
+.checkin-icon .el-icon {
+    font-size: 14px;
+    color: white;
+}
+
+.checkin-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.checkin-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.company-name {
+    font-size: 11px;
+    color: #8c8c8c;
+    background: #f0f0f0;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.checkin-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #8c8c8c;
+}
+
+.checkin-time {
+    font-weight: 500;
+}
+
+.checkin-type {
+    color: #bfbfbf;
+}
+
+/* 新统计卡片配色 */
+.company-stat {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.user-stat {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.checkin-stat {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.checkout-stat {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.active-stat {
+    background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
+}
+
+.duration-stat {
+    background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);
+}
+
 /* 超小屏幕优化 */
 @media (max-width: 480px) {
     .compact-stat-card {
@@ -1514,6 +1872,38 @@ onUnmounted(() => {
 
     .icon-item .el-icon {
         font-size: 16px;
+    }
+
+    /* 移动端柱状图优化 */
+    .chart-bars {
+        gap: 2px;
+    }
+
+    .chart-bar {
+        min-width: 12px;
+    }
+
+    .bar-value {
+        font-size: 8px;
+        top: -16px;
+    }
+
+    .chart-label {
+        font-size: 8px;
+        margin-top: 6px;
+    }
+
+    /* 移动端签到记录优化 */
+    .checkin-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .checkin-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
     }
 }
 </style>

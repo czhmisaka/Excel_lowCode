@@ -16,44 +16,33 @@
           </div>
         </template>
 
-        <el-form 
-          :model="form" 
-          :rules="rules" 
-          ref="formRef" 
-          label-width="100px"
-          v-loading="loading"
-        >
+        <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" v-loading="loading">
           <el-form-item label="姓名" prop="realName">
-            <el-input 
-              v-model="form.realName" 
-              placeholder="请输入姓名" 
-              maxlength="50"
-            />
+            <el-input v-model="form.realName" placeholder="请输入姓名" maxlength="50" />
           </el-form-item>
 
           <el-form-item label="手机号" prop="phone">
-            <el-input 
-              v-model="form.phone" 
-              placeholder="请输入手机号" 
-              maxlength="11"
-            />
+            <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
           </el-form-item>
 
           <el-form-item label="身份证号" prop="idCard">
+            <el-input v-model="form.idCard" placeholder="请输入身份证号" maxlength="18" />
+          </el-form-item>
+
+          <el-form-item label="备注" prop="remark">
             <el-input 
-              v-model="form.idCard" 
-              placeholder="请输入身份证号" 
-              maxlength="18"
+              v-model="form.remark" 
+              type="textarea"
+              placeholder="请输入备注信息（最多300字）" 
+              maxlength="300"
+              :rows="3"
+              show-word-limit
             />
           </el-form-item>
 
           <el-form-item>
-            <el-button 
-              type="primary" 
-              @click="handleCheckout" 
-              :loading="checkoutLoading"
-              :disabled="!todayStatus.hasCheckedIn"
-            >
+            <el-button type="primary" @click="handleCheckout" :loading="checkoutLoading"
+              :disabled="!todayStatus.hasCheckedIn">
               {{ getCheckoutButtonText() }}
             </el-button>
           </el-form-item>
@@ -65,7 +54,7 @@
           <h4>今日状态</h4>
           <div class="status-info">
             <p>
-              <strong>签到状态:</strong> 
+              <strong>签到状态:</strong>
               <el-tag :type="todayStatus.hasCheckedIn ? 'success' : 'info'" size="small">
                 {{ todayStatus.hasCheckedIn ? '已签到' : '未签到' }}
               </el-tag>
@@ -74,7 +63,7 @@
               <strong>签到时间:</strong> {{ formatTime(todayStatus.checkinTime) }}
             </p>
             <p>
-              <strong>签退状态:</strong> 
+              <strong>签退状态:</strong>
               <el-tag :type="todayStatus.hasCheckedOut ? 'success' : 'warning'" size="small">
                 {{ todayStatus.hasCheckedOut ? '已签退' : '未签退' }}
               </el-tag>
@@ -110,8 +99,10 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRoute } from 'vue-router'
 import { apiService } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const authStore = useAuthStore()
 
 // 响应式数据
 const company = ref({
@@ -124,7 +115,8 @@ const company = ref({
 const form = reactive({
   realName: '',
   phone: '',
-  idCard: ''
+  idCard: '',
+  remark: ''
 })
 
 const formRef = ref()
@@ -187,18 +179,18 @@ const getTodayStatus = async () => {
     if (!form.phone || !company.value.id) {
       return
     }
-    
+
     // 先根据手机号获取用户信息
     const userResponse = await apiService.getUserByPhone(form.phone)
     if (userResponse.success && userResponse.data) {
       const user = userResponse.data
-      
+
       // 然后获取今日状态
       const statusResponse = await apiService.getTodayStatus({
         userId: user.id.toString(),
         companyId: company.value.id.toString()
       })
-      
+
       if (statusResponse.success) {
         todayStatus.value = statusResponse.data
       }
@@ -248,15 +240,16 @@ const getCompanyInfo = async () => {
 const handleCheckout = async () => {
   try {
     await formRef.value.validate()
-    
+
     checkoutLoading.value = true
-    
+
     // 使用签退API
     const response = await apiService.checkout({
       phone: form.phone,
-      companyCode: company.value.code
+      companyCode: company.value.code,
+      remark: form.remark
     })
-    
+
     if (response.success) {
       checkoutResult.value = response.data
       todayStatus.value.hasCheckedOut = true
@@ -288,9 +281,76 @@ watch(() => form.phone, (newPhone) => {
   }
 })
 
+// 自动填充用户信息
+const autoFillUserInfo = async () => {
+  try {
+    // 检查用户是否已登录
+    if (authStore.isAuthenticated && authStore.userInfo) {
+      const userInfo = authStore.userInfo
+
+      // 如果用户信息中有真实姓名、手机号、身份证号，则自动填充
+      if (userInfo.realName) {
+        form.realName = userInfo.realName
+      }
+      if (userInfo.phone) {
+        form.phone = userInfo.phone
+      }
+      if (userInfo.idCard) {
+        form.idCard = userInfo.idCard
+      }
+
+      // 如果信息完整，显示提示
+      if (userInfo.realName && userInfo.phone && userInfo.idCard) {
+        ElMessage.success('已自动填充您的个人信息')
+
+        // 自动填充完成后，立即获取用户的签到数据
+        if (form.phone) {
+          setTimeout(async () => {
+            await getTodayStatus()
+          }, 100)
+        }
+      }
+    } else {
+      // 如果用户未登录，尝试获取当前用户信息
+      try {
+        const response = await apiService.getCurrentUser()
+        if (response.success && response.data) {
+          const userInfo = response.data
+
+          // 填充用户信息
+          if (userInfo.realName) {
+            form.realName = userInfo.realName
+          }
+          if (userInfo.phone) {
+            form.phone = userInfo.phone
+          }
+          if (userInfo.idCard) {
+            form.idCard = userInfo.idCard
+          }
+
+          // 如果信息完整，显示提示
+          if (userInfo.realName && userInfo.phone && userInfo.idCard) {
+            ElMessage.success('已自动填充您的个人信息')
+
+            // 自动填充完成后，立即获取用户的签到数据
+            if (form.phone && company.value.id) {
+              await getTodayStatus()
+            }
+          }
+        }
+      } catch (error) {
+        console.log('用户未登录或获取用户信息失败，需要手动输入')
+      }
+    }
+  } catch (error) {
+    console.error('自动填充用户信息失败:', error)
+  }
+}
+
 // 页面加载时初始化
 onMounted(() => {
   getCompanyInfo()
+  autoFillUserInfo()
 })
 </script>
 

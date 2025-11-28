@@ -49,6 +49,18 @@
             />
           </el-form-item>
 
+          <el-form-item label="备注" prop="remark">
+            <el-input 
+              v-model="form.remark" 
+              type="textarea"
+              placeholder="请输入备注信息（最多300字）" 
+              maxlength="300"
+              :rows="3"
+              show-word-limit
+              :disabled="todayStatus.hasCheckedIn"
+            />
+          </el-form-item>
+
           <el-form-item>
             <el-button 
               type="primary" 
@@ -99,8 +111,10 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute } from 'vue-router'
 import { apiService } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const authStore = useAuthStore()
 
 // 响应式数据
 const company = ref({
@@ -112,7 +126,8 @@ const company = ref({
 const form = reactive({
   realName: '',
   phone: '',
-  idCard: ''
+  idCard: '',
+  remark: ''
 })
 
 const formRef = ref()
@@ -144,13 +159,13 @@ const rules = {
 }
 
 // 格式化时间
-const formatTime = (time: string) => {
+const formatTime = (time: string | null) => {
   if (!time) return ''
   return new Date(time).toLocaleString('zh-CN')
 }
 
 // 格式化工作时长
-const formatWorkDuration = (minutes: number) => {
+const formatWorkDuration = (minutes: number | null) => {
   if (!minutes) return ''
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60
@@ -198,7 +213,8 @@ const handleCheckin = async () => {
       realName: form.realName,
       phone: form.phone,
       idCard: form.idCard,
-      companyCode: company.value.code
+      companyCode: company.value.code,
+      remark: form.remark
     })
     
     if (response.success) {
@@ -221,9 +237,64 @@ const handleCheckin = async () => {
   }
 }
 
+// 自动填充用户信息
+const autoFillUserInfo = async () => {
+  try {
+    // 检查用户是否已登录
+    if (authStore.isAuthenticated && authStore.userInfo) {
+      const userInfo = authStore.userInfo
+      
+      // 如果用户信息中有真实姓名、手机号、身份证号，则自动填充
+      if (userInfo.realName) {
+        form.realName = userInfo.realName
+      }
+      if (userInfo.phone) {
+        form.phone = userInfo.phone
+      }
+      if (userInfo.idCard) {
+        form.idCard = userInfo.idCard
+      }
+      
+      // 如果信息完整，显示提示
+      if (userInfo.realName && userInfo.phone && userInfo.idCard) {
+        ElMessage.success('已自动填充您的个人信息')
+      }
+    } else {
+      // 如果用户未登录，尝试获取当前用户信息
+      try {
+        const response = await apiService.getCurrentUser()
+        if (response.success && response.data) {
+          const userInfo = response.data
+          
+          // 填充用户信息
+          if (userInfo.realName) {
+            form.realName = userInfo.realName
+          }
+          if (userInfo.phone) {
+            form.phone = userInfo.phone
+          }
+          if (userInfo.idCard) {
+            form.idCard = userInfo.idCard
+          }
+          
+          // 如果信息完整，显示提示
+          if (userInfo.realName && userInfo.phone && userInfo.idCard) {
+            ElMessage.success('已自动填充您的个人信息')
+          }
+        }
+      } catch (error) {
+        console.log('用户未登录或获取用户信息失败，需要手动输入')
+      }
+    }
+  } catch (error) {
+    console.error('自动填充用户信息失败:', error)
+  }
+}
+
 // 页面加载时初始化
 onMounted(() => {
   getCompanyInfo()
+  autoFillUserInfo()
 })
 </script>
 

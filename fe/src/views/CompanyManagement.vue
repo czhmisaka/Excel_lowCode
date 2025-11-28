@@ -36,20 +36,6 @@
                         </el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column prop="checkinUrl" label="签到链接" min-width="180" show-overflow-tooltip>
-                    <template #default="{ row }">
-                        <el-link type="primary" :href="row.checkinUrl" target="_blank">
-                            {{ row.checkinUrl }}
-                        </el-link>
-                    </template>
-                </el-table-column>
-                <el-table-column prop="checkoutUrl" label="签退链接" min-width="180" show-overflow-tooltip>
-                    <template #default="{ row }">
-                        <el-link type="primary" :href="row.checkoutUrl" target="_blank">
-                            {{ row.checkoutUrl }}
-                        </el-link>
-                    </template>
-                </el-table-column>
                 <el-table-column prop="createdAt" label="创建时间" width="180">
                     <template #default="{ row }">
                         {{ formatDate(row.createdAt) }}

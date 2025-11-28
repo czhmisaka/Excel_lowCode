@@ -88,6 +88,13 @@
                         {{ formatDateTime(row.createdAt) }}
                     </template>
                 </el-table-column>
+                <el-table-column prop="remark" label="备注" min-width="200">
+                    <template #default="{ row }">
+                        <div class="remark-content" :title="row.remark">
+                            {{ row.remark || '-' }}
+                        </div>
+                    </template>
+                </el-table-column>
                 <el-table-column label="操作" width="120" fixed="right">
                     <template #default="{ row }">
                         <el-button 
@@ -330,5 +337,23 @@ onMounted(() => {
 .pagination {
     margin-top: 20px;
     text-align: right;
+}
+
+.remark-content {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+}
+
+.remark-content:hover {
+    white-space: normal;
+    overflow: visible;
+    background-color: #f5f7fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    position: relative;
+    z-index: 10;
 }
 </style>

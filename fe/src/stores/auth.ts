@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-10-13 10:08:31
  * @LastEditors: CZH
- * @LastEditTime: 2025-10-28 15:29:01
- * @FilePath: /lowCode_excel/fe/src/stores/auth.ts
+ * @LastEditTime: 2025-11-29 00:45:42
+ * @FilePath: /打卡/fe/src/stores/auth.ts
  */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -14,6 +14,9 @@ interface UserInfo {
     username: string
     email?: string
     displayName?: string
+    realName?: string
+    phone?: string
+    idCard?: string
     role: string
     isActive: boolean
     lastLogin?: string
