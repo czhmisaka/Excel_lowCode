@@ -40,14 +40,6 @@
             />
           </el-form-item>
 
-          <el-form-item label="身份证号" prop="idCard">
-            <el-input 
-              v-model="form.idCard" 
-              placeholder="请输入身份证号" 
-              maxlength="18"
-              :disabled="todayStatus.hasCheckedIn"
-            />
-          </el-form-item>
 
           <el-form-item label="备注" prop="remark">
             <el-input 
@@ -108,13 +100,12 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { useRoute } from 'vue-router'
 import { apiService } from '@/services/api'
-import { useAuthStore } from '@/stores/auth'
+import { saveUserInfo, getUserInfo } from '@/utils/localstorage'
 
 const route = useRoute()
-const authStore = useAuthStore()
 
 // 响应式数据
 const company = ref({
@@ -126,7 +117,6 @@ const company = ref({
 const form = reactive({
   realName: '',
   phone: '',
-  idCard: '',
   remark: ''
 })
 
@@ -151,10 +141,6 @@ const rules = {
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-  ],
-  idCard: [
-    { required: true, message: '请输入身份证号', trigger: 'blur' },
-    { pattern: /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/, message: '请输入正确的身份证号', trigger: 'blur' }
   ]
 }
 
@@ -212,7 +198,6 @@ const handleCheckin = async () => {
     const response = await apiService.checkin({
       realName: form.realName,
       phone: form.phone,
-      idCard: form.idCard,
       companyCode: company.value.code,
       remark: form.remark
     })
@@ -221,6 +206,14 @@ const handleCheckin = async () => {
       checkinResult.value = response.data
       todayStatus.value.hasCheckedIn = true
       todayStatus.value.checkinTime = checkinResult.value.checkinRecord.checkinTime
+      
+      // 保存用户信息到localstorage
+      saveUserInfo({
+        realName: form.realName,
+        phone: form.phone,
+        lastCheckinTime: checkinResult.value.checkinRecord.checkinTime
+      })
+      
       ElMessage.success('签到成功')
     } else {
       ElMessage.error(response.message || '签到失败')
@@ -240,52 +233,18 @@ const handleCheckin = async () => {
 // 自动填充用户信息
 const autoFillUserInfo = async () => {
   try {
-    // 检查用户是否已登录
-    if (authStore.isAuthenticated && authStore.userInfo) {
-      const userInfo = authStore.userInfo
-      
-      // 如果用户信息中有真实姓名、手机号、身份证号，则自动填充
-      if (userInfo.realName) {
-        form.realName = userInfo.realName
-      }
-      if (userInfo.phone) {
-        form.phone = userInfo.phone
-      }
-      if (userInfo.idCard) {
-        form.idCard = userInfo.idCard
-      }
-      
-      // 如果信息完整，显示提示
-      if (userInfo.realName && userInfo.phone && userInfo.idCard) {
-        ElMessage.success('已自动填充您的个人信息')
-      }
-    } else {
-      // 如果用户未登录，尝试获取当前用户信息
-      try {
-        const response = await apiService.getCurrentUser()
-        if (response.success && response.data) {
-          const userInfo = response.data
-          
-          // 填充用户信息
-          if (userInfo.realName) {
-            form.realName = userInfo.realName
-          }
-          if (userInfo.phone) {
-            form.phone = userInfo.phone
-          }
-          if (userInfo.idCard) {
-            form.idCard = userInfo.idCard
-          }
-          
-          // 如果信息完整，显示提示
-          if (userInfo.realName && userInfo.phone && userInfo.idCard) {
-            ElMessage.success('已自动填充您的个人信息')
-          }
-        }
-      } catch (error) {
-        console.log('用户未登录或获取用户信息失败，需要手动输入')
-      }
+    // 首先尝试从localstorage读取用户信息
+    const savedUserInfo = getUserInfo()
+    if (savedUserInfo) {
+      // 如果localstorage中有用户信息，则自动填充
+      form.realName = savedUserInfo.realName
+      form.phone = savedUserInfo.phone
+      ElMessage.success('已自动填充您的个人信息（来自上次签到）')
+      return
     }
+    
+    // 如果没有保存的用户信息，则显示提示让用户手动输入
+    console.log('请手动输入您的个人信息')
   } catch (error) {
     console.error('自动填充用户信息失败:', error)
   }

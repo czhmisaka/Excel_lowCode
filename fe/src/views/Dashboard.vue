@@ -203,7 +203,7 @@
                                 </div>
                                 <div class="checkin-content">
                                     <div class="checkin-title">
-                                        <span class="user-name">{{ record.user?.realName || record.user?.username || '未知用户' }}</span>
+                                        <span class="user-name">{{ record.realName || record.real_name || record.user?.realName || record.user?.username || '未知用户' }}</span>
                                         <span class="company-name">{{ record.company?.name || '未知公司' }}</span>
                                     </div>
                                     <div class="checkin-meta">
@@ -521,22 +521,45 @@ const initData = async () => {
 // 刷新签到数据
 const refreshCheckinData = async () => {
     try {
-        // 获取公司列表
-        const companiesResponse = await apiService.getCompanies({ limit: 1000 })
+        // 获取公司列表 - 只获取有效的公司
+        const companiesResponse = await apiService.getCompanies({ 
+            limit: 1000,
+            isActive: true 
+        })
         console.log('公司API响应:', companiesResponse)
         companyCount.value = companiesResponse.data?.length || companiesResponse.data?.total || 0
 
-        // 获取用户列表
-        const usersResponse = await apiService.getUsers({ limit: 1000 })
+        // 获取用户列表 - 只获取有效的用户
+        const usersResponse = await apiService.getUsers({ 
+            limit: 1000,
+            isActive: true 
+        })
         console.log('用户API响应:', usersResponse)
         userCount.value = usersResponse.data?.length || usersResponse.data?.total || 0
 
-        // 获取今日签到记录（用于统计）
+        // 获取今日签到记录（用于统计）- 使用本地时间
         const today = new Date()
-        const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString()
-        const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString()
+        
+        // 创建本地时间的今日开始和结束
+        const startDateLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0)
+        const endDateLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
+        
+        // 手动构建本地时间的ISO字符串（避免toISOString的UTC转换）
+        const formatLocalISO = (date: Date) => {
+            const year = date.getFullYear()
+            const month = String(date.getMonth() + 1).padStart(2, '0')
+            const day = String(date.getDate()).padStart(2, '0')
+            const hours = String(date.getHours()).padStart(2, '0')
+            const minutes = String(date.getMinutes()).padStart(2, '0')
+            const seconds = String(date.getSeconds()).padStart(2, '0')
+            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`
+        }
+        
+        const startDate = formatLocalISO(startDateLocal)
+        const endDate = formatLocalISO(endDateLocal)
         
         console.log('今日时间范围:', startDate, '到', endDate)
+        console.log('本地时间:', startDateLocal.toLocaleString(), '到', endDateLocal.toLocaleString())
         
         const todayCheckinResponse = await apiService.getCheckinRecords({
             startDate,
@@ -545,20 +568,40 @@ const refreshCheckinData = async () => {
         })
         
         console.log('今日签到API响应:', todayCheckinResponse)
-        // 获取今日签到记录 - 注意：apiService.getCheckinRecords返回的是完整响应对象
-        const todayRecords = todayCheckinResponse.data?.data || []
+        // 获取今日签到记录 - 根据接口返回结构，数据直接是 response.data
+        let todayRecords = todayCheckinResponse.data || []
+        console.log('今日签到API完整响应:', todayCheckinResponse)
         console.log('今日签到记录数量:', todayRecords.length)
+        console.log('今日签到记录详情:', todayRecords)
         
-        // 计算今日签到数据
-        todayCheckinCount.value = todayRecords.filter((record: any) => record.checkinType === 'checkin').length
-        todayCheckoutCount.value = todayRecords.filter((record: any) => record.checkinType === 'checkout').length
+        // 调试：检查数据解析是否正确
+        if (todayCheckinResponse.data && Array.isArray(todayCheckinResponse.data)) {
+          console.log('数据直接是数组:', todayCheckinResponse.data)
+        } else if (todayCheckinResponse.data && todayCheckinResponse.data.data) {
+          console.log('数据在data.data中:', todayCheckinResponse.data.data)
+          // 如果数据在data.data中，重新赋值
+          todayRecords = todayCheckinResponse.data.data
+        }
         
-        // 计算活跃用户数
-        const activeUserIds = new Set(todayRecords.map((record: any) => record.userId))
-        activeUserCount.value = activeUserIds.size
+        // 计算今日签到数据 - 只统计有效的签到记录
+        todayCheckinCount.value = todayRecords.filter((record: any) => 
+            record.checkinType === 'checkin' && record.isActive !== false
+        ).length
+        todayCheckoutCount.value = todayRecords.filter((record: any) => 
+            record.checkinType === 'checkout' && record.isActive !== false
+        ).length
         
-        // 计算平均工作时长
-        const completedRecords = todayRecords.filter((record: any) => record.workDuration)
+        // 计算活跃用户数 - 基于手机号去重
+        const activePhones = new Set(todayRecords
+            .filter((record: any) => record.isActive !== false)
+            .map((record: any) => record.phone)
+        )
+        activeUserCount.value = activePhones.size
+        
+        // 计算平均工作时长 - 只计算有效的已完成记录
+        const completedRecords = todayRecords.filter((record: any) => 
+            record.workDuration && record.isActive !== false
+        )
         if (completedRecords.length > 0) {
             const totalDuration = completedRecords.reduce((sum: number, record: any) => sum + record.workDuration, 0)
             avgWorkDuration.value = (totalDuration / completedRecords.length / 60).toFixed(1)
@@ -566,25 +609,47 @@ const refreshCheckinData = async () => {
             avgWorkDuration.value = '0.0'
         }
         
-        // 计算时间分布
+        // 计算时间分布 - 只统计有效的签到记录
         const distribution = new Array(24).fill(0)
+        console.log('开始计算时间分布，今日记录数量:', todayRecords.length)
+        
         todayRecords.forEach((record: any) => {
-            if (record.checkinType === 'checkin') {
-                const hour = new Date(record.checkinTime).getHours()
-                distribution[hour]++
+            if (record.checkinType === 'checkin' && record.isActive !== false) {
+                try {
+                    const checkinTime = new Date(record.checkinTime)
+                    // 使用本地时间的小时数，而不是UTC时间
+                    const hour = checkinTime.getHours()
+                    console.log(`记录ID: ${record.id}, 签到时间: ${record.checkinTime}, 本地小时: ${hour}`)
+                    distribution[hour]++
+                } catch (error) {
+                    console.error('处理签到时间错误:', error, record)
+                }
             }
         })
+        
+        console.log('时间分布计算结果:', distribution)
         checkinTimeDistribution.value = distribution
         
-        // 获取最近签到记录（所有记录，不限制日期）
+        // 获取最近签到记录（所有记录，不限制日期）- 后端已经过滤了无效公司和记录
         const recentCheckinResponse = await apiService.getCheckinRecords({
             limit: 5
         })
         
         console.log('最近签到API响应:', recentCheckinResponse)
-        // 获取最近签到记录 - 注意：apiService.getCheckinRecords返回的是完整响应对象
-        recentCheckinRecords.value = recentCheckinResponse.data || []
-        console.log('最近签到记录数量:', recentCheckinRecords.value.length)
+        // 获取最近签到记录 - 根据接口返回结构，数据直接是 response.data
+        let recentRecords = recentCheckinResponse.data || []
+        console.log('最近签到记录数量:', recentRecords.length)
+        
+        // 调试：检查数据解析是否正确
+        if (recentCheckinResponse.data && Array.isArray(recentCheckinResponse.data)) {
+          console.log('最近数据直接是数组:', recentCheckinResponse.data)
+        } else if (recentCheckinResponse.data && recentCheckinResponse.data.data) {
+          console.log('最近数据在data.data中:', recentCheckinResponse.data.data)
+          // 如果数据在data.data中，重新赋值
+          recentRecords = recentCheckinResponse.data.data
+        }
+        
+        recentCheckinRecords.value = recentRecords
         
     } catch (error) {
         console.error('刷新签到数据失败:', error)

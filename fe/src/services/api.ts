@@ -758,7 +758,6 @@ class ApiService {
   async checkin(data: {
     realName: string
     phone: string
-    idCard: string
     companyCode: string
     location?: string
     remark?: string
@@ -779,7 +778,7 @@ class ApiService {
 
     // 获取今日状态
     async getTodayStatus(params: {
-        userId: string
+        phone: string
         companyId: string
     }): Promise<any> {
         const response = await apiClient.get('/api/checkin/today-status', { params })

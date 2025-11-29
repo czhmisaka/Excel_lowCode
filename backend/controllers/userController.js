@@ -10,8 +10,10 @@ const getUsers = async (req, res) => {
     const { page = 1, limit = 10, search, companyId, isActive } = req.query;
     const offset = (page - 1) * limit;
 
-    // 构建查询条件
-    const where = {};
+    // 构建查询条件 - 默认只查询活跃用户
+    const where = {
+      isActive: true // 默认只查询活跃用户
+    };
     
     if (search) {
       where[Op.or] = [
@@ -283,7 +285,7 @@ const updateUser = async (req, res) => {
 };
 
 /**
- * 删除用户
+ * 删除用户（软删除）
  */
 const deleteUser = async (req, res) => {
   try {
@@ -297,19 +299,14 @@ const deleteUser = async (req, res) => {
       });
     }
 
-    // 先删除用户相关的签到记录，避免外键约束错误
-    await CheckinRecord.destroy({ 
-      where: { 
-        userId: userId 
-      } 
+    // 软删除用户：设置 isActive 为 false
+    await user.update({
+      isActive: false
     });
-
-    // 删除用户
-    await user.destroy();
 
     res.json({
       success: true,
-      message: '用户删除成功'
+      message: '用户删除成功（已停用）'
     });
   } catch (error) {
     console.error('删除用户失败:', error);

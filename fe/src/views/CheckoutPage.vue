@@ -25,9 +25,6 @@
             <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
           </el-form-item>
 
-          <el-form-item label="身份证号" prop="idCard">
-            <el-input v-model="form.idCard" placeholder="请输入身份证号" maxlength="18" />
-          </el-form-item>
 
           <el-form-item label="备注" prop="remark">
             <el-input 
@@ -99,10 +96,9 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRoute } from 'vue-router'
 import { apiService } from '@/services/api'
-import { useAuthStore } from '@/stores/auth'
+import { getUserInfo } from '@/utils/localstorage'
 
 const route = useRoute()
-const authStore = useAuthStore()
 
 // 响应式数据
 const company = ref({
@@ -115,7 +111,6 @@ const company = ref({
 const form = reactive({
   realName: '',
   phone: '',
-  idCard: '',
   remark: ''
 })
 
@@ -140,10 +135,6 @@ const rules = {
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-  ],
-  idCard: [
-    { required: true, message: '请输入身份证号', trigger: 'blur' },
-    { pattern: /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/, message: '请输入正确的身份证号', trigger: 'blur' }
   ]
 }
 
@@ -175,27 +166,21 @@ const getCheckoutButtonText = () => {
 // 获取今日状态
 const getTodayStatus = async () => {
   try {
-    // 需要用户信息才能查询状态，在用户输入信息后调用
+    // 需要手机号和公司ID才能查询状态
     if (!form.phone || !company.value.id) {
       return
     }
 
-    // 先根据手机号获取用户信息
-    const userResponse = await apiService.getUserByPhone(form.phone)
-    if (userResponse.success && userResponse.data) {
-      const user = userResponse.data
+    // 基于手机号查询今日状态
+    const response = await apiService.getTodayStatus({
+      phone: form.phone,
+      companyId: company.value.id.toString()
+    })
 
-      // 然后获取今日状态
-      const statusResponse = await apiService.getTodayStatus({
-        userId: user.id.toString(),
-        companyId: company.value.id.toString()
-      })
-
-      if (statusResponse.success) {
-        todayStatus.value = statusResponse.data
-      }
+    if (response.success) {
+      todayStatus.value = response.data
     } else {
-      // 如果用户不存在，重置今日状态为未签到
+      // 如果查询失败，重置状态为未签到
       todayStatus.value = {
         hasCheckedIn: false,
         hasCheckedOut: false,
@@ -284,73 +269,42 @@ watch(() => form.phone, (newPhone) => {
 // 自动填充用户信息
 const autoFillUserInfo = async () => {
   try {
-    // 检查用户是否已登录
-    if (authStore.isAuthenticated && authStore.userInfo) {
-      const userInfo = authStore.userInfo
-
-      // 如果用户信息中有真实姓名、手机号、身份证号，则自动填充
-      if (userInfo.realName) {
-        form.realName = userInfo.realName
-      }
-      if (userInfo.phone) {
-        form.phone = userInfo.phone
-      }
-      if (userInfo.idCard) {
-        form.idCard = userInfo.idCard
-      }
-
-      // 如果信息完整，显示提示
-      if (userInfo.realName && userInfo.phone && userInfo.idCard) {
-        ElMessage.success('已自动填充您的个人信息')
-
-        // 自动填充完成后，立即获取用户的签到数据
-        if (form.phone) {
-          setTimeout(async () => {
-            await getTodayStatus()
-          }, 100)
-        }
-      }
-    } else {
-      // 如果用户未登录，尝试获取当前用户信息
-      try {
-        const response = await apiService.getCurrentUser()
-        if (response.success && response.data) {
-          const userInfo = response.data
-
-          // 填充用户信息
-          if (userInfo.realName) {
-            form.realName = userInfo.realName
+    // 首先尝试从localstorage读取用户信息
+    const savedUserInfo = getUserInfo()
+    if (savedUserInfo) {
+      // 如果localstorage中有用户信息，则自动填充
+      form.realName = savedUserInfo.realName
+      form.phone = savedUserInfo.phone
+      ElMessage.success('已自动填充您的个人信息（来自上次签到）')
+      
+      // 自动填充完成后，立即获取用户的签到数据
+      // 等待公司信息加载完成后再获取状态
+      if (form.phone && company.value.id) {
+        await getTodayStatus()
+      } else {
+        // 如果公司信息还没加载完成，等待一下再尝试
+        setTimeout(() => {
+          if (form.phone && company.value.id) {
+            getTodayStatus()
           }
-          if (userInfo.phone) {
-            form.phone = userInfo.phone
-          }
-          if (userInfo.idCard) {
-            form.idCard = userInfo.idCard
-          }
-
-          // 如果信息完整，显示提示
-          if (userInfo.realName && userInfo.phone && userInfo.idCard) {
-            ElMessage.success('已自动填充您的个人信息')
-
-            // 自动填充完成后，立即获取用户的签到数据
-            if (form.phone && company.value.id) {
-              await getTodayStatus()
-            }
-          }
-        }
-      } catch (error) {
-        console.log('用户未登录或获取用户信息失败，需要手动输入')
+        }, 1000)
       }
+      return
     }
+    
+    // 如果没有保存的用户信息，则显示提示让用户手动输入
+    console.log('请手动输入您的个人信息')
   } catch (error) {
     console.error('自动填充用户信息失败:', error)
   }
 }
 
 // 页面加载时初始化
-onMounted(() => {
-  getCompanyInfo()
-  autoFillUserInfo()
+onMounted(async () => {
+  // 先获取公司信息
+  await getCompanyInfo()
+  // 然后自动填充用户信息
+  await autoFillUserInfo()
 })
 </script>
 

@@ -24,7 +24,7 @@ function calculateWorkDuration(checkinTime, checkoutTime) {
  */
 const checkin = async (req, res) => {
   try {
-    const { realName, phone, idCard, companyCode, location, remark } = req.body;
+    const { realName, phone, companyCode, location, remark } = req.body;
     
     // 1. 根据公司代码获取公司信息
     const company = await Company.findOne({ 
@@ -41,29 +41,15 @@ const checkin = async (req, res) => {
       });
     }
     
-    // 2. 检查用户是否存在
-    const user = await User.findOne({ 
-      where: { 
-        phone,
-        isActive: true 
-      } 
-    });
-    
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: '用户不存在，请先注册或联系管理员'
-      });
-    }
-    
-    // 3. 检查今日是否已签到
+    // 2. 检查今日是否已签到
     const { startOfDay, endOfDay } = getDayRange();
     
     const existingCheckin = await CheckinRecord.findOne({
       where: {
-        userId: user.id,
+        phone: phone,
         companyId: company.id,
         checkinType: 'checkin',
+        isActive: true, // 只检查有效的签到记录
         checkinTime: { [Op.between]: [startOfDay, endOfDay] }
       }
     });
@@ -75,9 +61,10 @@ const checkin = async (req, res) => {
       });
     }
     
-    // 4. 记录签到
+    // 3. 记录签到
     const checkinRecord = await CheckinRecord.create({
-      userId: user.id,
+      realName: realName,
+      phone: phone,
       companyId: company.id,
       checkinType: 'checkin',
       checkinTime: new Date(),
@@ -91,9 +78,8 @@ const checkin = async (req, res) => {
       message: '签到成功',
       data: { 
         user: {
-          id: user.id,
-          realName: user.realName,
-          phone: user.phone
+          realName: realName,
+          phone: phone
         },
         checkinRecord: {
           id: checkinRecord.id,
@@ -139,30 +125,15 @@ const checkout = async (req, res) => {
       });
     }
     
-    // 2. 获取用户信息
-    const user = await User.findOne({ 
-      where: { 
-        phone,
-        isActive: true 
-      } 
-    });
-    
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: '用户不存在'
-      });
-    }
-    
-    // 3. 不再检查是否已签退，允许当天多次签退更新
+    // 2. 查找今日的签到记录
     const { startOfDay, endOfDay } = getDayRange();
     
-    // 4. 查找今日的签到记录
     const todayCheckin = await CheckinRecord.findOne({
       where: {
-        userId: user.id,
+        phone: phone,
         companyId: company.id,
         checkinType: 'checkin',
+        isActive: true, // 只查找有效的签到记录
         checkinTime: { [Op.between]: [startOfDay, endOfDay] }
       }
     });
@@ -174,7 +145,7 @@ const checkout = async (req, res) => {
       });
     }
     
-    // 5. 更新当天的签到记录，添加签退信息
+    // 3. 更新当天的签到记录，添加签退信息
     const checkoutTime = new Date();
     const workDuration = calculateWorkDuration(todayCheckin.checkinTime, checkoutTime);
     
@@ -190,9 +161,8 @@ const checkout = async (req, res) => {
       message: '签退成功',
       data: { 
         user: {
-          id: user.id,
-          realName: user.realName,
-          phone: user.phone
+          realName: todayCheckin.realName,
+          phone: todayCheckin.phone
         },
         checkoutRecord: {
           id: todayCheckin.id,
@@ -224,11 +194,13 @@ const checkout = async (req, res) => {
  */
 const getCheckinHistory = async (req, res) => {
   try {
-    const { userId, companyId, startDate, endDate, page = 1, limit = 10 } = req.query;
+    const { phone, companyId, startDate, endDate, page = 1, limit = 10 } = req.query;
     
-    const where = {};
+    const where = {
+      isActive: true // 默认只查询有效的签到记录
+    };
     
-    if (userId) where.userId = userId;
+    if (phone) where.phone = phone;
     if (companyId) where.companyId = companyId;
     
     if (startDate && endDate) {
@@ -243,14 +215,12 @@ const getCheckinHistory = async (req, res) => {
       where,
       include: [
         {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'realName', 'phone', 'idCard']
-        },
-        {
           model: Company,
           as: 'company',
-          attributes: ['id', 'name', 'code']
+          attributes: ['id', 'name', 'code', 'isActive'],
+          where: {
+            isActive: true // 只关联有效的公司
+          }
         }
       ],
       order: [['checkinTime', 'DESC']],
@@ -284,14 +254,22 @@ const getCheckinHistory = async (req, res) => {
  */
 const getTodayStatus = async (req, res) => {
   try {
-    const { userId, companyId } = req.query;
+    const { phone, companyId } = req.query;
+    
+    if (!phone || !companyId) {
+      return res.status(400).json({
+        success: false,
+        message: '手机号和公司ID为必填参数'
+      });
+    }
     
     const { startOfDay, endOfDay } = getDayRange();
     
     const todayRecords = await CheckinRecord.findAll({
       where: {
-        userId,
+        phone,
         companyId,
+        isActive: true, // 只查询有效的签到记录
         checkinTime: { [Op.between]: [startOfDay, endOfDay] }
       },
       order: [['checkinTime', 'ASC']]
@@ -324,7 +302,7 @@ const getTodayStatus = async (req, res) => {
 };
 
 /**
- * 删除打卡记录
+ * 删除打卡记录（软删除）
  */
 const deleteCheckinRecord = async (req, res) => {
   try {
@@ -339,12 +317,14 @@ const deleteCheckinRecord = async (req, res) => {
       });
     }
 
-    // 删除打卡记录
-    await record.destroy();
+    // 软删除打卡记录：设置 isActive 为 false
+    await record.update({
+      isActive: false
+    });
 
     res.json({
       success: true,
-      message: '打卡记录删除成功'
+      message: '打卡记录删除成功（已标记为无效）'
     });
   } catch (error) {
     console.error('删除打卡记录失败:', error);

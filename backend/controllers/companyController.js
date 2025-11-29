@@ -9,8 +9,10 @@ const getCompanies = async (req, res) => {
     const { page = 1, limit = 10, search, isActive } = req.query;
     const offset = (page - 1) * limit;
 
-    // 构建查询条件
-    const where = {};
+    // 构建查询条件 - 默认只查询有效的公司
+    const where = {
+      isActive: true
+    };
     
     if (search) {
       where[Op.or] = [
@@ -20,7 +22,7 @@ const getCompanies = async (req, res) => {
     }
     
     if (isActive !== undefined) {
-      where.status = isActive === 'true' ? 'active' : 'inactive';
+      where.isActive = isActive === 'true';
     }
 
     const companies = await Company.findAndCountAll({
@@ -58,13 +60,16 @@ const getCompanyByCode = async (req, res) => {
     const { companyCode } = req.params;
 
     const company = await Company.findOne({
-      where: { code: companyCode }
+      where: { 
+        code: companyCode,
+        isActive: true // 只查询有效的公司
+      }
     });
 
     if (!company) {
       return res.status(404).json({
         success: false,
-        message: '公司不存在'
+        message: '公司不存在或已停用'
       });
     }
 
@@ -89,12 +94,17 @@ const getCompany = async (req, res) => {
   try {
     const { companyId } = req.params;
 
-    const company = await Company.findByPk(companyId);
+    const company = await Company.findOne({
+      where: {
+        id: companyId,
+        isActive: true // 只查询有效的公司
+      }
+    });
 
     if (!company) {
       return res.status(404).json({
         success: false,
-        message: '公司不存在'
+        message: '公司不存在或已停用'
       });
     }
 
@@ -212,7 +222,7 @@ const updateCompany = async (req, res) => {
 };
 
 /**
- * 删除公司
+ * 删除公司（软删除）
  */
 const deleteCompany = async (req, res) => {
   try {
@@ -226,12 +236,15 @@ const deleteCompany = async (req, res) => {
       });
     }
 
-    // 删除公司
-    await company.destroy();
+    // 软删除公司：设置 isActive 为 false 和 status 为 'inactive'
+    await company.update({
+      isActive: false,
+      status: 'inactive'
+    });
 
     res.json({
       success: true,
-      message: '公司删除成功'
+      message: '公司删除成功（已停用）'
     });
   } catch (error) {
     console.error('删除公司失败:', error);

@@ -10,7 +10,7 @@
         <div class="modern-toolbar">
             <el-row :gutter="20">
                 <el-col :span="8">
-                    <el-input v-model="searchKeyword" placeholder="搜索姓名、手机号或身份证号" clearable @clear="handleSearch"
+                    <el-input v-model="searchKeyword" placeholder="搜索姓名或手机号" clearable @clear="handleSearch"
                         @keyup.enter="handleSearch">
                         <template #append>
                             <el-button :icon="Search" @click="handleSearch" />
@@ -46,19 +46,14 @@
         <div class="modern-card" style="margin-bottom: 20px;">
             <el-table v-loading="loading" :data="checkinRecords" border stripe class="modern-table" style="width: 100%">
                 <el-table-column prop="id" label="ID" width="80" />
-                <el-table-column prop="user.realName" label="姓名" min-width="100">
+                <el-table-column prop="realName" label="姓名" min-width="100">
                     <template #default="{ row }">
-                        {{ row.user?.realName || '-' }}
+                        {{ row.realName || '-' }}
                     </template>
                 </el-table-column>
-                <el-table-column prop="user.phone" label="手机号" min-width="120">
+                <el-table-column prop="phone" label="手机号" min-width="120">
                     <template #default="{ row }">
-                        {{ row.user?.phone || '-' }}
-                    </template>
-                </el-table-column>
-                <el-table-column prop="idCard" label="身份证号" min-width="180">
-                    <template #default="{ row }">
-                        {{ row.user?.idCard || '-' }}
+                        {{ row.phone || '-' }}
                     </template>
                 </el-table-column>
                 <el-table-column prop="checkinTime" label="签到时间" width="180">

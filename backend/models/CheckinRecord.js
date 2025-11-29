@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-11-26 16:23:34
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-29 01:00:23
+ * @LastEditTime: 2025-11-29 11:16:53
  * @FilePath: /打卡/backend/models/CheckinRecord.js
  */
 const { DataTypes } = require('sequelize');
@@ -13,14 +13,16 @@ module.exports = (sequelize) => {
     primaryKey: true,
     autoIncrement: true
   },
-  userId: {
-    type: DataTypes.INTEGER,
+  realName: {
+    type: DataTypes.STRING(50),
     allowNull: false,
-    field: 'user_id',
-    references: {
-      model: 'Users',
-      key: 'id'
-    }
+    field: 'real_name',
+    comment: '用户真实姓名'
+  },
+  phone: {
+    type: DataTypes.STRING(11),
+    allowNull: false,
+    comment: '用户手机号'
   },
   companyId: {
     type: DataTypes.INTEGER,
@@ -59,6 +61,12 @@ module.exports = (sequelize) => {
     allowNull: true,
     comment: '备注信息'
   },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'is_active',
+    comment: '是否有效记录'
+  },
   createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
@@ -71,7 +79,7 @@ module.exports = (sequelize) => {
   tableName: 'checkin_records',
   indexes: [
     {
-      fields: ['user_id', 'company_id', 'checkin_time']
+      fields: ['phone', 'company_id', 'checkin_time']
     },
     {
       fields: ['company_id', 'checkin_type', 'checkin_time']
