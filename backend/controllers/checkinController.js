@@ -24,7 +24,24 @@ function calculateWorkDuration(checkinTime, checkoutTime) {
  */
 const checkin = async (req, res) => {
   try {
-    const { realName, phone, companyCode, location, remark } = req.body;
+    const { realName, phone, companyCode, location, remark, laborSource } = req.body;
+    
+    // 验证必填字段
+    if (!laborSource) {
+      return res.status(400).json({
+        success: false,
+        message: '劳务来源为必填项'
+      });
+    }
+    
+    // 验证劳务来源选项
+    const validLaborSources = ['汇博劳务公司', '恒信劳务公司', '其他类（临时工）'];
+    if (!validLaborSources.includes(laborSource)) {
+      return res.status(400).json({
+        success: false,
+        message: '劳务来源选项无效，请选择有效的劳务来源'
+      });
+    }
     
     // 1. 根据公司代码获取公司信息
     const company = await Company.findOne({ 
@@ -70,6 +87,7 @@ const checkin = async (req, res) => {
       checkinTime: new Date(),
       location,
       remark,
+      laborSource,
       deviceInfo: req.headers['user-agent']
     });
     

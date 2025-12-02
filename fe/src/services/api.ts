@@ -759,6 +759,7 @@ class ApiService {
     realName: string
     phone: string
     companyCode: string
+    laborSource: string
     location?: string
     remark?: string
   }): Promise<any> {

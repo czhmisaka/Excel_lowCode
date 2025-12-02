@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-11-26 16:23:34
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-29 11:16:53
+ * @LastEditTime: 2025-12-02 16:18:47
  * @FilePath: /打卡/backend/models/CheckinRecord.js
  */
 const { DataTypes } = require('sequelize');
@@ -55,6 +55,12 @@ module.exports = (sequelize) => {
     type: DataTypes.INTEGER,
     allowNull: true,
     comment: '工作时长（分钟）'
+  },
+  laborSource: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    field: 'labor_source',
+    comment: '劳务来源'
   },
   remark: {
     type: DataTypes.STRING(300),

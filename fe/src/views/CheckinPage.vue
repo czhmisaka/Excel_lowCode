@@ -40,6 +40,18 @@
             />
           </el-form-item>
 
+          <el-form-item label="劳务来源" prop="laborSource">
+            <el-select
+              v-model="form.laborSource"
+              placeholder="请选择劳务来源"
+              style="width: 100%"
+              :disabled="todayStatus.hasCheckedIn"
+            >
+              <el-option label="汇博劳务公司" value="汇博劳务公司" />
+              <el-option label="恒信劳务公司" value="恒信劳务公司" />
+              <el-option label="其他类（临时工）" value="其他类（临时工）" />
+            </el-select>
+          </el-form-item>
 
           <el-form-item label="备注" prop="remark">
             <el-input 
@@ -117,6 +129,7 @@ const company = ref({
 const form = reactive({
   realName: '',
   phone: '',
+  laborSource: '',
   remark: ''
 })
 
@@ -141,6 +154,9 @@ const rules = {
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
+  laborSource: [
+    { required: true, message: '请选择劳务来源', trigger: 'change' }
   ]
 }
 
@@ -199,6 +215,7 @@ const handleCheckin = async () => {
       realName: form.realName,
       phone: form.phone,
       companyCode: company.value.code,
+      laborSource: form.laborSource,
       remark: form.remark
     })
     

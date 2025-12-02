@@ -56,6 +56,11 @@
                         {{ row.phone || '-' }}
                     </template>
                 </el-table-column>
+                <el-table-column prop="laborSource" label="劳务来源" width="120">
+                    <template #default="{ row }">
+                        {{ row.laborSource || '-' }}
+                    </template>
+                </el-table-column>
                 <el-table-column prop="checkinTime" label="签到时间" width="180">
                     <template #default="{ row }">
                         {{ formatDateTime(row.checkinTime) }}
@@ -128,6 +133,7 @@ interface CheckinRecord {
     userId: string
     realName: string
     phone: string
+    laborSource?: string
     idCard: string
     checkinTime: string
     checkoutTime?: string
