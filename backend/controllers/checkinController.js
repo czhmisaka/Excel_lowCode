@@ -354,10 +354,125 @@ const deleteCheckinRecord = async (req, res) => {
   }
 };
 
+/**
+ * 导出打卡记录为Excel
+ */
+const exportCheckinRecords = async (req, res) => {
+  try {
+    const { companyId, startDate, endDate, search, page = 1, limit = 1000 } = req.query;
+    
+    // 构建查询条件
+    const where = {
+      isActive: true
+    };
+    
+    if (companyId) where.companyId = companyId;
+    
+    // 日期范围筛选
+    if (startDate && endDate) {
+      where.checkinTime = {
+        [Op.between]: [new Date(startDate), new Date(endDate)]
+      };
+    }
+    
+    // 搜索条件（姓名或手机号）
+    if (search) {
+      where[Op.or] = [
+        { realName: { [Op.like]: `%${search}%` } },
+        { phone: { [Op.like]: `%${search}%` } }
+      ];
+    }
+    
+    // 查询所有符合条件的记录
+    const records = await CheckinRecord.findAll({
+      where,
+      include: [
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'name', 'code']
+        }
+      ],
+      order: [['checkinTime', 'DESC']],
+      limit: parseInt(limit)
+    });
+    
+    // 准备Excel数据
+    const excelData = records.map(record => ({
+      'ID': record.id,
+      '姓名': record.realName || '',
+      '手机号': record.phone || '',
+      '劳务来源': record.laborSource || '',
+      '签到时间': record.checkinTime ? new Date(record.checkinTime).toLocaleString('zh-CN') : '',
+      '工作时长(分钟)': record.workDuration || '',
+      '工作时长(格式化)': record.workDuration ? 
+        `${Math.floor(record.workDuration / 60)}小时${record.workDuration % 60}分钟` : '',
+      '备注': record.remark || '',
+      '公司名称': record.company?.name || '',
+      '公司代码': record.company?.code || '',
+      '创建时间': record.createdAt ? new Date(record.createdAt).toLocaleString('zh-CN') : ''
+    }));
+    
+    // 生成Excel文件
+    const XLSX = require('xlsx');
+    const workbook = XLSX.utils.book_new();
+    
+    // 创建工作表
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    
+    // 设置列宽
+    const colWidths = [
+      { wch: 8 },   // ID
+      { wch: 10 },  // 姓名
+      { wch: 15 },  // 手机号
+      { wch: 15 },  // 劳务来源
+      { wch: 20 },  // 签到时间
+      { wch: 15 },  // 工作时长(分钟)
+      { wch: 15 },  // 工作时长(格式化)
+      { wch: 30 },  // 备注
+      { wch: 15 },  // 公司名称
+      { wch: 10 },  // 公司代码
+      { wch: 20 }   // 创建时间
+    ];
+    worksheet['!cols'] = colWidths;
+    
+    // 添加工作表到工作簿
+    const sheetName = '打卡记录';
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    
+    // 生成Excel文件缓冲区
+    const excelBuffer = XLSX.write(workbook, {
+      type: 'buffer',
+      bookType: 'xlsx',
+      compression: true
+    });
+    
+    // 生成文件名
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+    const fileName = `checkin_records_export_${timestamp}.xlsx`;
+    
+    // 设置响应头并发送文件
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+    res.setHeader('Content-Length', excelBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
+    
+    res.send(excelBuffer);
+    
+  } catch (error) {
+    console.error('导出打卡记录失败:', error);
+    res.status(500).json({
+      success: false,
+      message: `导出失败: ${error.message}`
+    });
+  }
+};
+
 module.exports = {
   checkin,
   checkout,
   getCheckinHistory,
   getTodayStatus,
-  deleteCheckinRecord
+  deleteCheckinRecord,
+  exportCheckinRecords
 };

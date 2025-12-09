@@ -124,7 +124,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import { Search, Refresh, Download, ArrowLeft, Delete } from '@element-plus/icons-vue'
 import { apiService } from '@/services/api'
 
@@ -259,15 +259,59 @@ const handleCurrentChange = (page: number) => {
 
 const handleExport = async () => {
     try {
-        const response = await apiService.exportCheckinRecords(queryParams.value)
-        if (response.success) {
-            ElMessage.success('导出成功')
-            // 这里可以添加下载逻辑
-        } else {
-            ElMessage.error(response.message || '导出失败')
+        // 显示加载状态
+        const loadingInstance = ElLoading.service({
+            lock: true,
+            text: '正在生成Excel文件，请稍候...',
+            background: 'rgba(0, 0, 0, 0.7)'
+        })
+        
+        try {
+            // 获取Excel文件Blob
+            const blob = await apiService.exportCheckinRecords(queryParams.value)
+            
+            // 创建下载链接
+            const url = window.URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            
+            // 从响应头获取文件名，如果没有则使用默认文件名
+            const timestamp = new Date().toISOString().split('T')[0]
+            const fileName = `checkin_records_export_${timestamp}.xlsx`
+            link.download = fileName
+            
+            // 触发下载
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            
+            // 释放URL对象
+            window.URL.revokeObjectURL(url)
+            
+            ElMessage.success('导出成功，文件下载中...')
+        } finally {
+            loadingInstance.close()
         }
     } catch (error: any) {
-        ElMessage.error(error.message || '导出失败')
+        console.error('导出失败:', error)
+        
+        // 尝试解析错误响应（如果是JSON格式）
+        if (error.response && error.response.data) {
+            try {
+                // 如果是Blob错误响应，尝试读取为文本
+                if (error.response.data instanceof Blob) {
+                    const errorText = await error.response.data.text()
+                    const errorData = JSON.parse(errorText)
+                    ElMessage.error(errorData.message || '导出失败')
+                } else {
+                    ElMessage.error(error.response.data.message || '导出失败')
+                }
+            } catch (parseError) {
+                ElMessage.error('导出失败：服务器返回错误')
+            }
+        } else {
+            ElMessage.error(error.message || '导出失败')
+        }
     }
 }
 

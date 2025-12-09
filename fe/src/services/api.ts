@@ -115,6 +115,11 @@ apiClient.interceptors.request.use(
 // 响应拦截器
 apiClient.interceptors.response.use(
     (response) => {
+        // 跳过对blob响应的处理（如Excel文件下载）
+        if (response.config.responseType === 'blob' || response.data instanceof Blob) {
+            return response
+        }
+        
         // 处理响应数据中的大数字
         if (response.data) {
             response.data = processLargeNumbers(response.data)
@@ -889,8 +894,11 @@ class ApiService {
         startDate?: string
         endDate?: string
         search?: string
-    } = {}): Promise<any> {
-        const response = await apiClient.get('/api/checkin/export', { params })
+    } = {}): Promise<Blob> {
+        const response = await apiClient.get('/api/checkin/export', { 
+            params,
+            responseType: 'blob' // 重要：指定响应类型为blob
+        })
         return response.data
     }
 

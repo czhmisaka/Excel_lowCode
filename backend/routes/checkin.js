@@ -189,4 +189,60 @@ router.get('/records', CheckinController.getCheckinHistory);
  */
 router.delete('/record/:recordId', CheckinController.deleteCheckinRecord);
 
+/**
+ * @swagger
+ * /api/checkin/export:
+ *   get:
+ *     summary: 导出打卡记录为Excel
+ *     tags: [签到管理]
+ *     parameters:
+ *       - in: query
+ *         name: companyId
+ *         schema:
+ *           type: string
+ *         description: 公司ID
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: 开始日期（格式：YYYY-MM-DD）
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: 结束日期（格式：YYYY-MM-DD）
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: 搜索关键词（姓名或手机号）
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: 页码（用于分页查询）
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 1000
+ *         description: 每页数量（最大1000）
+ *     responses:
+ *       200:
+ *         description: Excel文件下载
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       400:
+ *         description: 参数错误
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.get('/export', CheckinController.exportCheckinRecords);
+
 module.exports = router;
