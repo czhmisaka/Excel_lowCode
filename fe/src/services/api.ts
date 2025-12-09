@@ -913,6 +913,14 @@ class ApiService {
         const response = await apiClient.delete(`/api/checkin/record/${recordId}`)
         return response.data
     }
+
+    // 批量删除打卡记录
+    async batchDeleteCheckinRecords(recordIds: string[]): Promise<any> {
+        const response = await apiClient.delete('/api/checkin/records/batch', {
+            data: { recordIds }
+        })
+        return response.data
+    }
 }
 
 export const apiService = new ApiService()

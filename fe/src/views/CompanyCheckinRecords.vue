@@ -42,9 +42,37 @@
             </el-row>
         </div>
 
+        <!-- 批量操作工具栏 -->
+        <div v-if="selectedRecords.length > 0" class="batch-toolbar modern-card" style="margin-bottom: 15px; padding: 12px 20px;">
+            <el-row :gutter="20" align="middle">
+                <el-col :span="12">
+                    <span style="font-size: 14px; color: #606266;">
+                        已选择 <strong style="color: #409EFF;">{{ selectedRecords.length }}</strong> 条记录
+                    </span>
+                </el-col>
+                <el-col :span="12" class="text-right">
+                    <el-button type="danger" :icon="Delete" @click="handleBatchDelete" :disabled="batchDeleting">
+                        {{ batchDeleting ? '删除中...' : '批量删除' }}
+                    </el-button>
+                    <el-button @click="clearSelection">
+                        取消选择
+                    </el-button>
+                </el-col>
+            </el-row>
+        </div>
+
         <!-- 打卡记录表格 -->
         <div class="modern-card" style="margin-bottom: 20px;">
-            <el-table v-loading="loading" :data="checkinRecords" border stripe class="modern-table" style="width: 100%">
+            <el-table 
+                v-loading="loading" 
+                :data="checkinRecords" 
+                border 
+                stripe 
+                class="modern-table" 
+                style="width: 100%"
+                @selection-change="handleSelectionChange"
+            >
+                <el-table-column type="selection" width="55" />
                 <el-table-column prop="id" label="ID" width="80" />
                 <el-table-column prop="realName" label="姓名" min-width="100">
                     <template #default="{ row }">
@@ -154,6 +182,8 @@ const searchKeyword = ref('')
 const dateRange = ref<string[]>([])
 const companyName = ref('')
 const checkinRecords = ref<CheckinRecord[]>([])
+const selectedRecords = ref<CheckinRecord[]>([])
+const batchDeleting = ref(false)
 
 const pagination = reactive({
     currentPage: 1,
@@ -342,6 +372,60 @@ const handleDelete = async (recordId: string) => {
             ElMessage.error(error.message || '删除失败')
         }
     }
+}
+
+// 处理表格选择变化
+const handleSelectionChange = (selection: CheckinRecord[]) => {
+    selectedRecords.value = selection
+}
+
+// 批量删除打卡记录
+const handleBatchDelete = async () => {
+    if (selectedRecords.value.length === 0) {
+        ElMessage.warning('请先选择要删除的记录')
+        return
+    }
+
+    try {
+        // 确认批量删除
+        await ElMessageBox.confirm(
+            `确定要删除选中的 ${selectedRecords.value.length} 条打卡记录吗？此操作不可恢复。`,
+            '确认批量删除',
+            {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning',
+            }
+        )
+
+        batchDeleting.value = true
+
+        // 提取记录ID
+        const recordIds = selectedRecords.value.map(record => record.id)
+
+        // 执行批量删除
+        const response = await apiService.batchDeleteCheckinRecords(recordIds)
+        if (response.success) {
+            ElMessage.success(`成功删除 ${response.data?.deletedCount || selectedRecords.value.length} 条打卡记录`)
+            // 清空选择
+            selectedRecords.value = []
+            // 重新加载数据
+            loadCheckinRecords()
+        } else {
+            ElMessage.error(response.message || '批量删除失败')
+        }
+    } catch (error: any) {
+        if (error !== 'cancel') {
+            ElMessage.error(error.message || '批量删除失败')
+        }
+    } finally {
+        batchDeleting.value = false
+    }
+}
+
+// 清空选择
+const clearSelection = () => {
+    selectedRecords.value = []
 }
 
 const handleBack = () => {

@@ -468,11 +468,78 @@ const exportCheckinRecords = async (req, res) => {
   }
 };
 
+/**
+ * 批量删除打卡记录（软删除）
+ */
+const batchDeleteCheckinRecords = async (req, res) => {
+  try {
+    const { recordIds } = req.body;
+
+    // 验证输入参数
+    if (!recordIds || !Array.isArray(recordIds) || recordIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '请提供要删除的记录ID数组'
+      });
+    }
+
+    // 验证ID数组中的每个元素都是数字
+    const invalidIds = recordIds.filter(id => isNaN(parseInt(id)));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `包含无效的记录ID: ${invalidIds.join(', ')}`
+      });
+    }
+
+    // 使用事务确保批量操作的一致性
+    const transaction = await CheckinRecord.sequelize.transaction();
+
+    try {
+      // 批量更新记录，设置 isActive 为 false（软删除）
+      const [affectedCount] = await CheckinRecord.update(
+        { isActive: false },
+        {
+          where: {
+            id: { [Op.in]: recordIds },
+            isActive: true // 只更新有效的记录
+          },
+          transaction
+        }
+      );
+
+      // 提交事务
+      await transaction.commit();
+
+      res.json({
+        success: true,
+        message: `成功删除 ${affectedCount} 条打卡记录`,
+        data: {
+          deletedCount: affectedCount,
+          totalRequested: recordIds.length
+        }
+      });
+    } catch (error) {
+      // 回滚事务
+      await transaction.rollback();
+      throw error;
+    }
+  } catch (error) {
+    console.error('批量删除打卡记录失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '批量删除打卡记录失败',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   checkin,
   checkout,
   getCheckinHistory,
   getTodayStatus,
   deleteCheckinRecord,
-  exportCheckinRecords
+  exportCheckinRecords,
+  batchDeleteCheckinRecords
 };

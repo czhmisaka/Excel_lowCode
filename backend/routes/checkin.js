@@ -245,4 +245,50 @@ router.delete('/record/:recordId', CheckinController.deleteCheckinRecord);
  */
 router.get('/export', CheckinController.exportCheckinRecords);
 
+/**
+ * @swagger
+ * /api/checkin/records/batch:
+ *   delete:
+ *     summary: 批量删除打卡记录
+ *     tags: [签到管理]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - recordIds
+ *             properties:
+ *               recordIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: 要删除的记录ID数组
+ *     responses:
+ *       200:
+ *         description: 批量删除成功
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deletedCount:
+ *                       type: integer
+ *                     totalRequested:
+ *                       type: integer
+ *       400:
+ *         description: 参数错误（如recordIds为空或不是数组）
+ *       500:
+ *         description: 服务器内部错误
+ */
+router.delete('/records/batch', CheckinController.batchDeleteCheckinRecords);
+
 module.exports = router;
