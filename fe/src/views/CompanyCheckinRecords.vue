@@ -237,9 +237,14 @@ const loadCheckinRecords = async () => {
     try {
         const response = await apiService.getCheckinRecords(queryParams.value)
         if (response.success) {
-            const recordsData = response.data?.data || response.data
+            // 修复：response.data 已经是数据数组，不需要 response.data.data
+            const recordsData = response.data
             checkinRecords.value = Array.isArray(recordsData) ? recordsData : []
-            pagination.total = response.data?.pagination?.total || checkinRecords.value.length
+            
+            // 修复：分页信息在 response.pagination，不是 response.data.pagination
+            // 修复：避免 0 被误判为假值
+            const total = response.pagination?.total
+            pagination.total = total !== undefined ? total : checkinRecords.value.length
             
             // 加载公司信息
             await loadCompanyInfo()

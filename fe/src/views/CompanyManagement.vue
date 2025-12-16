@@ -210,10 +210,14 @@ const loadCompanies = async () => {
         
         const response = await apiService.getCompanies(params)
         if (response.success) {
-            // 正确处理 API 返回的数据结构
-            const companiesData = response.data?.data || response.data
+            // 修复：response.data 已经是数据数组，不需要 response.data.data
+            const companiesData = response.data
             companyList.value = Array.isArray(companiesData) ? companiesData : []
-            pagination.total = response.data?.pagination?.total || companyList.value.length
+            
+            // 修复：分页信息在 response.pagination，不是 response.data.pagination
+            // 修复：避免 0 被误判为假值
+            const total = response.pagination?.total
+            pagination.total = total !== undefined ? total : companyList.value.length
         } else {
             ElMessage.error(response.message || '获取公司列表失败')
             companyList.value = [] // 确保数据是数组

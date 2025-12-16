@@ -228,10 +228,14 @@ const loadUsers = async () => {
     try {
         const response = await apiService.getUsers()
         if (response.success) {
-            // 正确处理 API 返回的数据结构：response.data.data.users
-            const usersData = response.data?.data?.users || response.data?.users || response.data
+            // 修复：response.data 已经是数据数组，不需要 response.data.data.users
+            const usersData = response.data
             userList.value = Array.isArray(usersData) ? usersData : []
-            pagination.total = response.data?.data?.pagination?.total || response.data?.pagination?.total || userList.value.length
+            
+            // 修复：分页信息在 response.pagination，不是 response.data.pagination
+            // 修复：避免 0 被误判为假值
+            const total = response.pagination?.total
+            pagination.total = total !== undefined ? total : userList.value.length
         } else {
             ElMessage.error(response.message || '获取用户列表失败')
             userList.value = [] // 确保数据是数组

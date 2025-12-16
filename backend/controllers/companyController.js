@@ -1,5 +1,5 @@
 // 公司配置管理控制器
-const { Company } = require('../models');
+const { Company, LaborSource } = require('../models');
 
 /**
  * 获取公司列表
@@ -123,6 +123,47 @@ const getCompany = async (req, res) => {
 };
 
 /**
+ * 为指定公司创建默认劳务来源
+ */
+const createDefaultLaborSources = async (companyId) => {
+  try {
+    const defaultLaborSources = [
+      { name: '汇博劳务公司', code: '汇博劳务公司', description: '默认劳务公司 - 汇博劳务公司', sortOrder: 1 },
+      { name: '恒信劳务公司', code: '恒信劳务公司', description: '默认劳务公司 - 恒信劳务公司', sortOrder: 2 },
+      { name: '其他类（临时工）', code: '其他类（临时工）', description: '默认劳务公司 - 其他类（临时工）', sortOrder: 3 }
+    ];
+
+    const createdSources = [];
+    
+    for (const sourceData of defaultLaborSources) {
+      // 检查是否已存在相同代码的劳务来源
+      const existingSource = await LaborSource.findOne({
+        where: {
+          companyId,
+          code: sourceData.code
+        }
+      });
+
+      if (!existingSource) {
+        const laborSource = await LaborSource.create({
+          ...sourceData,
+          companyId,
+          isActive: true
+        });
+        createdSources.push(laborSource);
+      }
+    }
+
+    console.log(`为公司ID ${companyId} 创建了 ${createdSources.length} 个默认劳务来源`);
+    return createdSources;
+  } catch (error) {
+    console.error('创建默认劳务来源失败:', error);
+    // 不抛出错误，避免影响公司创建
+    return [];
+  }
+};
+
+/**
  * 创建公司
  */
 const createCompany = async (req, res) => {
@@ -160,6 +201,9 @@ const createCompany = async (req, res) => {
       checkoutUrl,
       requireCheckout
     });
+
+    // 为公司创建默认劳务来源
+    await createDefaultLaborSources(company.id);
 
     res.status(201).json({
       success: true,
@@ -308,6 +352,13 @@ const batchCreateCompanies = async (req, res) => {
 
     // 批量创建公司
     const createdCompanies = await Company.bulkCreate(validCompanies);
+
+    // 为每个新创建的公司创建默认劳务来源
+    const laborSourcePromises = createdCompanies.map(company => 
+      createDefaultLaborSources(company.id)
+    );
+    
+    await Promise.all(laborSourcePromises);
 
     res.status(201).json({
       success: true,

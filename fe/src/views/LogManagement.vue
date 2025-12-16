@@ -319,8 +319,14 @@ const loadLogs = async () => {
 
         const response = await apiService.getLogs(params)
         if (response.success) {
-            logList.value = response.data.logs || response.data
-            pagination.total = response.data.pagination?.total || logList.value.length
+            // 修复：response.data 已经是数据数组，不需要 response.data.logs
+            const logsData = response.data
+            logList.value = Array.isArray(logsData) ? logsData : []
+            
+            // 修复：分页信息在 response.pagination，不是 response.data.pagination
+            // 修复：避免 0 被误判为假值
+            const total = response.pagination?.total
+            pagination.total = total !== undefined ? total : logList.value.length
         } else {
             ElMessage.error(response.message || '获取日志列表失败')
         }
