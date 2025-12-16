@@ -1,8 +1,8 @@
 <!--
  * @Date: 2025-11-11 00:50:04
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-25 18:37:50
- * @FilePath: /lowCode_excel/task.md
+ * @LastEditTime: 2025-12-12 10:27:30
+ * @FilePath: /打卡/task.md
 -->
 # 自动建表模块开发任务 ✅ 完成
 
@@ -528,3 +528,223 @@ backup/
 
 ## 当前状态
 ✅ JavaScript精度问题解决方案开发完成并测试通过
+
+# 临时测试脚本清理任务 ✅ 完成
+
+## 任务描述
+清理项目内的非必要的临时测试脚本，优化项目结构，提高代码库的可维护性。
+
+## 任务清单
+
+- [x] 分析项目中的临时测试脚本
+- [x] 制定清理计划
+- [x] 执行根目录清理
+- [x] 执行backend目录清理
+- [x] 执行其他目录清理
+- [x] 验证清理结果
+- [x] 更新task.md记录
+
+## 清理完成情况
+
+### 清理文件统计
+- ✅ **根目录测试脚本**: 9个文件
+- ✅ **backend目录测试脚本**: 6个文件
+- ✅ **MCPServer目录测试脚本**: 2个文件
+- ✅ **fe目录测试脚本**: 2个文件
+- ✅ **测试Excel文件**: 1个文件
+
+### 清理文件列表
+
+#### 根目录清理文件
+1. `test_checkin_simple.js` - 简单的签到功能测试
+2. `test_checkin_fix.js` - 签到功能修复测试
+3. `test_labor_source.js` - 劳务来源功能测试
+4. `test_labor_source_final.js` - 劳务来源最终测试
+5. `test_labor_source_fix.js` - 劳务来源修复测试
+6. `test_new_checkin_system.js` - 新签到系统测试
+7. `test_null_compliance.js` - 空值合规性测试
+8. `test_large_numbers.js` - 大数字测试
+9. `test_fix_verification.js` - 修复验证测试
+10. `test_large_numbers.xlsx` - 大数字测试Excel文件
+
+#### backend目录清理文件
+1. `backend/test_db_connection.js` - 数据库连接测试
+2. `backend/test_final_checkin_system.js` - 最终签到系统测试
+3. `backend/test_new_checkin_system.js` - 新签到系统功能测试
+4. `backend/test_sqlite_connection.js` - SQLite连接测试
+5. `backend/test_upload_preview.js` - 上传预览测试
+6. `backend/testTableController.js` - 表控制器测试
+
+#### MCPServer目录清理文件
+1. `MCPServer/testAllTools.js` - 所有MCP工具测试
+2. `MCPServer/testConnection.js` - 连接测试
+
+#### fe目录清理文件
+1. `fe/test_api_formdata.js` - API表单数据测试
+2. `fe/test_frontend_upload.js` - 前端上传测试
+
+### 保留文件说明
+以下文件被保留，因为它们可能仍有用途：
+1. `backend/final_verification.js` - 最终验证脚本（可能用于部署验证）
+2. `backend/updateTableDefinitions.js` - 表定义更新脚本（维护工具）
+3. `backend/tests/queryPerformanceTest.js` - 正式的查询性能测试
+
+### 清理成果
+1. **项目结构更清晰**: 减少了20个临时测试文件的干扰
+2. **代码库更整洁**: 专注于核心业务代码和正式测试
+3. **维护性提高**: 更容易识别和管理重要的测试文件
+4. **存储空间优化**: 减少了不必要的文件占用
+
+### 验证结果
+✅ 所有临时测试脚本已成功清理
+✅ 项目核心功能不受影响
+✅ 正式的测试文件保留完整
+✅ 项目结构更加清晰
+
+## 当前状态
+✅ 临时测试脚本清理任务完成并验证通过
+
+# 公司打卡配置管理功能开发任务 ✅ 完成
+
+## 任务描述
+增加公司打卡的配置管理功能，用户可以选择是否需要签退+计算工作时长。
+
+## 任务清单
+
+- [x] 分析当前打卡系统实现
+- [x] 设计配置管理功能方案
+- [x] 后端：修改Company模型，添加requireCheckout字段
+- [x] 后端：更新companyController.js，支持requireCheckout字段的创建和更新
+- [x] 前端：更新CompanyManagement.vue，添加requireCheckout配置开关
+- [x] 前端：更新api.ts中的Company接口和API方法
+- [x] 前端：更新CheckoutPage.vue，根据公司配置显示不同提示
+- [x] 前端：更新CheckinPage.vue，根据公司配置显示不同提示
+- [x] 后端：更新checkinController.js，在签退时检查公司配置
+
+## 功能实现
+
+### 核心特性
+- ✅ **公司配置管理**: 管理员可以配置公司是否需要签退功能
+- ✅ **灵活的工作时长计算**: 需要签退的公司自动计算工作时长
+- ✅ **前端智能提示**: 根据公司配置显示不同的界面提示
+- ✅ **后端验证**: 签退时检查公司配置，防止不必要的签退操作
+
+### 数据库修改
+1. **Company模型** (`backend/models/Company.js`)
+   - 添加 `requireCheckout` 字段，默认值为 `true`
+   - 类型为 `BOOLEAN`，表示是否需要签退功能
+
+### 后端API修改
+1. **公司创建API** (`backend/controllers/companyController.js`)
+   - 支持 `requireCheckout` 参数，默认值为 `true`
+   - 创建公司时自动设置签退配置
+
+2. **公司更新API** (`backend/controllers/companyController.js`)
+   - 支持更新 `requireCheckout` 字段
+   - 管理员可以随时修改公司的签退配置
+
+3. **签退验证** (`backend/controllers/checkinController.js`)
+   - 签退时检查公司的 `requireCheckout` 配置
+   - 如果公司不需要签退，返回相应的提示信息
+
+### 前端界面修改
+1. **公司管理页面** (`fe/src/views/CompanyManagement.vue`)
+   - 添加"是否需要签退"开关控件
+   - 开关标签：需要签退（含工作时长计算） vs 只需签到
+   - 支持创建和编辑公司时配置签退选项
+
+2. **签退页面** (`fe/src/views/CheckoutPage.vue`)
+   - 根据公司配置显示不同的状态标签
+   - 如果公司不需要签退，签退按钮显示"该公司只需签到"
+   - 签退时验证公司配置，防止不必要的签退操作
+
+3. **签到页面** (`fe/src/views/CheckinPage.vue`)
+   - 根据公司配置显示不同的状态标签
+   - 提示用户该公司是否需要签退
+
+### TypeScript接口更新
+1. **Company接口** (`fe/src/services/api.ts`)
+   - 添加 `requireCheckout?: boolean` 字段
+   - 更新 `createCompany` 和 `updateCompany` 方法的参数类型
+
+### 配置选项说明
+- **需要签退（含工作时长计算）**: 员工需要签到和签退，系统自动计算工作时长
+- **只需签到**: 员工只需签到，无需签退，不计算工作时长
+
+## 使用场景
+
+### 场景1：需要完整考勤记录的公司
+- 配置：需要签退（含工作时长计算）
+- 员工操作：签到 → 工作 → 签退
+- 系统功能：记录签到时间、签退时间、自动计算工作时长
+
+### 场景2：只需记录出勤的公司
+- 配置：只需签到
+- 员工操作：签到
+- 系统功能：只记录签到时间，不要求签退，不计算工作时长
+
+## 测试验证
+✅ 公司管理页面可以正常配置requireCheckout选项
+✅ 创建公司时默认启用签退功能
+✅ 编辑公司时可以修改签退配置
+✅ 签退页面根据公司配置显示正确的提示信息
+✅ 签退时验证公司配置，防止不必要的签退操作
+✅ 签到页面根据公司配置显示相应的状态标签
+
+## 当前状态
+✅ 公司打卡配置管理功能开发完成并测试通过
+
+# 公司打卡记录页面加载问题修复 ✅ 完成
+
+## 问题描述
+点击公司管理页面的"打卡记录"按钮时出现错误：
+```
+TypeError: Failed to fetch dynamically imported module: http://localhost:8080/assets/CompanyCheckinRecords-DGQ1dUEY.js
+```
+
+## 问题分析
+1. **端口不匹配**: 错误信息显示端口8080，但当前Vite开发服务器运行在端口5173
+2. **缓存问题**: 浏览器可能缓存了旧的模块文件路径
+3. **旧进程残留**: 可能有旧的开发服务器进程在端口8080运行
+
+## 修复步骤
+
+- [x] 检查CompanyCheckinRecords组件文件是否存在
+- [x] 检查路由配置是否正确
+- [x] 停止端口8080的旧进程
+- [x] 重新构建前端项目
+- [x] 启动正确的开发服务器（端口5173）
+
+## 解决方案
+
+### 1. 验证组件和路由
+- ✅ CompanyCheckinRecords.vue文件存在且语法正确
+- ✅ 路由配置正确，路径为`/company-checkin-records/:id`
+
+### 2. 清理旧进程
+- 使用命令`lsof -ti:8080 | xargs kill -9`停止端口8080的所有进程
+- 确保没有旧的开发服务器占用端口
+
+### 3. 重新构建和启动
+- 执行`npm run build`重新构建前端项目
+- 启动Vite开发服务器在端口5173
+
+### 4. 验证修复
+- 开发服务器成功启动在`http://localhost:5173/`
+- 构建生成了正确的组件文件`CompanyCheckinRecords-DbBO-UND.js`
+
+## 技术说明
+- **Vite配置**: 端口5173，代理配置正确
+- **动态导入**: Vue Router使用动态导入(`import()`)加载组件
+- **缓存机制**: 浏览器缓存可能导致模块路径错误
+- **端口冲突**: 多个开发服务器实例可能导致资源加载失败
+
+## 预防措施
+1. **统一端口**: 确保所有开发环境使用相同的端口配置
+2. **清理缓存**: 开发时定期清理浏览器缓存
+3. **进程管理**: 启动新服务器前检查并停止旧进程
+4. **构建验证**: 重要更改后重新构建项目
+
+## 当前状态
+✅ 公司打卡记录页面加载问题已修复
+✅ 用户可以正常访问公司打卡记录页面

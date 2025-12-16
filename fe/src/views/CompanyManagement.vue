@@ -41,8 +41,11 @@
                         {{ formatDate(row.createdAt) }}
                     </template>
                 </el-table-column>
-                <el-table-column label="操作" width="320" fixed="right">
+                <el-table-column label="操作" width="380" fixed="right">
                     <template #default="{ row }">
+                        <el-button size="small" type="info" :icon="List" @click="handleManageLaborSources(row)">
+                            劳务来源
+                        </el-button>
                         <el-button size="small" type="success" :icon="View" @click="handleViewCheckinRecords(row)">
                             打卡记录
                         </el-button>
@@ -84,6 +87,11 @@
                         <el-switch v-model="companyForm.status" active-value="active" inactive-value="inactive" 
                             active-text="启用" inactive-text="禁用" />
                     </el-form-item>
+                    <el-form-item label="是否需要签退" prop="requireCheckout">
+                        <el-switch v-model="companyForm.requireCheckout" 
+                            active-text="需要签退（含工作时长计算）" 
+                            inactive-text="只需签到" />
+                    </el-form-item>
                 </el-form>
                 <template #footer>
                     <span class="dialog-footer">
@@ -110,7 +118,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Edit, Delete, Refresh, Search, View, Promotion } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Refresh, Search, View, Promotion, List } from '@element-plus/icons-vue'
 import { apiService } from '@/services/api'
 import QRCodeDialog from '@/components/QRCodeDialog.vue'
 
@@ -122,6 +130,7 @@ interface Company {
     status: string
     checkinUrl?: string
     checkoutUrl?: string
+    requireCheckout?: boolean
     createdAt: string
     updatedAt: string
 }
@@ -131,6 +140,7 @@ interface CompanyForm {
     code: string
     description: string
     status: string
+    requireCheckout: boolean
 }
 
 // 响应式数据
@@ -156,7 +166,8 @@ const companyForm = reactive<CompanyForm>({
     name: '',
     code: '',
     description: '',
-    status: 'active'
+    status: 'active',
+    requireCheckout: true
 })
 
 // 计算属性
@@ -243,13 +254,18 @@ const handleEditCompany = (company: Company) => {
         name: company.name,
         code: company.code,
         description: company.description || '',
-        status: company.status
+        status: company.status,
+        requireCheckout: company.requireCheckout !== undefined ? company.requireCheckout : true
     })
     dialogVisible.value = true
 }
 
 const handleViewCheckinRecords = (company: Company) => {
     router.push(`/company-checkin-records/${company.id}`)
+}
+
+const handleManageLaborSources = (company: Company) => {
+    router.push(`/company/${company.id}/labor-sources`)
 }
 
 const handleShowQRCode = (company: Company) => {
@@ -289,7 +305,8 @@ const resetForm = () => {
         name: '',
         code: '',
         description: '',
-        status: 'active'
+        status: 'active',
+        requireCheckout: true
     })
     editingCompanyId.value = null // 重置编辑状态
 }
@@ -307,7 +324,8 @@ const handleSubmitCompany = async () => {
             const companyData = {
                 name: companyForm.name,
                 description: companyForm.description,
-                status: companyForm.status
+                status: companyForm.status,
+                requireCheckout: companyForm.requireCheckout
             }
             const response = await apiService.updateCompany(editingCompanyId.value!, companyData)
             if (response.success) {
@@ -322,7 +340,8 @@ const handleSubmitCompany = async () => {
             const companyData = {
                 name: companyForm.name,
                 code: companyForm.code,
-                description: companyForm.description
+                description: companyForm.description,
+                requireCheckout: companyForm.requireCheckout
             }
             const response = await apiService.createCompany(companyData)
             if (response.success) {

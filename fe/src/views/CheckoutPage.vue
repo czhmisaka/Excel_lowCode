@@ -10,9 +10,14 @@
         <template #header>
           <div class="card-header">
             <span>签退信息</span>
-            <el-tag v-if="todayStatus.hasCheckedOut" type="success">已签退（可再次签退更新）</el-tag>
-            <el-tag v-else-if="todayStatus.hasCheckedIn" type="warning">已签到，待签退</el-tag>
-            <el-tag v-else type="info">未签到</el-tag>
+            <div>
+              <el-tag v-if="!company.requireCheckout" type="info" style="margin-right: 8px;">
+                该公司只需签到
+              </el-tag>
+              <el-tag v-if="todayStatus.hasCheckedOut" type="success">已签退（可再次签退更新）</el-tag>
+              <el-tag v-else-if="todayStatus.hasCheckedIn" type="warning">已签到，待签退</el-tag>
+              <el-tag v-else type="info">未签到</el-tag>
+            </div>
           </div>
         </template>
 
@@ -105,7 +110,8 @@ const company = ref({
   id: 0,
   name: '',
   code: '',
-  description: ''
+  description: '',
+  requireCheckout: true
 })
 
 const form = reactive({
@@ -154,6 +160,10 @@ const formatWorkDuration = (minutes: number | null) => {
 
 // 获取签退按钮文本
 const getCheckoutButtonText = () => {
+  if (!company.value.requireCheckout) {
+    return '该公司只需签到'
+  }
+  
   if (!todayStatus.value.hasCheckedIn) {
     return '请先签到'
   } else if (todayStatus.value.hasCheckedOut) {
@@ -225,6 +235,12 @@ const getCompanyInfo = async () => {
 const handleCheckout = async () => {
   try {
     await formRef.value.validate()
+
+    // 检查公司是否需要签退
+    if (!company.value.requireCheckout) {
+      ElMessage.warning('该公司只需签到，无需签退')
+      return
+    }
 
     checkoutLoading.value = true
 

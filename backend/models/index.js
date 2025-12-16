@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-09-27 23:17:13
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-27 14:42:12
+ * @LastEditTime: 2025-12-11 18:02:35
  * @FilePath: /打卡/backend/models/index.js
  */
 const { sequelize } = require('../config/database');
@@ -10,6 +10,7 @@ const User = require('./User');
 const TableLog = require('./TableLog');
 const CheckinRecord = require('./CheckinRecord');
 const Company = require('./Company');
+const LaborSource = require('./LaborSource');
 
 // 初始化 TableLog 模型
 const TableLogModel = TableLog(sequelize);
@@ -17,6 +18,7 @@ const TableLogModel = TableLog(sequelize);
 // 初始化签到系统模型
 const CheckinRecordModel = CheckinRecord(sequelize);
 const CompanyModel = Company(sequelize);
+const LaborSourceModel = LaborSource(sequelize);
 
 // 设置模型关联
 CheckinRecordModel.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
@@ -27,6 +29,10 @@ CompanyModel.hasMany(CheckinRecordModel, { foreignKey: 'company_id', as: 'checki
 // 添加User和Company之间的关联
 User.belongsTo(CompanyModel, { foreignKey: 'company_id', as: 'company' });
 CompanyModel.hasMany(User, { foreignKey: 'company_id', as: 'users' });
+
+// 添加LaborSource和Company之间的关联（逻辑关联，无外键约束）
+LaborSourceModel.belongsTo(CompanyModel, { foreignKey: 'company_id', as: 'company' });
+CompanyModel.hasMany(LaborSourceModel, { foreignKey: 'company_id', as: 'laborSources' });
 
 
 // 初始化所有模型
@@ -44,6 +50,7 @@ const initModels = async () => {
         await TableLogModel.sync(syncOptions);
         await CheckinRecordModel.sync(syncOptions);
         await CompanyModel.sync(syncOptions);
+        await LaborSourceModel.sync(syncOptions);
         
         console.log('数据库表同步成功');
 
@@ -52,7 +59,8 @@ const initModels = async () => {
             User,
             TableLog: TableLogModel,
             CheckinRecord: CheckinRecordModel,
-            Company: CompanyModel
+            Company: CompanyModel,
+            LaborSource: LaborSourceModel
         };
     } catch (error) {
         console.error('数据库表同步失败:', error);
@@ -248,6 +256,7 @@ module.exports = {
     TableLog,
     CheckinRecord: CheckinRecordModel,
     Company: CompanyModel,
+    LaborSource: LaborSourceModel,
     getDynamicModel,
     dropDynamicTable
 };

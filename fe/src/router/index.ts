@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-08-28 07:54:03
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-28 16:25:50
+ * @LastEditTime: 2025-12-11 18:09:55
  * @FilePath: /打卡/fe/src/router/index.ts
  */
 import { createRouter, createWebHistory } from 'vue-router'
@@ -96,6 +96,12 @@ const router = createRouter({
           path: '/company-checkin-records/:id',
           name: 'CompanyCheckinRecords',
           component: () => import('@/views/CompanyCheckinRecords.vue'),
+          meta: { requiresAdmin: true }
+        },
+        {
+          path: '/company/:companyId/labor-sources',
+          name: 'LaborSourceManagement',
+          component: () => import('@/views/LaborSourceManagement.vue'),
           meta: { requiresAdmin: true }
         }
       ]

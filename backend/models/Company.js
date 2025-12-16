@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-11-26 16:24:17
  * @LastEditors: CZH
- * @LastEditTime: 2025-11-27 11:00:58
+ * @LastEditTime: 2025-12-12 09:20:48
  * @FilePath: /打卡/backend/models/Company.js
  */
 const { DataTypes } = require('sequelize');
@@ -43,6 +43,12 @@ module.exports = (sequelize) => {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
     field: 'is_active'
+  },
+  requireCheckout: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'require_checkout',
+    comment: '是否需要签退（含工作时长计算）'
   },
   createdAt: {
     type: DataTypes.DATE,

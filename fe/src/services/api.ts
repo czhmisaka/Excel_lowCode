@@ -291,6 +291,7 @@ export interface Company {
     status: string
     checkinUrl?: string
     checkoutUrl?: string
+    requireCheckout?: boolean
     createdAt: string
     updatedAt: string
 }
@@ -846,6 +847,7 @@ class ApiService {
         name: string
         code: string
         description?: string
+        requireCheckout?: boolean
     }): Promise<any> {
         const response = await apiClient.post('/api/companies', companyData)
         return response.data
@@ -856,6 +858,7 @@ class ApiService {
         name?: string
         description?: string
         status?: string
+        requireCheckout?: boolean
     }): Promise<any> {
         const response = await apiClient.put(`/api/companies/${companyId}`, companyData)
         return response.data
@@ -919,6 +922,80 @@ class ApiService {
         const response = await apiClient.delete('/api/checkin/records/batch', {
             data: { recordIds }
         })
+        return response.data
+    }
+
+    // === 劳务来源管理API ===
+
+    // 获取公司的劳务来源列表
+    async getLaborSources(companyId: string, params: {
+        page?: number
+        limit?: number
+        search?: string
+        isActive?: boolean
+        sortBy?: string
+        sortOrder?: string
+    } = {}): Promise<any> {
+        const response = await apiClient.get(`/api/companies/${companyId}/labor-sources`, { params })
+        return response.data
+    }
+
+    // 获取公司启用的劳务来源列表（用于下拉选择）
+    async getActiveLaborSources(companyId: string): Promise<any> {
+        const response = await apiClient.get(`/api/companies/${companyId}/labor-sources/active`)
+        return response.data
+    }
+
+    // 根据公司代码获取启用的劳务来源列表（用于签到页面）
+    async getActiveLaborSourcesByCompanyCode(companyCode: string): Promise<any> {
+        const response = await apiClient.get(`/api/labor-sources/company/${companyCode}/active`)
+        return response.data
+    }
+
+    // 获取单个劳务来源
+    async getLaborSource(companyId: string, laborSourceId: string): Promise<any> {
+        const response = await apiClient.get(`/api/companies/${companyId}/labor-sources/${laborSourceId}`)
+        return response.data
+    }
+
+    // 创建劳务来源
+    async createLaborSource(companyId: string, laborSourceData: {
+        name: string
+        code: string
+        description?: string
+        isActive?: boolean
+        sortOrder?: number
+    }): Promise<any> {
+        const response = await apiClient.post(`/api/companies/${companyId}/labor-sources`, laborSourceData)
+        return response.data
+    }
+
+    // 更新劳务来源
+    async updateLaborSource(companyId: string, laborSourceId: string, laborSourceData: {
+        name?: string
+        description?: string
+        isActive?: boolean
+        sortOrder?: number
+    }): Promise<any> {
+        const response = await apiClient.put(`/api/companies/${companyId}/labor-sources/${laborSourceId}`, laborSourceData)
+        return response.data
+    }
+
+    // 删除劳务来源
+    async deleteLaborSource(companyId: string, laborSourceId: string): Promise<any> {
+        const response = await apiClient.delete(`/api/companies/${companyId}/labor-sources/${laborSourceId}`)
+        return response.data
+    }
+
+    // 切换劳务来源启用状态
+    async toggleLaborSourceStatus(companyId: string, laborSourceId: string): Promise<any> {
+        const response = await apiClient.put(`/api/companies/${companyId}/labor-sources/${laborSourceId}/toggle`)
+        return response.data
+    }
+
+    // 批量创建劳务来源
+    async batchCreateLaborSources(companyId: string, laborSources: any[]): Promise<any> {
+        const response = await apiClient.post(`/api/companies/${companyId}/labor-sources/batch`, { laborSources })
         return response.data
     }
 }

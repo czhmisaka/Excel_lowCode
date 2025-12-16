@@ -215,6 +215,7 @@ app.use('/api/tables', require('./routes/tables'));
 app.use('/api/cache', require('./routes/cache'));
 app.use('/api/checkin', require('./routes/checkin'));
 app.use('/api/companies', require('./routes/companies'));
+app.use('/api/labor-sources', require('./routes/laborSources'));
 
 // 404处理
 app.use('*', (req, res) => {

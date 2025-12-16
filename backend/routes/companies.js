@@ -207,4 +207,8 @@ router.delete('/:companyId', CompanyController.deleteCompany);
  */
 router.post('/batch', CompanyController.batchCreateCompanies);
 
+// 嵌套劳务来源路由
+const laborSourcesRouter = require('./laborSources');
+router.use('/:companyId/labor-sources', laborSourcesRouter);
+
 module.exports = router;

@@ -20,6 +20,28 @@ function calculateWorkDuration(checkinTime, checkoutTime) {
 }
 
 /**
+ * 获取公司的劳务来源选项
+ */
+const getCompanyLaborSources = async (companyId) => {
+  try {
+    const { LaborSource } = require('../models');
+    const laborSources = await LaborSource.findAll({
+      where: {
+        companyId: companyId,
+        isActive: true
+      },
+      attributes: ['code', 'name'],
+      order: [['sortOrder', 'ASC'], ['name', 'ASC']]
+    });
+    
+    return laborSources.map(source => source.code);
+  } catch (error) {
+    console.error('获取公司劳务来源失败:', error);
+    return [];
+  }
+};
+
+/**
  * 签到逻辑
  */
 const checkin = async (req, res) => {
@@ -31,15 +53,6 @@ const checkin = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: '劳务来源为必填项'
-      });
-    }
-    
-    // 验证劳务来源选项
-    const validLaborSources = ['汇博劳务公司', '恒信劳务公司', '其他类（临时工）'];
-    if (!validLaborSources.includes(laborSource)) {
-      return res.status(400).json({
-        success: false,
-        message: '劳务来源选项无效，请选择有效的劳务来源'
       });
     }
     
@@ -57,6 +70,25 @@ const checkin = async (req, res) => {
         message: '公司不存在或已停用'
       });
     }
+    
+    // 获取公司的劳务来源选项
+    const validLaborSources = await getCompanyLaborSources(company.id);
+    
+    if (validLaborSources.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '该公司未配置劳务来源选项，请联系管理员配置'
+      });
+    }
+    
+    // 验证劳务来源选项
+    if (!validLaborSources.includes(laborSource)) {
+      return res.status(400).json({
+        success: false,
+        message: '劳务来源选项无效，请选择有效的劳务来源'
+      });
+    }
+    
     
     // 2. 检查今日是否已签到
     const { startOfDay, endOfDay } = getDayRange();
@@ -140,6 +172,14 @@ const checkout = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: '公司不存在或已停用'
+      });
+    }
+    
+    // 检查公司是否需要签退
+    if (!company.requireCheckout) {
+      return res.status(400).json({
+        success: false,
+        message: '该公司只需签到，无需签退'
       });
     }
     

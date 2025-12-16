@@ -10,8 +10,13 @@
         <template #header>
           <div class="card-header">
             <span>签到信息</span>
-            <el-tag v-if="todayStatus.hasCheckedIn" type="success">今日已签到</el-tag>
-            <el-tag v-else type="info">未签到</el-tag>
+            <div>
+              <el-tag v-if="!company.requireCheckout" type="info" style="margin-right: 8px;">
+                该公司只需签到
+              </el-tag>
+              <el-tag v-if="todayStatus.hasCheckedIn" type="success">今日已签到</el-tag>
+              <el-tag v-else type="info">未签到</el-tag>
+            </div>
           </div>
         </template>
 
@@ -40,16 +45,20 @@
             />
           </el-form-item>
 
-          <el-form-item label="劳务来源" prop="laborSource">
+          <el-form-item label="隶属单位" prop="laborSource">
             <el-select
               v-model="form.laborSource"
-              placeholder="请选择劳务来源"
+              placeholder="请选择隶属单位"
               style="width: 100%"
               :disabled="todayStatus.hasCheckedIn"
+              :loading="loadingLaborSources"
             >
-              <el-option label="汇博劳务公司" value="汇博劳务公司" />
-              <el-option label="恒信劳务公司" value="恒信劳务公司" />
-              <el-option label="其他类（临时工）" value="其他类（临时工）" />
+              <el-option
+                v-for="source in laborSources"
+                :key="source.code"
+                :label="source.name"
+                :value="source.code"
+              />
             </el-select>
           </el-form-item>
 
@@ -123,7 +132,8 @@ const route = useRoute()
 const company = ref({
   name: '',
   code: '',
-  description: ''
+  description: '',
+  requireCheckout: true
 })
 
 const form = reactive({
@@ -136,6 +146,7 @@ const form = reactive({
 const formRef = ref()
 const loading = ref(false)
 const checkinLoading = ref(false)
+const loadingLaborSources = ref(false)
 const checkinResult = ref<any>(null)
 const todayStatus = ref({
   hasCheckedIn: false,
@@ -144,6 +155,7 @@ const todayStatus = ref({
   checkoutTime: null,
   workDuration: null
 })
+const laborSources = ref<Array<{code: string, name: string}>>([])
 
 // 表单验证规则
 const rules = {
@@ -156,7 +168,7 @@ const rules = {
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ],
   laborSource: [
-    { required: true, message: '请选择劳务来源', trigger: 'change' }
+    { required: true, message: '请选择隶属单位', trigger: 'change' }
   ]
 }
 
@@ -182,6 +194,8 @@ const getCompanyInfo = async () => {
     const response = await apiService.getCompanyByCode(companyCode)
     if (response.success) {
       company.value = response.data
+      // 获取公司的劳务来源选项
+      await getLaborSources(companyCode)
     } else {
       ElMessage.error('获取公司信息失败')
     }
@@ -190,6 +204,29 @@ const getCompanyInfo = async () => {
     ElMessage.error('获取公司信息失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 获取劳务来源选项
+const getLaborSources = async (companyCode: string) => {
+  try {
+    loadingLaborSources.value = true
+    const response = await apiService.getActiveLaborSourcesByCompanyCode(companyCode)
+    if (response.success) {
+      laborSources.value = response.data || []
+      if (laborSources.value.length === 0) {
+        ElMessage.warning('该公司未配置隶属单位选项，请联系管理员配置')
+      }
+    } else {
+      ElMessage.error('获取隶属单位选项失败')
+      laborSources.value = []
+    }
+  } catch (error) {
+    console.error('获取隶属单位选项失败:', error)
+    ElMessage.error('获取隶属单位选项失败')
+    laborSources.value = []
+  } finally {
+    loadingLaborSources.value = false
   }
 }
 

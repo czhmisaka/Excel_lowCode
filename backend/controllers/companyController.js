@@ -127,7 +127,7 @@ const getCompany = async (req, res) => {
  */
 const createCompany = async (req, res) => {
   try {
-    const { name, code, description } = req.body;
+    const { name, code, description, requireCheckout = true } = req.body;
 
     // 验证必填字段
     if (!name || !code) {
@@ -157,7 +157,8 @@ const createCompany = async (req, res) => {
       code,
       description,
       checkinUrl,
-      checkoutUrl
+      checkoutUrl,
+      requireCheckout
     });
 
     res.status(201).json({
@@ -189,7 +190,7 @@ const createCompany = async (req, res) => {
 const updateCompany = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const { name, description, isActive } = req.body;
+    const { name, description, isActive, requireCheckout } = req.body;
 
     const company = await Company.findByPk(companyId);
     if (!company) {
@@ -203,7 +204,8 @@ const updateCompany = async (req, res) => {
     await company.update({
       name: name || company.name,
       description: description !== undefined ? description : company.description,
-      isActive: isActive !== undefined ? isActive : company.isActive
+      isActive: isActive !== undefined ? isActive : company.isActive,
+      requireCheckout: requireCheckout !== undefined ? requireCheckout : company.requireCheckout
     });
 
     res.json({
