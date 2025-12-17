@@ -20,6 +20,17 @@
             </div>
           </div>
         </template>
+        
+        <!-- 时间限制提示 -->
+        <div v-if="company.enableCheckoutTimeLimit" class="time-limit-notice">
+          <el-alert 
+            type="info" 
+            :title="`签退时间限制：${formatTimeRange(company.checkoutStartTime, company.checkoutEndTime)}`"
+            :description="getCurrentTimeStatus('checkout')"
+            show-icon
+            :closable="false"
+          />
+        </div>
 
         <el-form :model="form" :rules="rules" ref="formRef" label-width="100px" v-loading="loading">
           <el-form-item label="姓名" prop="realName">
@@ -111,7 +122,13 @@ const company = ref({
   name: '',
   code: '',
   description: '',
-  requireCheckout: true
+  requireCheckout: true,
+  enableCheckinTimeLimit: false,
+  checkinStartTime: '',
+  checkinEndTime: '',
+  enableCheckoutTimeLimit: false,
+  checkoutStartTime: '',
+  checkoutEndTime: ''
 })
 
 const form = reactive({
@@ -156,6 +173,70 @@ const formatWorkDuration = (minutes: number | null) => {
   const hours = Math.floor(minutes / 60)
   const mins = minutes % 60
   return `${hours}小时${mins}分钟`
+}
+
+// 格式化时间范围
+const formatTimeRange = (startTime: string, endTime: string) => {
+  if (!startTime || !endTime) return ''
+  
+  const [startHour, startMinute] = startTime.split(':').map(Number)
+  const [endHour, endMinute] = endTime.split(':').map(Number)
+  
+  const startTotalMinutes = startHour * 60 + startMinute
+  const endTotalMinutes = endHour * 60 + endMinute
+  
+  if (endTotalMinutes < startTotalMinutes) {
+    // 跨天情况
+    return `${startTime} - 次日 ${endTime}`
+  } else {
+    // 正常情况
+    return `${startTime} - ${endTime}`
+  }
+}
+
+// 获取当前时间状态
+const getCurrentTimeStatus = (type: 'checkin' | 'checkout') => {
+  const now = new Date()
+  const currentHour = now.getHours()
+  const currentMinute = now.getMinutes()
+  const currentTotalMinutes = currentHour * 60 + currentMinute
+  
+  let startTime = ''
+  let endTime = ''
+  
+  if (type === 'checkin') {
+    startTime = company.value.checkinStartTime
+    endTime = company.value.checkinEndTime
+  } else {
+    startTime = company.value.checkoutStartTime
+    endTime = company.value.checkoutEndTime
+  }
+  
+  if (!startTime || !endTime) return ''
+  
+  const [startHour, startMinute] = startTime.split(':').map(Number)
+  const [endHour, endMinute] = endTime.split(':').map(Number)
+  
+  const startTotalMinutes = startHour * 60 + startMinute
+  const endTotalMinutes = endHour * 60 + endMinute
+  
+  // 检查是否在时间范围内
+  let isInRange = false
+  if (endTotalMinutes < startTotalMinutes) {
+    // 跨天情况：当前时间在开始时间之后或结束时间之前
+    isInRange = currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes
+  } else {
+    // 正常情况：当前时间在开始时间和结束时间之间
+    isInRange = currentTotalMinutes >= startTotalMinutes && currentTotalMinutes <= endTotalMinutes
+  }
+  
+  const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
+  
+  if (isInRange) {
+    return `当前时间 ${currentTimeStr} 在允许的时间范围内`
+  } else {
+    return `当前时间 ${currentTimeStr} 不在允许的时间范围内，请等待允许的时间段`
+  }
 }
 
 // 获取签退按钮文本
@@ -395,5 +476,9 @@ onMounted(async () => {
 
 .status-info .el-tag {
   margin-left: 8px;
+}
+
+.time-limit-notice {
+  margin-bottom: 20px;
 }
 </style>

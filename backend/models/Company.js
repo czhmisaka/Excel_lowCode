@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-11-26 16:24:17
  * @LastEditors: CZH
- * @LastEditTime: 2025-12-12 09:20:48
+ * @LastEditTime: 2025-12-17 14:18:15
  * @FilePath: /打卡/backend/models/Company.js
  */
 const { DataTypes } = require('sequelize');
@@ -49,6 +49,42 @@ module.exports = (sequelize) => {
     defaultValue: true,
     field: 'require_checkout',
     comment: '是否需要签退（含工作时长计算）'
+  },
+  enableCheckinTimeLimit: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'enable_checkin_time_limit',
+    comment: '是否开启签到时间限制'
+  },
+  checkinStartTime: {
+    type: DataTypes.TIME,
+    allowNull: true,
+    field: 'checkin_start_time',
+    comment: '签到开始时间（HH:mm）'
+  },
+  checkinEndTime: {
+    type: DataTypes.TIME,
+    allowNull: true,
+    field: 'checkin_end_time',
+    comment: '签到结束时间（HH:mm）'
+  },
+  enableCheckoutTimeLimit: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'enable_checkout_time_limit',
+    comment: '是否开启签退时间限制'
+  },
+  checkoutStartTime: {
+    type: DataTypes.TIME,
+    allowNull: true,
+    field: 'checkout_start_time',
+    comment: '签退开始时间（HH:mm）'
+  },
+  checkoutEndTime: {
+    type: DataTypes.TIME,
+    allowNull: true,
+    field: 'checkout_end_time',
+    comment: '签退结束时间（HH:mm）'
   },
   createdAt: {
     type: DataTypes.DATE,

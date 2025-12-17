@@ -71,9 +71,9 @@
             </div>
 
             <!-- 新增/编辑公司对话框 -->
-            <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px" :close-on-click-modal="false"
+            <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" :close-on-click-modal="false"
                 class="modern-dialog" append-to-body>
-                <el-form ref="companyFormRef" :model="companyForm" :rules="companyFormRules" label-width="100px">
+                <el-form ref="companyFormRef" :model="companyForm" :rules="companyFormRules" label-width="120px">
                     <el-form-item label="公司名称" prop="name">
                         <el-input v-model="companyForm.name" placeholder="请输入公司名称" />
                     </el-form-item>
@@ -92,6 +92,54 @@
                             active-text="需要签退（含工作时长计算）" 
                             inactive-text="只需签到" />
                     </el-form-item>
+                    
+                    <!-- 签到时间限制 -->
+                    <el-form-item label="签到时间限制">
+                        <el-switch v-model="companyForm.enableCheckinTimeLimit" 
+                            active-text="启用签到时间限制" 
+                            inactive-text="不限制" />
+                    </el-form-item>
+                    
+                    <template v-if="companyForm.enableCheckinTimeLimit">
+                        <el-form-item label="签到开始时间" prop="checkinStartTime">
+                            <el-time-picker v-model="companyForm.checkinStartTime" 
+                                placeholder="选择开始时间" 
+                                format="HH:mm" 
+                                value-format="HH:mm"
+                                style="width: 100%" />
+                        </el-form-item>
+                        <el-form-item label="签到结束时间" prop="checkinEndTime">
+                            <el-time-picker v-model="companyForm.checkinEndTime" 
+                                placeholder="选择结束时间" 
+                                format="HH:mm" 
+                                value-format="HH:mm"
+                                style="width: 100%" />
+                        </el-form-item>
+                    </template>
+                    
+                    <!-- 签退时间限制 -->
+                    <el-form-item label="签退时间限制">
+                        <el-switch v-model="companyForm.enableCheckoutTimeLimit" 
+                            active-text="启用签退时间限制" 
+                            inactive-text="不限制" />
+                    </el-form-item>
+                    
+                    <template v-if="companyForm.enableCheckoutTimeLimit">
+                        <el-form-item label="签退开始时间" prop="checkoutStartTime">
+                            <el-time-picker v-model="companyForm.checkoutStartTime" 
+                                placeholder="选择开始时间" 
+                                format="HH:mm" 
+                                value-format="HH:mm"
+                                style="width: 100%" />
+                        </el-form-item>
+                        <el-form-item label="签退结束时间" prop="checkoutEndTime">
+                            <el-time-picker v-model="companyForm.checkoutEndTime" 
+                                placeholder="选择结束时间" 
+                                format="HH:mm" 
+                                value-format="HH:mm"
+                                style="width: 100%" />
+                        </el-form-item>
+                    </template>
                 </el-form>
                 <template #footer>
                     <span class="dialog-footer">
@@ -131,6 +179,12 @@ interface Company {
     checkinUrl?: string
     checkoutUrl?: string
     requireCheckout?: boolean
+    enableCheckinTimeLimit?: boolean
+    checkinStartTime?: string
+    checkinEndTime?: string
+    enableCheckoutTimeLimit?: boolean
+    checkoutStartTime?: string
+    checkoutEndTime?: string
     createdAt: string
     updatedAt: string
 }
@@ -141,6 +195,12 @@ interface CompanyForm {
     description: string
     status: string
     requireCheckout: boolean
+    enableCheckinTimeLimit: boolean
+    checkinStartTime: string
+    checkinEndTime: string
+    enableCheckoutTimeLimit: boolean
+    checkoutStartTime: string
+    checkoutEndTime: string
 }
 
 // 响应式数据
@@ -167,7 +227,13 @@ const companyForm = reactive<CompanyForm>({
     code: '',
     description: '',
     status: 'active',
-    requireCheckout: true
+    requireCheckout: true,
+    enableCheckinTimeLimit: false,
+    checkinStartTime: '',
+    checkinEndTime: '',
+    enableCheckoutTimeLimit: false,
+    checkoutStartTime: '',
+    checkoutEndTime: ''
 })
 
 // 计算属性
@@ -259,7 +325,13 @@ const handleEditCompany = (company: Company) => {
         code: company.code,
         description: company.description || '',
         status: company.status,
-        requireCheckout: company.requireCheckout !== undefined ? company.requireCheckout : true
+        requireCheckout: company.requireCheckout !== undefined ? company.requireCheckout : true,
+        enableCheckinTimeLimit: company.enableCheckinTimeLimit !== undefined ? company.enableCheckinTimeLimit : false,
+        checkinStartTime: company.checkinStartTime || '',
+        checkinEndTime: company.checkinEndTime || '',
+        enableCheckoutTimeLimit: company.enableCheckoutTimeLimit !== undefined ? company.enableCheckoutTimeLimit : false,
+        checkoutStartTime: company.checkoutStartTime || '',
+        checkoutEndTime: company.checkoutEndTime || ''
     })
     dialogVisible.value = true
 }
@@ -310,7 +382,13 @@ const resetForm = () => {
         code: '',
         description: '',
         status: 'active',
-        requireCheckout: true
+        requireCheckout: true,
+        enableCheckinTimeLimit: false,
+        checkinStartTime: '',
+        checkinEndTime: '',
+        enableCheckoutTimeLimit: false,
+        checkoutStartTime: '',
+        checkoutEndTime: ''
     })
     editingCompanyId.value = null // 重置编辑状态
 }
@@ -329,7 +407,13 @@ const handleSubmitCompany = async () => {
                 name: companyForm.name,
                 description: companyForm.description,
                 status: companyForm.status,
-                requireCheckout: companyForm.requireCheckout
+                requireCheckout: companyForm.requireCheckout,
+                enableCheckinTimeLimit: companyForm.enableCheckinTimeLimit,
+                checkinStartTime: companyForm.checkinStartTime || undefined,
+                checkinEndTime: companyForm.checkinEndTime || undefined,
+                enableCheckoutTimeLimit: companyForm.enableCheckoutTimeLimit,
+                checkoutStartTime: companyForm.checkoutStartTime || undefined,
+                checkoutEndTime: companyForm.checkoutEndTime || undefined
             }
             const response = await apiService.updateCompany(editingCompanyId.value!, companyData)
             if (response.success) {
@@ -345,7 +429,13 @@ const handleSubmitCompany = async () => {
                 name: companyForm.name,
                 code: companyForm.code,
                 description: companyForm.description,
-                requireCheckout: companyForm.requireCheckout
+                requireCheckout: companyForm.requireCheckout,
+                enableCheckinTimeLimit: companyForm.enableCheckinTimeLimit,
+                checkinStartTime: companyForm.checkinStartTime || undefined,
+                checkinEndTime: companyForm.checkinEndTime || undefined,
+                enableCheckoutTimeLimit: companyForm.enableCheckoutTimeLimit,
+                checkoutStartTime: companyForm.checkoutStartTime || undefined,
+                checkoutEndTime: companyForm.checkoutEndTime || undefined
             }
             const response = await apiService.createCompany(companyData)
             if (response.success) {

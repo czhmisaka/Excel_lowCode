@@ -292,6 +292,12 @@ export interface Company {
     checkinUrl?: string
     checkoutUrl?: string
     requireCheckout?: boolean
+    enableCheckinTimeLimit?: boolean
+    checkinStartTime?: string
+    checkinEndTime?: string
+    enableCheckoutTimeLimit?: boolean
+    checkoutStartTime?: string
+    checkoutEndTime?: string
     createdAt: string
     updatedAt: string
 }
@@ -848,6 +854,12 @@ class ApiService {
         code: string
         description?: string
         requireCheckout?: boolean
+        enableCheckinTimeLimit?: boolean
+        checkinStartTime?: string
+        checkinEndTime?: string
+        enableCheckoutTimeLimit?: boolean
+        checkoutStartTime?: string
+        checkoutEndTime?: string
     }): Promise<any> {
         const response = await apiClient.post('/api/companies', companyData)
         return response.data
@@ -859,6 +871,12 @@ class ApiService {
         description?: string
         status?: string
         requireCheckout?: boolean
+        enableCheckinTimeLimit?: boolean
+        checkinStartTime?: string
+        checkinEndTime?: string
+        enableCheckoutTimeLimit?: boolean
+        checkoutStartTime?: string
+        checkoutEndTime?: string
     }): Promise<any> {
         const response = await apiClient.put(`/api/companies/${companyId}`, companyData)
         return response.data

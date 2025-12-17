@@ -1,5 +1,32 @@
 // 公司配置管理控制器
 const { Company, LaborSource } = require('../models');
+const { Op } = require('sequelize');
+
+/**
+ * 验证时间格式（HH:mm）
+ */
+const validateTimeFormat = (time) => {
+  if (!time) return true; // 允许空值
+  
+  const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  return timeRegex.test(time);
+};
+
+/**
+ * 验证时间范围
+ */
+const validateTimeRange = (startTime, endTime) => {
+  if (!startTime || !endTime) return true; // 允许空值
+  
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+  
+  const startTotalMinutes = startHour * 60 + startMinute;
+  const endTotalMinutes = endHour * 60 + endMinute;
+  
+  // 允许跨天时间范围（如23:00-01:00）
+  return true; // 总是返回true，因为跨天是允许的
+};
 
 /**
  * 获取公司列表
@@ -168,7 +195,18 @@ const createDefaultLaborSources = async (companyId) => {
  */
 const createCompany = async (req, res) => {
   try {
-    const { name, code, description, requireCheckout = true } = req.body;
+    const { 
+      name, 
+      code, 
+      description, 
+      requireCheckout = true,
+      enableCheckinTimeLimit = false,
+      checkinStartTime = null,
+      checkinEndTime = null,
+      enableCheckoutTimeLimit = false,
+      checkoutStartTime = null,
+      checkoutEndTime = null
+    } = req.body;
 
     // 验证必填字段
     if (!name || !code) {
@@ -187,6 +225,54 @@ const createCompany = async (req, res) => {
       });
     }
 
+    // 验证时间格式
+    if (checkinStartTime && !validateTimeFormat(checkinStartTime)) {
+      return res.status(400).json({
+        success: false,
+        message: '签到开始时间格式无效，请使用HH:mm格式'
+      });
+    }
+    
+    if (checkinEndTime && !validateTimeFormat(checkinEndTime)) {
+      return res.status(400).json({
+        success: false,
+        message: '签到结束时间格式无效，请使用HH:mm格式'
+      });
+    }
+    
+    if (checkoutStartTime && !validateTimeFormat(checkoutStartTime)) {
+      return res.status(400).json({
+        success: false,
+        message: '签退开始时间格式无效，请使用HH:mm格式'
+      });
+    }
+    
+    if (checkoutEndTime && !validateTimeFormat(checkoutEndTime)) {
+      return res.status(400).json({
+        success: false,
+        message: '签退结束时间格式无效，请使用HH:mm格式'
+      });
+    }
+
+    // 验证时间范围逻辑
+    if (enableCheckinTimeLimit && checkinStartTime && checkinEndTime) {
+      if (!validateTimeRange(checkinStartTime, checkinEndTime)) {
+        return res.status(400).json({
+          success: false,
+          message: '签到时间范围无效'
+        });
+      }
+    }
+    
+    if (enableCheckoutTimeLimit && checkoutStartTime && checkoutEndTime) {
+      if (!validateTimeRange(checkoutStartTime, checkoutEndTime)) {
+        return res.status(400).json({
+          success: false,
+          message: '签退时间范围无效'
+        });
+      }
+    }
+
     // 自动生成签到和签退页面URL - 使用前端完整URL
     const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
     const checkinUrl = `${frontendBaseUrl}/checkin/${code}`;
@@ -199,7 +285,13 @@ const createCompany = async (req, res) => {
       description,
       checkinUrl,
       checkoutUrl,
-      requireCheckout
+      requireCheckout,
+      enableCheckinTimeLimit,
+      checkinStartTime,
+      checkinEndTime,
+      enableCheckoutTimeLimit,
+      checkoutStartTime,
+      checkoutEndTime
     });
 
     // 为公司创建默认劳务来源
@@ -234,7 +326,18 @@ const createCompany = async (req, res) => {
 const updateCompany = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const { name, description, isActive, requireCheckout } = req.body;
+    const { 
+      name, 
+      description, 
+      isActive, 
+      requireCheckout,
+      enableCheckinTimeLimit,
+      checkinStartTime,
+      checkinEndTime,
+      enableCheckoutTimeLimit,
+      checkoutStartTime,
+      checkoutEndTime
+    } = req.body;
 
     const company = await Company.findByPk(companyId);
     if (!company) {
@@ -244,13 +347,72 @@ const updateCompany = async (req, res) => {
       });
     }
 
+    // 验证时间格式
+    if (checkinStartTime !== undefined && checkinStartTime !== null && !validateTimeFormat(checkinStartTime)) {
+      return res.status(400).json({
+        success: false,
+        message: '签到开始时间格式无效，请使用HH:mm格式'
+      });
+    }
+    
+    if (checkinEndTime !== undefined && checkinEndTime !== null && !validateTimeFormat(checkinEndTime)) {
+      return res.status(400).json({
+        success: false,
+        message: '签到结束时间格式无效，请使用HH:mm格式'
+      });
+    }
+    
+    if (checkoutStartTime !== undefined && checkoutStartTime !== null && !validateTimeFormat(checkoutStartTime)) {
+      return res.status(400).json({
+        success: false,
+        message: '签退开始时间格式无效，请使用HH:mm格式'
+      });
+    }
+    
+    if (checkoutEndTime !== undefined && checkoutEndTime !== null && !validateTimeFormat(checkoutEndTime)) {
+      return res.status(400).json({
+        success: false,
+        message: '签退结束时间格式无效，请使用HH:mm格式'
+      });
+    }
+
+    // 验证时间范围逻辑
+    if (enableCheckinTimeLimit && checkinStartTime && checkinEndTime) {
+      if (!validateTimeRange(checkinStartTime, checkinEndTime)) {
+        return res.status(400).json({
+          success: false,
+          message: '签到时间范围无效'
+        });
+      }
+    }
+    
+    if (enableCheckoutTimeLimit && checkoutStartTime && checkoutEndTime) {
+      if (!validateTimeRange(checkoutStartTime, checkoutEndTime)) {
+        return res.status(400).json({
+          success: false,
+          message: '签退时间范围无效'
+        });
+      }
+    }
+
+    // 准备更新数据
+    const updateData = {};
+    
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (requireCheckout !== undefined) updateData.requireCheckout = requireCheckout;
+    
+    // 时间限制相关字段
+    if (enableCheckinTimeLimit !== undefined) updateData.enableCheckinTimeLimit = enableCheckinTimeLimit;
+    if (checkinStartTime !== undefined) updateData.checkinStartTime = checkinStartTime;
+    if (checkinEndTime !== undefined) updateData.checkinEndTime = checkinEndTime;
+    if (enableCheckoutTimeLimit !== undefined) updateData.enableCheckoutTimeLimit = enableCheckoutTimeLimit;
+    if (checkoutStartTime !== undefined) updateData.checkoutStartTime = checkoutStartTime;
+    if (checkoutEndTime !== undefined) updateData.checkoutEndTime = checkoutEndTime;
+
     // 更新公司信息
-    await company.update({
-      name: name || company.name,
-      description: description !== undefined ? description : company.description,
-      isActive: isActive !== undefined ? isActive : company.isActive,
-      requireCheckout: requireCheckout !== undefined ? requireCheckout : company.requireCheckout
-    });
+    await company.update(updateData);
 
     res.json({
       success: true,

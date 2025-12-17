@@ -3,6 +3,69 @@ const { CheckinRecord, Company, User } = require('../models');
 const { Op } = require('sequelize');
 
 /**
+ * 验证当前时间是否在允许的时间范围内
+ * @param {string} currentTime - 当前时间（HH:mm格式）
+ * @param {string} startTime - 开始时间（HH:mm格式）
+ * @param {string} endTime - 结束时间（HH:mm格式）
+ * @returns {boolean} 是否在时间范围内
+ */
+const isTimeInRange = (currentTime, startTime, endTime) => {
+  if (!startTime || !endTime) return true; // 如果没有设置时间限制，则允许
+  
+  const [currentHour, currentMinute] = currentTime.split(':').map(Number);
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+  
+  const currentTotalMinutes = currentHour * 60 + currentMinute;
+  const startTotalMinutes = startHour * 60 + startMinute;
+  const endTotalMinutes = endHour * 60 + endMinute;
+  
+  // 处理跨天时间范围（如23:00-01:00）
+  if (endTotalMinutes < startTotalMinutes) {
+    // 跨天情况：当前时间在开始时间之后或结束时间之前
+    return currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes;
+  } else {
+    // 正常情况：当前时间在开始时间和结束时间之间
+    return currentTotalMinutes >= startTotalMinutes && currentTotalMinutes <= endTotalMinutes;
+  }
+};
+
+/**
+ * 获取当前时间的HH:mm格式字符串
+ * @returns {string} 当前时间（HH:mm）
+ */
+const getCurrentTimeString = () => {
+  const now = new Date();
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+/**
+ * 获取时间范围描述
+ * @param {string} startTime - 开始时间（HH:mm格式）
+ * @param {string} endTime - 结束时间（HH:mm格式）
+ * @returns {string} 时间范围描述
+ */
+const getTimeRangeDescription = (startTime, endTime) => {
+  if (!startTime || !endTime) return '';
+  
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+  
+  const startTotalMinutes = startHour * 60 + startMinute;
+  const endTotalMinutes = endHour * 60 + endMinute;
+  
+  if (endTotalMinutes < startTotalMinutes) {
+    // 跨天情况
+    return `${startTime} - 次日 ${endTime}`;
+  } else {
+    // 正常情况
+    return `${startTime} - ${endTime}`;
+  }
+};
+
+/**
  * 获取一天的开始和结束时间
  */
 function getDayRange(date = new Date()) {
@@ -89,6 +152,18 @@ const checkin = async (req, res) => {
       });
     }
     
+    // 检查签到时间限制
+    if (company.enableCheckinTimeLimit) {
+      const currentTime = getCurrentTimeString();
+      
+      if (!isTimeInRange(currentTime, company.checkinStartTime, company.checkinEndTime)) {
+        const timeRangeDesc = getTimeRangeDescription(company.checkinStartTime, company.checkinEndTime);
+        return res.status(400).json({
+          success: false,
+          message: `当前时间 ${currentTime} 不在允许的签到时间范围内（${timeRangeDesc}）`
+        });
+      }
+    }
     
     // 2. 检查今日是否已签到
     const { startOfDay, endOfDay } = getDayRange();
@@ -181,6 +256,19 @@ const checkout = async (req, res) => {
         success: false,
         message: '该公司只需签到，无需签退'
       });
+    }
+    
+    // 检查签退时间限制
+    if (company.enableCheckoutTimeLimit) {
+      const currentTime = getCurrentTimeString();
+      
+      if (!isTimeInRange(currentTime, company.checkoutStartTime, company.checkoutEndTime)) {
+        const timeRangeDesc = getTimeRangeDescription(company.checkoutStartTime, company.checkoutEndTime);
+        return res.status(400).json({
+          success: false,
+          message: `当前时间 ${currentTime} 不在允许的签退时间范围内（${timeRangeDesc}）`
+        });
+      }
     }
     
     // 2. 查找今日的签到记录
